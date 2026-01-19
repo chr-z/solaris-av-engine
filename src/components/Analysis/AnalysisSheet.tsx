@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
-import { SearchIcon, LinkIcon, ChevronDownIcon, FilterIcon, RefreshIcon, XIcon, WaveformIcon } from './Core/icons';
-import LoadingIndicator from './Core/LoadingIndicator';
-import Popover from './Core/Popover';
+import { SearchIcon, LinkIcon, ChevronDownIcon, FilterIcon, RefreshIcon, XIcon, WaveformIcon } from '../Core/icons';
+import LoadingIndicator from '../Core/LoadingIndicator';
+import Popover from '../Core/Popover';
 import FilterControls, { FilterState } from './FilterControls';
-import { RowWithSheetIndex } from '../App';
-import { database } from '../config/firebase';
-import { UserProfile } from '../types';
-import UserAvatar from './Auth/UserAvatar';
-import { useWaveformCache } from '../contexts/WaveformCacheContext';
-import { getVideoIdFromUrl } from '../utils/videoUtils';
+import { database } from '../../config/firebase';
+import { UserProfile } from '../../types';
+import UserAvatar from '../Auth/UserAvatar';
+import { useWaveformCache } from '../../contexts/WaveformCacheContext';
+import { getVideoIdFromUrl } from '../../utils/videoUtils';
 
 declare const gapi: any;
 
@@ -17,6 +16,11 @@ type CellData = {
     link?: string;
 };
 export type RowData = CellData[];
+
+export interface RowWithSheetIndex {
+  rowIndex: number;
+  row: RowData;
+}
 
 export interface DriveFile {
     id: string;

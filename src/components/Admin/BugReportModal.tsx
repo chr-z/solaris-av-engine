@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { XIcon, BugIcon, PaperAirplaneIcon, CheckIcon, AlertIcon } from '../Core/icons';
-// CORREÇÃO AQUI: Adicionado mais um "../" para chegar na raiz src
 import { logCaptureService } from '../../utils/logCapture';
 import { UserProfile } from '../../types';
 
@@ -25,14 +24,12 @@ const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose, userPr
     setSendStatus('idle');
 
     try {
-      // Coleta os logs e envia
+
       const report = logCaptureService.generateReport(description, userProfile || undefined);
       
-      // Aqui você conectaria com seu backend ou Firebase para salvar o JSON
-      // Por enquanto, vamos simular um delay e logar no console
       console.log('Bug Report Generated:', report);
       
-      // Simulação de envio
+
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       setSendStatus('success');
