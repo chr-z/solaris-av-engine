@@ -1,0 +1,42 @@
+{
+  "rules": {
+    "presence": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "bug_reports": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".indexOn": "timestamp",
+      "$report_id": {
+        ".validate": "newData.hasChildren(['description', 'user', 'timestamp', 'userAgent'])"
+      }
+    },
+    "locks": {
+      ".read": "auth != null",
+      "$os_index": {
+        ".write": "auth != null"
+      }
+    },
+    "timestamps": {
+      "$os_index": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "analysisMetadata": {
+       "$os_index": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "waveforms": {
+       "$video_id": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}

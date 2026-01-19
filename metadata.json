@@ -1,0 +1,5 @@
+{
+  "name": "Solaris",
+  "description": "Professional web platform for audiovisual quality assurance. Provides tools like RGB Parade, Waveform, and Spectrograms to analyze local and cloud-based media in a macOS-inspired interface.",
+  "requestFramePermissions": []
+}
