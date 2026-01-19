@@ -1,3 +1,5 @@
+import { UserProfile } from '../types';
+
 interface LogEntry {
     level: 'log' | 'warn' | 'error' | 'info' | 'debug';
     message: string;
@@ -8,6 +10,10 @@ class LogCaptureService {
     private logs: LogEntry[] = [];
     private originalConsole: { [key: string]: (...args: any[]) => void } = {};
     private isInitialized = false;
+
+    constructor() {
+        this.init();
+    }
 
     public init() {
         if (this.isInitialized) {
@@ -61,6 +67,7 @@ class LogCaptureService {
                 timestamp: Date.now()
             });
             
+            // Limit log size to prevent memory issues
             if (this.logs.length > 200) {
                 this.logs.shift();
             }
@@ -71,6 +78,26 @@ class LogCaptureService {
 
     public getLogs(): LogEntry[] {
         return [...this.logs];
+    }
+
+    // This method captures current state for the bug report
+    public generateReport(description: string, user?: UserProfile | null) {
+        return {
+            description,
+            timestamp: new Date().toISOString(),
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            screen: {
+                width: window.screen.width,
+                height: window.screen.height,
+            },
+            user: user ? {
+                id: user.id,
+                name: user.name,
+                email: user.email
+            } : 'Guest',
+            logs: this.logs
+        };
     }
 }
 

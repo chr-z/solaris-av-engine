@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { LinkIcon, GoogleDriveIcon, VideoIcon, InfoIcon } from './Core/icons';
-import { RowData } from '../types';
-import { formSections, allBooleanFields, dropdownFields, resultFields, simNaoFields } from '../utils/constants';
-import { DRIVE_FOLDER_REGEX } from '../utils/regex';
-import Tooltip from './Core/Tooltip';
-import { inconformityDetailsMap } from '../utils/inconformityDetails';
+import { LinkIcon, GoogleDriveIcon, VideoIcon, InfoIcon } from '../Core/icons';
+import { RowData } from '../../types';
+import { formSections, allBooleanFields, dropdownFields, resultFields, simNaoFields } from '../../utils/constants';
+import { DRIVE_FOLDER_REGEX } from '../../utils/regex';
+import Tooltip from '../Core/Tooltip';
+import { inconformityDetailsMap } from '../../utils/inconformityDetails';
 
 interface AnalysisFormProps {
     selectedRow: RowData | null;

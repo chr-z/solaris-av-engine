@@ -35,28 +35,41 @@ export interface UserProfile {
   email: string;
 }
 
-// Represents a single cell in the Google Sheet
-export interface CellData {
-    value: string;
-    link?: string;
-}
-
-// The raw array of cells returned by the Sheets API
-export type RowData = CellData[];
 
 export interface TimestampAnalyst {
     id: string;
     name: string;
     givenName: string;
     picture: string;
-}
-
-export interface Timestamp {
-  id: string;
-  time: number;
-  comment: string;
-  analyst: TimestampAnalyst;
-  createdAt: number;
-  fileId: string;
-  fileName: string; 
-}
+  }
+  
+  export interface Timestamp {
+    id: string;
+    time: number;
+    comment: string;
+    analyst: TimestampAnalyst;
+    createdAt: number;
+    fileId: string;
+    fileName: string; 
+  }
+  
+  export type DriveFile = {
+    id: string;
+    name: string;
+    mimeType: string;
+    url: string;
+  };
+  
+  export interface RowWithSheetIndex {
+    rowIndex: number;
+    row: RowData;
+  }
+  
+  // Represents a single cell in the Google Sheet
+  export interface CellData {
+      value: string;
+      link?: string;
+  }
+  
+  // The raw array of cells returned by the Sheets API
+  export type RowData = CellData[];
