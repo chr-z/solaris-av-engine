@@ -7,7 +7,7 @@ import WaveformTimeline from '../Monitors/WaveformTimeline';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
 
 // Import SVGs as URLs
-import tetoPresencialUrl from './svg/homestudio.svg';
+import tetoPresencialUrl from '../svg/homestudio.svg';
 import tetoHomeUrl from '../svg/homestudio.svg';
 
 interface VideoPlayerProps {
