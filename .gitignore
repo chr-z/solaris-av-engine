@@ -1,0 +1,55 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Testing
+coverage
+
+# Production Build
+dist
+dist-ssr
+build
+
+# Environment Variables (CRÍTICO: Jamais remova isso)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.env.*
+
+# Vercel
+.vercel
+
+# Firebase
+.firebase/
+firebase-debug.log
+
+# IDE & Editors
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs
+*.njsproj
+*.sln
+*.sw?
+
+# OS Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Optional: Local Video Files (caso você teste com arquivos na raiz)
+*.mp4
+*.mov
+*.mkv
