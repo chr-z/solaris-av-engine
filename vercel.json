@@ -1,0 +1,47 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/get-sheets-data",
+      "destination": "/api/get-sheets-data"
+    },
+    {
+      "source": "/api/sheet-row",
+      "destination": "/api/sheet-row"
+    },
+    {
+      "source": "/api/drive-proxy",
+      "destination": "/api/drive-proxy"
+    },
+    {
+      "source": "/api/drive-folder-contents",
+      "destination": "/api/drive-folder-contents"
+    },
+    {
+      "source": "/api/youtube-proxy",
+      "destination": "/api/youtube-proxy"
+    },
+    {
+      "source": "/api/set-auth-cookie",
+      "destination": "/api/set-auth-cookie"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://accounts.google.com https://*.googleapis.com https://*.gstatic.com https://*.firebaseapp.com https://*.firebaseio.com https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; img-src 'self' data: blob: https:; frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://content.googleapis.com https://*.firebaseio.com https://vercel.live; connect-src 'self' wss: *.google.com *.googleapis.com *.firebaseio.com *.firebaseapp.com blob:; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' blob: https:;"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "unsafe-none"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "cross-origin"
+        }
+      ]
+    }
+  ]
+}
