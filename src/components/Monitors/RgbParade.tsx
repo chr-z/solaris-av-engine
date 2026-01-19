@@ -17,7 +17,6 @@ const RgbParade: React.FC<RgbParadeProps> = ({ pixelData, isZoomed = false }) =>
     const canvas = canvasRef.current;
     const currentPixelData = pixelDataRef.current;
     
-    // Performance: 'willReadFrequently' optimizes for heavy readback operations
     const ctx = canvas?.getContext('2d', { willReadFrequently: true });
     if (!ctx || !canvas) return;
     
@@ -64,14 +63,17 @@ const RgbParade: React.FC<RgbParadeProps> = ({ pixelData, isZoomed = false }) =>
     if (paradeWidth <= 0) return;
 
     const histSize = 256 * paradeWidth;
+    
     if (!histogramsRef.current.r || histogramsRef.current.r.length !== histSize) {
         histogramsRef.current.r = new Uint32Array(histSize);
         histogramsRef.current.g = new Uint32Array(histSize);
         histogramsRef.current.b = new Uint32Array(histSize);
     }
-    const rHistogram = histogramsRef.current.r;
-    const gHistogram = histogramsRef.current.g;
-    const bHistogram = histogramsRef.current.b;
+
+    const rHistogram = histogramsRef.current.r!;
+    const gHistogram = histogramsRef.current.g!;
+    const bHistogram = histogramsRef.current.b!;
+    
     rHistogram.fill(0);
     gHistogram.fill(0);
     bHistogram.fill(0);
