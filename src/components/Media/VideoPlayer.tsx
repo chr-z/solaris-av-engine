@@ -1,14 +1,14 @@
 import React, { forwardRef, useRef, useState, useEffect, useCallback } from 'react';
-import { OverlaySettings } from '../types';
-import Crosshair from './Crosshair';
-import { PlayIcon, PauseIcon, VolumeHighIcon, VolumeMediumIcon, VolumeLowIcon, VolumeMuteIcon, FullscreenIcon, ExitFullscreenIcon, XIcon, Replay5Icon, Forward5Icon } from './icons';
+import { OverlaySettings } from '../../types';
+import Crosshair from '../Monitors/Crosshair';
+import { PlayIcon, PauseIcon, VolumeHighIcon, VolumeMediumIcon, VolumeLowIcon, VolumeMuteIcon, FullscreenIcon, ExitFullscreenIcon, XIcon, Replay5Icon, Forward5Icon } from '../Core/icons';
 import { useAudioWaveform } from '../../hooks/useAudioWaveform';
-import WaveformTimeline from './WaveformTimeline';
+import WaveformTimeline from '../Monitors/WaveformTimeline';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
 
 // Import SVGs as URLs
-import tetoPresencialUrl from './svg/Teto Presencial.svg';
-import tetoHomeUrl from './svg/Teto Home.svg';
+import tetoPresencialUrl from './svg/homestudio.svg';
+import tetoHomeUrl from '../svg/homestudio.svg';
 
 interface VideoPlayerProps {
   src: string | null;
