@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { OverlaySettings } from '../types';
+import { OverlaySettings } from '../../types';
 
 interface CrosshairProps {
   settings: OverlaySettings;

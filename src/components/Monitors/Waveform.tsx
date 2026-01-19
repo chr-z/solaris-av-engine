@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback } from 'react';
-import { VideoAnalysisData } from '../types';
+import { VideoAnalysisData } from '../../types';
 
 interface WaveformProps {
   pixelData: VideoAnalysisData | null;

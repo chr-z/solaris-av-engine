@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ExpandIcon } from './icons';
+import { ExpandIcon } from '../Core/icons';
 
 interface VuMeterProps {
   volume: number;

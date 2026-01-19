@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { DriveFile } from '../AnalysisSheet';
-import { useWaveformCache } from '../contexts/WaveformCacheContext';
+import { DriveFile } from '../Analysis/AnalysisSheet';
+import { useWaveformCache } from '../../contexts/WaveformCacheContext';
 import { WaveformIcon } from '../Core/icons';
 
 declare const gapi: any;

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { UploadIcon, GoogleDriveIcon, YouTubeIcon } from '../Core/icons';
 import DriveFilePicker from './DriveFilePicker';
-import { DriveFile } from '../AnalysisSheet';
+import { DriveFile } from '../Analysis/AnalysisSheet';
 
 interface SourceSelectorProps {
   onSourceSelected: (source: File | string, info?: { name?: string; isDriveLink?: boolean; isYoutube?: boolean }) => void;
