@@ -422,7 +422,12 @@ const App: React.FC = () => {
 
     // Fetch Full Row Data (Admin Mode)
     try {
-      const response = await fetch(`/api/sheet-row?rowIndex=${rowIndex}`);
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error('Session expired. Please sign in again.');
+
+      const response = await fetch(`/api/sheet-row?rowIndex=${rowIndex}`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
        if (!response.ok) throw new Error('Failed to fetch row data.');
       
       const fullRowData: RowData = await response.json();

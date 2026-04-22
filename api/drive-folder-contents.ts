@@ -5,6 +5,9 @@
 import { google, drive_v3 } from 'googleapis';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+// Google Drive file & folder IDs (prevents q-string injection: no quotes or spaces)
+const DRIVE_RESOURCE_ID_RE = /^[A-Za-z0-9_-]{1,500}$/;
+
 function getUserDriveClient(accessToken: string) {
     const auth = new google.auth.OAuth2();
     auth.setCredentials({ access_token: accessToken });
@@ -52,7 +55,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Missing Access Token.' });
 
     const { folderId } = req.query;
-    if (typeof folderId !== 'string') return res.status(400).json({ error: 'Invalid Folder ID.' });
+    if (typeof folderId !== 'string' || !DRIVE_RESOURCE_ID_RE.test(folderId)) {
+        return res.status(400).json({ error: 'Invalid folder ID.' });
+    }
 
     try {
         const drive = getUserDriveClient(authHeader.split(' ')[1]);

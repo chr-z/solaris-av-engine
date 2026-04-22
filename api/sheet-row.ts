@@ -4,6 +4,7 @@
 
 import { google } from 'googleapis';
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { requireFirebaseIdToken } from './_lib/verifyAuth';
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const SERVICE_ACCOUNT_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON;
@@ -29,6 +30,9 @@ function getUserClient(accessToken: string) {
 
 // --- GET: Fetch Single Row Detail ---
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
+    const authedUid = await requireFirebaseIdToken(req, res);
+    if (!authedUid) return;
+
     const rowIndex = parseInt(req.query.rowIndex as string, 10);
     if (isNaN(rowIndex) || rowIndex < 2) return res.status(400).json({ error: 'Invalid row index.' });
 

@@ -3,7 +3,7 @@ import { SearchIcon, LinkIcon, ChevronDownIcon, FilterIcon, RefreshIcon, XIcon, 
 import LoadingIndicator from '../Core/LoadingIndicator';
 import Popover from '../Core/Popover';
 import FilterControls, { FilterState } from './FilterControls';
-import { database } from '../../config/firebase';
+import { database, auth } from '../../config/firebase';
 import { UserProfile } from '../../types';
 import UserAvatar from '../Auth/UserAvatar';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
@@ -47,7 +47,13 @@ interface AnalysisSheetListProps {
 }
 
 export const fetchFullRowData = async (rowIndex: number): Promise<RowData> => {
-    const response = await fetch(`/api/sheet-row?rowIndex=${rowIndex}`);
+    const idToken = await auth.currentUser?.getIdToken();
+    if (!idToken) {
+        throw new Error('Not authenticated. Please sign in again.');
+    }
+    const response = await fetch(`/api/sheet-row?rowIndex=${rowIndex}`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+    });
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Failed to fetch row data.' }));
         throw new Error(errorData.error || 'Unknown server error.');
@@ -219,10 +225,22 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
       }, []);
 
     const fetchData = useCallback(async (currentFilters: FilterState, forceRefresh = false) => {
+        if (userProfile?.id === 'guest-reviewer-id') {
+            setIsLoading(false);
+            setLoadingMessage('Ready');
+            setError(null);
+            return;
+        }
+
         setIsLoading(true);
         setLoadingMessage('Syncing Data...');
         setError(null);
         try {
+            const idToken = await auth.currentUser?.getIdToken();
+            if (!idToken) {
+                throw new Error('Session expired. Please sign in again.');
+            }
+
             const queryParams = new URLSearchParams();
             if (currentFilters.startDate) queryParams.append('startDate', currentFilters.startDate);
             if (currentFilters.endDate) queryParams.append('endDate', currentFilters.endDate);
@@ -230,7 +248,9 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
                 queryParams.append('force', 'true');
             }
 
-            const response = await fetch(`/api/get-sheets-data?${queryParams.toString()}`);
+            const response = await fetch(`/api/get-sheets-data?${queryParams.toString()}`, {
+                headers: { Authorization: `Bearer ${idToken}` },
+            });
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ error: `Request failed: ${response.statusText}` }));
@@ -246,7 +266,7 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
         } finally {
             setIsLoading(false);
         }
-    }, [onDataLoaded]);
+    }, [onDataLoaded, userProfile]);
 
     useEffect(() => {
         fetchData(filters);

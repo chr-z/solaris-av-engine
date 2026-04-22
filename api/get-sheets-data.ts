@@ -4,6 +4,7 @@
 
 import { google } from 'googleapis';
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { requireFirebaseIdToken } from './_lib/verifyAuth';
 
 // --- SERVER-SIDE CACHE ---
 // Reduces latency and API quota usage for frequent dashboard refreshes.
@@ -36,10 +37,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: "System Configuration Error: Spreadsheet ID missing." });
   }
 
+  const authedUid = await requireFirebaseIdToken(req, res);
+  if (!authedUid) return;
+
   const { force } = req.query;
   const cacheKey = 'master_dataset_v1'; 
 
-  // 2. Cache Strategy
+  // 2. Cache Strategy (only after authentication to avoid leaking cached rows)
   if (force !== 'true' && cache[cacheKey] && Date.now() - cache[cacheKey].timestamp < CACHE_TTL) {
     res.setHeader('X-Cache', 'HIT');
     return res.status(200).json(cache[cacheKey].data);
