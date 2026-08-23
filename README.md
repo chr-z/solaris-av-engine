@@ -43,5 +43,30 @@ The application decouples the visualization logic from the React render cycle. B
 
 ---
 
+### Solaris Pro Licensing (v2)
+
+Pro entitlements are resolved locally, in this order: stored license key →
+`VITE_SOLARIS_EDITION` build override → free tier. Free keeps the QC report
+export; **A/B Compare** is a Pro feature.
+
+Generating keys (owner only — run from the repo root):
+
+```bash
+SOLARIS_LICENSE_SECRET='your-long-random-secret' \
+  node scripts/gen_license_key.mjs --edition pro --expires 0 --payload customer-42
+```
+
+The secret lives only in your environment or CI secret store — never in the
+repo, never in a `VITE_` variable (those ship to browsers). Paste the printed
+key into **Upgrade to Pro** inside the app; activation is fully offline
+(HMAC-SHA256 via WebCrypto).
+
+Environment variables expected by the app: `VITE_GOOGLE_CLIENT_ID`,
+`VITE_GOOGLE_API_KEY`, Firebase `VITE_FIREBASE_*`, optional
+`VITE_SOLARIS_EDITION` (`free`|`pro`). Owner-side only:
+`SOLARIS_LICENSE_SECRET`.
+
+---
+
 **Developed by Christian Eliel**
 *Software Engineer specializing in High-Performance Web Applications and Media Technology.*

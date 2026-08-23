@@ -48,8 +48,12 @@ jobs:
       - name: Lint changed files (incremental ratchet)
         run: |
           BASE=$(git merge-base origin/main HEAD 2>/dev/null || git rev-parse HEAD~10)
-          CHANGED=$(git diff --name-only --diff-filter=d "$BASE"...HEAD -- 'src/**/*.ts' 'src/**/*.tsx' | tr '\n' ' ')
-          if [ -n "$(printf '%s' \"$CHANGED\" | tr -d '[:space:]')" ]; then
+          CHANGED=$(git diff --name-only --diff-filter=d "$BASE" HEAD -- 'src/**/*.ts' 'src/**/*.tsx')
+          CHANGED=$(printf '%s' "$CHANGED" | tr '\n' ' ')
+          # NOTE: -n "$CHANGED" must quote the variable DIRECTLY. Escaped quotes
+          # ("$CHANGED") made this guard always true, and a bare `npx eslint`
+          # (no args) lints the entire tree — breaking main-only pushes.
+          if [ -n "$CHANGED" ]; then
             echo "Linting: $CHANGED"
             npx eslint $CHANGED --max-warnings 0
           else
