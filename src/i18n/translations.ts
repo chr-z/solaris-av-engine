@@ -52,6 +52,10 @@ export const en = {
   // Auth errors
   'auth.loginFailed': 'Login failed.',
   'auth.popupClosed': 'Login popup closed.',
+
+  // Accessibility
+  'a11y.skipToContent': 'Skip to main content',
+  'a11y.loadingStatus': 'Loading',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -104,6 +108,10 @@ export const pt: Record<TranslationKey, string> = {
   // Auth errors
   'auth.loginFailed': 'Falha no login.',
   'auth.popupClosed': 'Janela de login fechada.',
+
+  // Accessibility
+  'a11y.skipToContent': 'Pular para o conteúdo principal',
+  'a11y.loadingStatus': 'Carregando',
 };
 
 export const dictionaries = { en, pt } as const;

@@ -26,11 +26,17 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({ statusText, error, 
                 </>
             ) : (
                 <>
-                    <div className="relative w-16 h-16 mx-auto mb-4">
+                    <div className="relative w-16 h-16 mx-auto mb-4" aria-hidden="true">
                         <div className="w-full h-full border-4 border-solar-dark-border rounded-full"></div>
                         <div className="absolute inset-0 w-full h-full border-4 border-solar-accent border-t-transparent rounded-full animate-spin"></div>
                     </div>
-                    <p key={statusText} className="text-sm text-gray-400 animate-text-fade-in h-5 flex items-center justify-center">
+                    <p
+                        key={statusText}
+                        role="status"
+                        aria-live="polite"
+                        aria-label={`${t('a11y.loadingStatus')}: ${statusText}`}
+                        className="text-sm text-gray-400 animate-text-fade-in h-5 flex items-center justify-center"
+                    >
                         {statusText}
                     </p>
                 </>

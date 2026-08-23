@@ -693,7 +693,13 @@ const App: React.FC = () => {
         return (
           <WaveformCacheProvider>
             <div className="flex flex-col h-screen font-sans text-sm bg-solar-light-bg dark:bg-solar-dark-bg text-gray-800 dark:text-gray-200 overflow-hidden">
-              <Header 
+              <a
+                href="#main-workspace"
+                className="skip-link"
+              >
+                {t('a11y.skipToContent')}
+              </a>
+              <Header
                 onSourceSelected={handleSourceSelected}
                 isWorkspaceOpen={isWorkspaceOpen}
                 onCloseWorkspace={handleCloseWorkspace}
@@ -701,7 +707,7 @@ const App: React.FC = () => {
                 userProfile={userProfile}
                 onLogout={handleLogout}
               />
-              <main className="flex-1 relative overflow-hidden bg-solar-light-bg dark:bg-solar-dark-bg">
+              <main id="main-workspace" className="flex-1 relative overflow-hidden bg-solar-light-bg dark:bg-solar-dark-bg">
                 <div className={`absolute inset-0 h-full transition-all duration-500 ease-in-out ${isWorkspaceOpen ? 'w-[320px]' : 'w-full'}`}>
                   <AnalysisSheetList 
                     onDataLoaded={handleDataLoaded}

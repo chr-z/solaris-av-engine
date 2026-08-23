@@ -25,6 +25,13 @@ describe('i18n dictionaries', () => {
       expect(tokens(pt[key])).toEqual(tokens(en[key]));
     }
   });
+
+  it('exposes accessibility strings (skip link, live region) in both locales', () => {
+    expect(en['a11y.skipToContent']).toBe('Skip to main content');
+    expect(pt['a11y.skipToContent']).toBe('Pular para o conteúdo principal');
+    expect(en['a11y.loadingStatus']).toBe('Loading');
+    expect(pt['a11y.loadingStatus']).toBe('Carregando');
+  });
 });
 
 describe('interpolate', () => {
