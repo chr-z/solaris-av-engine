@@ -28,6 +28,7 @@ import { RowData, updateSheetRow, DriveFile } from './AnalysisSheet';
 import { useAVAnalysis } from '../../hooks/useAVAnalysis';
 import { useAnalystShortcuts } from '../../hooks/useAnalystShortcuts';
 import { useCompareMode } from '../../hooks/useCompareMode';
+import { useLicense } from '../../licensing/LicenseContext';
 import { OverlaySettings, VideoChoice, UserProfile, Timestamp } from '../../types';
 import { useI18n } from '../../i18n/I18nContext';
 import { dropdownFields, inconformityToCategoryMap, resultFields, inconformityScores, categoryMaxScores } from '../../utils/constants';
@@ -386,10 +387,13 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
 
   // S5.2: A/B compare orchestration (state + imperative sync channel).
   const compare = useCompareMode({ hasMedia: !!videoSrc });
+  // S6.1: compare mode is a Pro feature — the toggle is flag-gated.
+  const { flags } = useLicense();
+  const isCompareAllowed = flags.abCompareMode;
   const handleToggleCompare = useCallback(() => {
-    if (!videoSrc) return;
+    if (!videoSrc || !isCompareAllowed) return;
     compare.toggleActive();
-  }, [videoSrc, compare]);
+  }, [videoSrc, isCompareAllowed, compare]);
 
   // S5.1: imperative handle registered by VideoPlayer for the global layer.
   const playerControlsRef = useRef<{
@@ -806,17 +810,36 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
               <h2 className="font-bold">Analysis Sheet</h2>
               <div className="flex items-center gap-2">
                   {saveStatus === 'error' && <p className="text-sm text-red-400 mr-2">{saveError}</p>}
-                  {/* S5.2: enter/exit A/B compare split (also via V). */}
-                  <button
-                    onClick={handleToggleCompare}
-                    disabled={!videoSrc}
-                    aria-pressed={compare.isActive}
-                    className={`p-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed ${compare.isActive ? 'bg-solar-accent/30 text-solar-accent hover:bg-solar-accent/40' : 'text-gray-400 hover:bg-gray-500/20 hover:text-white'}`}
-                    title={t('compare.open')}
-                    aria-label={t('compare.open')}
-                  >
-                    <ColumnsIcon className="w-5 h-5" />
-                  </button>
+                  {/* S5.2: enter/exit A/B compare split (also via V). S6.1: Pro-gated — free tier gets the upsell lock. */}
+                  {isCompareAllowed ? (
+                    <button
+                      onClick={handleToggleCompare}
+                      disabled={!videoSrc}
+                      aria-pressed={compare.isActive}
+                      className={`p-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed ${compare.isActive ? 'bg-solar-accent/30 text-solar-accent hover:bg-solar-accent/40' : 'text-gray-400 hover:bg-gray-500/20 hover:text-white'}`}
+                      title={t('compare.open')}
+                      aria-label={t('compare.open')}
+                    >
+                      <ColumnsIcon className="w-5 h-5" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => window.dispatchEvent(new CustomEvent('solaris:open-pro-upgrade'))}
+                      aria-label={t('pro.lock.openUpgrade', { feature: t('compare.title') })}
+                      title={t('pro.lock.description', { feature: t('compare.title') })}
+                      className="relative p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent"
+                    >
+                      <ColumnsIcon className="w-5 h-5" />
+                      <svg
+                        className="absolute bottom-1 right-1 w-2.5 h-2.5 text-yellow-400"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z" />
+                      </svg>
+                    </button>
+                  )}
                   <button
                     onClick={() => setIsTimestampModalOpen(true)}
                     disabled={!currentVideoId}
