@@ -5,6 +5,7 @@ import { PlayIcon, PauseIcon, VolumeHighIcon, VolumeMediumIcon, VolumeLowIcon, V
 import { useAudioWaveform } from '../../hooks/useAudioWaveform';
 import WaveformTimeline from '../Monitors/WaveformTimeline';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
+import { useI18n } from '../../i18n/I18nContext';
 
 // Import SVGs as URLs
 import tetoPresencialUrl from '../svg/homestudio.svg';
@@ -21,6 +22,13 @@ interface VideoPlayerProps {
   children?: React.ReactNode;
   onRetry?: () => void;
   onClose?: () => void;
+  /** S5.1: imperative handle for the global analyst shortcut layer. */
+  registerPlayerControls?: (controls: {
+    togglePlay: () => void;
+    seekBy: (seconds: number) => void;
+    seekToStart: () => void;
+    changeVolume: (delta: number) => void;
+  }) => () => void;
 }
 
 const formatTime = (totalSeconds: number): string => {
@@ -30,17 +38,10 @@ const formatTime = (totalSeconds: number): string => {
     return `${minutes}:${seconds}`;
 };
 
-const usePrevious = <T,>(value: T): T | undefined => {
-    const ref = useRef<T | undefined>(undefined);
-    useEffect(() => {
-        ref.current = value;
-    }, [value]);
-    return ref.current;
-};
-
 
 const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
-  ({ src, videoId, title, overlaySettings, setOverlaySettings, isLoading: isMediaLoading, errorMessage, children, onRetry, onClose }, ref) => {
+  ({ src, videoId, title, overlaySettings, setOverlaySettings, isLoading: isMediaLoading, errorMessage, children, onRetry, onClose, registerPlayerControls }, ref) => {
+    const { t } = useI18n();
     const internalVideoRef = ref as React.RefObject<HTMLVideoElement>;
     const containerRef = useRef<HTMLDivElement>(null);
     const controlsTimeoutRef = useRef<number | null>(null);
@@ -55,14 +56,19 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const [isFullscreen, setIsFullscreen] = useState(false);
 
     const { waveform, isLoading: isWaveformLoading } = useAudioWaveform(src, videoId);
+    // Waveform cache bookkeeping: when the waveform just finished loading
+    // (loading → loaded transition), register the id in the shared cache.
+    // Tracked via an effect-updated ref instead of render-time reads.
+    const wasWaveformLoadingRef = useRef(false);
     const { addCachedId } = useWaveformCache();
-    const wasWaveformLoading = usePrevious(isWaveformLoading);
-    
+
     useEffect(() => {
-        if (wasWaveformLoading && !isWaveformLoading && videoId && waveform.length > 0) {
+        const wasLoading = wasWaveformLoadingRef.current;
+        if (wasLoading && !isWaveformLoading && videoId && waveform.length > 0) {
             addCachedId(videoId);
         }
-    }, [isWaveformLoading, wasWaveformLoading, videoId, waveform, addCachedId]);
+        wasWaveformLoadingRef.current = isWaveformLoading;
+    }, [isWaveformLoading, videoId, waveform, addCachedId]);
 
     // Visibility Logic
     const showControlsAndStartTimer = useCallback(() => {
@@ -249,7 +255,39 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         return () => container.removeEventListener('keydown', handleKeyDown);
     }, [handlePlayPause, handleSeekOffset, toggleFullscreen, toggleMute]);
 
-    const VolumeIcon = () => {
+    // S5.1: expose player controls to the global analyst shortcut layer.
+    useEffect(() => {
+        if (!registerPlayerControls) return;
+        return registerPlayerControls({
+            togglePlay: () => handlePlayPause(),
+            seekBy: (seconds: number) => {
+                const video = internalVideoRef.current;
+                if (!video || !isFinite(video.duration)) return;
+                video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + seconds));
+                setCurrentTime(video.currentTime);
+                showControlsAndStartTimer();
+            },
+            seekToStart: () => {
+                const video = internalVideoRef.current;
+                if (!video) return;
+                video.currentTime = 0;
+                setCurrentTime(0);
+                showControlsAndStartTimer();
+            },
+            changeVolume: (delta: number) => {
+                const video = internalVideoRef.current;
+                if (!video) return;
+                const next = Math.max(0, Math.min(1, (isMuted ? 0 : video.volume) + delta));
+                video.volume = next;
+                video.muted = next === 0;
+                showControlsAndStartTimer();
+            },
+        });
+    }, [registerPlayerControls, handlePlayPause, internalVideoRef, isMuted, showControlsAndStartTimer]);
+
+    // Render function, not a component (react-hooks/static-components):
+    // returns fresh JSX without remounting state on each render.
+    const renderVolumeIcon = () => {
         if (isMuted || volume === 0) return <VolumeMuteIcon className="w-6 h-6" />;
         if (volume < 0.33) return <VolumeLowIcon className="w-6 h-6" />;
         if (volume < 0.66) return <VolumeMediumIcon className="w-6 h-6" />;
@@ -356,7 +394,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
                         <Forward5Icon className="w-7 h-7"/>
                     </button>
                     <div className="flex items-center gap-2 group/volume">
-                         <button onClick={toggleMute} title="Mute (m)"><VolumeIcon /></button>
+                         <button onClick={toggleMute} title="Mute (m)" aria-label={t('shortcuts.mute.description')}>{renderVolumeIcon()}</button>
                          <input
                             type="range"
                             min="0"

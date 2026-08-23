@@ -2,12 +2,11 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import Header from './components/Layout/Header';
 import AnalysisSheetList from './components/Analysis/AnalysisSheet';
 import { RowWithSheetIndex, DriveFile, RowData } from './components/Analysis/AnalysisSheet';
-import AnalysisWorkspace from './components/Analysis/AnalysisWorkspace';
 import LoginScreen from './components/Auth/LoginScreen';
 import LoadingIndicator from './components/Core/LoadingIndicator';
 import { OverlaySettings, VideoChoice, UserProfile } from './types';
 import { DRIVE_FILE_REGEX, YOUTUBE_REGEX, DRIVE_FOLDER_REGEX } from './utils/regex';
-import { database, auth } from './config/firebase'; 
+import { database, auth } from './config/firebase';
 import firebase from 'firebase/compat/app';
 import { FilterState } from './components/Analysis/FilterControls';
 import { WaveformCacheProvider } from './contexts/WaveformCacheContext';
@@ -15,6 +14,12 @@ import { logCaptureService } from './utils/logCapture';
 import { DEMO_HEADERS, DEMO_ROWS } from './utils/demoData';
 import { useI18n } from './i18n/I18nContext';
 import { computeFilteredRows } from './utils/rowFiltering';
+
+// Code splitting (S3.1): the heavy analysis workspace (player + monitors + form)
+// is only fetched when an OS row is opened for the first time.
+const AnalysisWorkspace = React.lazy(
+  () => import(/* webpackChunkName: "analysis-workspace" */ './components/Analysis/AnalysisWorkspace'),
+);
 
 // Initialize log capture service
 logCaptureService.init();
@@ -729,8 +734,15 @@ const App: React.FC = () => {
                   style={{ width: 'calc(100% - 320px)' }}
                 >
                   {isWorkspaceOpen && (
-                    <AnalysisWorkspace
-                      key={selectedOsIndex}
+                    <React.Suspense
+                      fallback={
+                        <div className="w-full h-full flex items-center justify-center">
+                          <LoadingIndicator statusText={t('loading.step.monitors')} />
+                        </div>
+                      }
+                    >
+                      <AnalysisWorkspace
+                        key={selectedOsIndex}
                       selectedRow={fullRowData}
                       headers={headers}
                       videoSrc={videoSrc}
@@ -753,8 +765,9 @@ const App: React.FC = () => {
                       onClosePicker={handleClosePicker}
                       onFileFromPickerSelected={handleFileSelectedFromPicker}
                       userProfile={userProfile}
-                      onClose={handleUnloadMedia}
-                    />
+                        onClose={handleUnloadMedia}
+                      />
+                    </React.Suspense>
                   )}
                 </div>
               </main>

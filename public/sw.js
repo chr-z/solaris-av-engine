@@ -11,7 +11,7 @@
  *
  * Version bump `CACHE_VERSION` on deploy-shape changes to invalidate old caches.
  */
-const CACHE_VERSION = 'solaris-v1';
+const CACHE_VERSION = 'solaris-v2';
 const OFFLINE_URLS = [
   './',
   'index.html',

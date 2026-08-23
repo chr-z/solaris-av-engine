@@ -5,11 +5,16 @@ import SourceSelector from '../Media/SourceSelector';
 import { UserProfile } from '../../types';
 import OnlineUsers from './OnlineUsers';
 import UserAvatar from '../Auth/UserAvatar';
-import BugReportModal from '../Admin/BugReportModal';
-import BugReportViewer from '../Admin/BugReportViewer';
 import LanguageSwitcher from '../../i18n/LanguageSwitcher';
 import { useI18n } from '../../i18n/I18nContext';
 import OfflineIndicator from '../Core/OfflineIndicator';
+import { QCExportButton } from '../Analysis/QCExportButton';
+
+// Code splitting (S3.1): admin/report modals ship in separate chunks and are
+// fetched only on first open. `isOpen && ...` keeps them out of the tree while
+// closed, so the chunk request never fires until actually needed.
+const BugReportModal = React.lazy(() => import('../Admin/BugReportModal'));
+const BugReportViewer = React.lazy(() => import('../Admin/BugReportViewer'));
 
 
 interface HeaderProps {
@@ -71,6 +76,9 @@ const Header: React.FC<HeaderProps> = ({
           
           <OfflineIndicator />
 
+          {/* S4.1: printable QC report download (dataset summary). */}
+          <QCExportButton className="!px-2" />
+
           <OnlineUsers />
 
           <LanguageSwitcher />
@@ -120,17 +128,25 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
 
-      <BugReportModal 
-          isOpen={isBugReportModalOpen}
-          onClose={() => setIsBugReportModalOpen(false)}
-          userProfile={userProfile}
-      />
-      
+      {isBugReportModalOpen && (
+        <React.Suspense fallback={null}>
+          <BugReportModal
+            isOpen
+            onClose={() => setIsBugReportModalOpen(false)}
+            userProfile={userProfile}
+          />
+        </React.Suspense>
+      )}
+
       {/* Conditional rendering for admin view logic can be expanded here */}
-      <BugReportViewer
-          isOpen={isBugReportViewerOpen}
-          onClose={() => setIsBugReportViewerOpen(false)}
-      />
+      {isBugReportViewerOpen && (
+        <React.Suspense fallback={null}>
+          <BugReportViewer
+            isOpen
+            onClose={() => setIsBugReportViewerOpen(false)}
+          />
+        </React.Suspense>
+      )}
     </>
   );
 };
