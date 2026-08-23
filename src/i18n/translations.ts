@@ -56,6 +56,10 @@ export const en = {
   // Accessibility
   'a11y.skipToContent': 'Skip to main content',
   'a11y.loadingStatus': 'Loading',
+
+  // PWA / offline
+  'pwa.offlineBadge': 'Offline — cached mode',
+  'pwa.offlineBadgeTitle': 'You are offline. The app shell keeps working; media and cloud features need a connection.',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -112,6 +116,10 @@ export const pt: Record<TranslationKey, string> = {
   // Accessibility
   'a11y.skipToContent': 'Pular para o conteúdo principal',
   'a11y.loadingStatus': 'Carregando',
+
+  // PWA / offline
+  'pwa.offlineBadge': 'Offline — modo cacheado',
+  'pwa.offlineBadgeTitle': 'Você está offline. O app continua funcionando; mídia e recursos na nuvem precisam de conexão.',
 };
 
 export const dictionaries = { en, pt } as const;

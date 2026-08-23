@@ -9,6 +9,7 @@ import BugReportModal from '../Admin/BugReportModal';
 import BugReportViewer from '../Admin/BugReportViewer';
 import LanguageSwitcher from '../../i18n/LanguageSwitcher';
 import { useI18n } from '../../i18n/I18nContext';
+import OfflineIndicator from '../Core/OfflineIndicator';
 
 
 interface HeaderProps {
@@ -68,6 +69,8 @@ const Header: React.FC<HeaderProps> = ({
           
           <div className="h-6 w-px bg-solar-dark-border"></div>
           
+          <OfflineIndicator />
+
           <OnlineUsers />
 
           <LanguageSwitcher />
