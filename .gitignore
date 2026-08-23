@@ -53,3 +53,5 @@ lerna-debug.log*
 *.mp4
 *.mov
 *.mkv
+# Exception: template without real secrets is versioned
+!.env.example
