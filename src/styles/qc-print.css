@@ -1,0 +1,83 @@
+/* ---------------------------------------------------------------------------
+   S4.1: Print CSS — QC Report
+   ------------------------------------------------------------------------- */
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* QC Report Card */
+  .qc-report-card {
+    max-width: 900px;
+    margin: 20px auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  .qc-report-card h1 {
+    color: #1a1a1a;
+    border-bottom: 2px solid #f97316;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+  }
+
+  .qc-report-card h2 {
+    color: #0a84ff;
+    margin-top: 24px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e5e5;
+  }
+
+  .qc-report-card ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .qc-report-card li {
+    margin: 8px 0;
+    font-size: 0.95rem;
+  }
+
+  .qc-report-card pre {
+    background: #f8f8f8;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 12px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    color: #333;
+  }
+
+  /* Hide interactive elements in print */
+  button,
+  input,
+  select,
+  textarea {
+    display: none !important;
+  }
+
+  /* Focus-visible fallback for print */
+  a:focus {
+    outline: 1px solid #0a84ff;
+    outline-offset: 2px;
+  }
+}
+
+/* Fallback for screens without full PDF support */
+@media screen {
+  .qc-print-preview {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+}

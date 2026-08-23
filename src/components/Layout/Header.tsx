@@ -5,8 +5,19 @@ import SourceSelector from '../Media/SourceSelector';
 import { UserProfile } from '../../types';
 import OnlineUsers from './OnlineUsers';
 import UserAvatar from '../Auth/UserAvatar';
-import BugReportModal from '../Admin/BugReportModal';
-import BugReportViewer from '../Admin/BugReportViewer';
+import LanguageSwitcher from '../../i18n/LanguageSwitcher';
+import { useI18n } from '../../i18n/I18nContext';
+import OfflineIndicator from '../Core/OfflineIndicator';
+import { QCExportButton } from '../Analysis/QCExportButton';
+import ProUpgradeModal from '../Admin/ProUpgradeModal';
+import { useLicense } from '../../licensing/LicenseContext';
+import { describeFeature } from '../../licensing/core';
+
+// Code splitting (S3.1): admin/report modals ship in separate chunks and are
+// fetched only on first open. `isOpen && ...` keeps them out of the tree while
+// closed, so the chunk request never fires until actually needed.
+const BugReportModal = React.lazy(() => import('../Admin/BugReportModal'));
+const BugReportViewer = React.lazy(() => import('../Admin/BugReportViewer'));
 
 
 interface HeaderProps {
@@ -26,8 +37,19 @@ const Header: React.FC<HeaderProps> = ({
   userProfile,
   onLogout
 }) => {
+  const { t } = useI18n();
+  const { isPro } = useLicense();
   const [isBugReportModalOpen, setIsBugReportModalOpen] = useState(false);
   const [isBugReportViewerOpen, setIsBugReportViewerOpen] = useState(false);
+  // S6.1: the lock overlay opens this via a window event (no prop drilling
+  // through the workspace tree).
+  const [isProUpgradeOpen, setIsProUpgradeOpen] = useState(false);
+
+  React.useEffect(() => {
+    const open = () => setIsProUpgradeOpen(true);
+    window.addEventListener('solaris:open-pro-upgrade', open as EventListener);
+    return () => window.removeEventListener('solaris:open-pro-upgrade', open as EventListener);
+  }, []);
 
   return (
     <>
@@ -41,7 +63,7 @@ const Header: React.FC<HeaderProps> = ({
             onClick={onCloseWorkspace}
             className={`transition-all duration-300 ease-in-out flex items-center gap-2 ${isWorkspaceOpen ? 'w-auto opacity-100' : 'w-0 opacity-0 -translate-x-2'}`}
             disabled={!isWorkspaceOpen}
-            aria-label="Back to List"
+            aria-label={t('header.backToList')}
           >
             <ArrowLeftIcon className="w-5 h-5" />
           </button>
@@ -55,7 +77,7 @@ const Header: React.FC<HeaderProps> = ({
                 trigger={
                   <button className="flex items-center gap-2 px-3 py-2 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-light-content dark:focus:ring-offset-solar-dark-content focus:ring-solar-accent">
                     <VideoIcon className="w-5 h-5" />
-                    <span>Load Media</span>
+                    <span>{t('header.loadMedia')}</span>
                   </button>
                 }
               >
@@ -65,7 +87,45 @@ const Header: React.FC<HeaderProps> = ({
           
           <div className="h-6 w-px bg-solar-dark-border"></div>
           
+          <OfflineIndicator />
+
+          {/* S6.1: edition badge + upgrade entry point (free tier only). */}
+          {isPro ? (
+            <span
+              title={t('solaris.pro.activeTitle')}
+              className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-solar-accent/20 text-solar-accent border border-solar-accent/40 select-none"
+            >
+              {t('pro.badge')}
+            </span>
+          ) : (
+            <button
+              onClick={() => setIsProUpgradeOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-sm font-semibold hover:from-yellow-400 hover:to-orange-400 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
+              title={describeFeature('abCompareMode')}
+            >
+              <svg
+                className="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="4" y="11" width="16" height="10" rx="2" />
+                <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+              </svg>
+              <span>{t('header.upgrade')}</span>
+            </button>
+          )}
+
+          {/* S4.1: printable QC report download (dataset summary). */}
+          <QCExportButton className="!px-2" />
+
           <OnlineUsers />
+
+          <LanguageSwitcher />
 
           {userProfile && (
               <Popover 
@@ -87,7 +147,7 @@ const Header: React.FC<HeaderProps> = ({
                           onClick={() => { setIsBugReportModalOpen(true); close(); }} 
                           className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
                         >
-                          Report Issue
+                          {t('header.reportIssue')}
                         </button>
                         {/* Admin Panel Link */}
                         {userProfile.email.endsWith('.admin') && (
@@ -95,7 +155,7 @@ const Header: React.FC<HeaderProps> = ({
                             onClick={() => { setIsBugReportViewerOpen(true); close(); }} 
                             className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
                           >
-                            System Reports
+                            {t('header.systemReports')}
                           </button>
                         )}
                     </div>
@@ -103,7 +163,7 @@ const Header: React.FC<HeaderProps> = ({
                       onClick={() => { onLogout(); close(); }} 
                       className="w-full text-left mt-1 px-3 py-2 text-sm rounded-md text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors border-t border-solar-dark-border"
                     >
-                      Sign Out
+                      {t('header.signOut')}
                     </button>
                   </div>
                 )}
@@ -112,17 +172,28 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
 
-      <BugReportModal 
-          isOpen={isBugReportModalOpen}
-          onClose={() => setIsBugReportModalOpen(false)}
-          userProfile={userProfile}
-      />
-      
+      {isBugReportModalOpen && (
+        <React.Suspense fallback={null}>
+          <BugReportModal
+            isOpen
+            onClose={() => setIsBugReportModalOpen(false)}
+            userProfile={userProfile}
+          />
+        </React.Suspense>
+      )}
+
       {/* Conditional rendering for admin view logic can be expanded here */}
-      <BugReportViewer
-          isOpen={isBugReportViewerOpen}
-          onClose={() => setIsBugReportViewerOpen(false)}
-      />
+      {isBugReportViewerOpen && (
+        <React.Suspense fallback={null}>
+          <BugReportViewer
+            isOpen
+            onClose={() => setIsBugReportViewerOpen(false)}
+          />
+        </React.Suspense>
+      )}
+
+      {/* S6.1: Pro activation/upgrade dialog (also opened by lock overlays). */}
+      <ProUpgradeModal isOpen={isProUpgradeOpen} onClose={() => setIsProUpgradeOpen(false)} />
     </>
   );
 };

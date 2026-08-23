@@ -58,6 +58,13 @@ const Popover: React.FC<PopoverProps> = ({ trigger, children, contentClassName }
     }
   }, [isOpen, closePopover]);
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      closePopover();
+    }
+  }, [closePopover]);
+
   useEffect(() => {
     if (isOpen) {
         window.addEventListener('resize', calculatePosition);
@@ -86,11 +93,13 @@ const Popover: React.FC<PopoverProps> = ({ trigger, children, contentClassName }
     <div ref={triggerRef}>
       {triggerWithProps}
       {isOpen && createPortal(
-        <div 
+        <div
           ref={contentRef}
           style={style}
           className={`bg-solar-light-content/80 dark:bg-solar-dark-content/80 backdrop-blur-md rounded-lg shadow-lg border border-solar-light-border dark:border-solar-dark-border p-1 ${contentClassName || ''}`}
           role="dialog"
+          aria-modal="false"
+          onKeyDown={handleKeyDown}
           onClick={(e) => e.stopPropagation()}
         >
           {typeof children === 'function' ? children(closePopover) : children}

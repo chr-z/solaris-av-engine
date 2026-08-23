@@ -88,7 +88,7 @@ export const useAVAnalysis = (videoRef: React.RefObject<HTMLVideoElement>, video
 
     try {
       if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
-          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+          audioContextRef.current = new (window.AudioContext || (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
       }
       const audioContext = audioContextRef.current;
       
@@ -130,7 +130,7 @@ export const useAVAnalysis = (videoRef: React.RefObject<HTMLVideoElement>, video
 
       const newVideoData = runVideoAnalysis();
       let newVolume = 0;
-      let newFrequencyData = null;
+      let newFrequencyData: Uint8Array | null = null;
 
       if (analyserRef.current) {
         const analyser = analyserRef.current;

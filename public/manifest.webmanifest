@@ -1,0 +1,35 @@
+{
+  "name": "Solaris | AV Analysis Engine",
+  "short_name": "Solaris",
+  "description": "Audiovisual analysis platform: waveform, spectrogram, vectorscope and QC reporting for media professionals.",
+  "id": "/",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1a1a1a",
+  "theme_color": "#f97316",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities", "video"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

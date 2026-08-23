@@ -1,5 +1,6 @@
 import React from 'react';
 import { ExpandIcon } from '../Core/icons';
+import { useI18n } from '../../i18n/I18nContext';
 
 interface DockProps {
   children: React.ReactNode;
@@ -9,6 +10,7 @@ interface DockProps {
 }
 
 const Dock: React.FC<DockProps> = ({ children, className = '', title, onZoom }) => {
+  const { t } = useI18n();
   return (
     <div className={`bg-solar-light-content/80 dark:bg-solar-dark-content/80 backdrop-blur-md rounded-lg shadow-sm flex flex-col border border-solar-light-border dark:border-solar-dark-border h-full ${className}`}>
       {(title || onZoom) && (
@@ -18,8 +20,8 @@ const Dock: React.FC<DockProps> = ({ children, className = '', title, onZoom }) 
             <button
               onClick={onZoom}
               className="p-1 -mr-1 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors"
-              title="Expand"
-              aria-label={`Expand monitor ${title}`}
+              title={t('dock.expandMonitor', { monitor: title ?? '' })}
+              aria-label={t('dock.expandMonitor', { monitor: title ?? '' })}
             >
               <ExpandIcon className="w-4 h-4" />
             </button>

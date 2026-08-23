@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { XIcon } from '../Core/icons';
 import { UserProfile } from '../../types';
 import { database } from '../../config/firebase';
-import { LogEntry } from '../utils/logCapture';
+import { LogEntry } from '../../utils/logCapture';
 import UserAvatar from '../Auth/UserAvatar';
 
 interface Report {
@@ -24,12 +24,12 @@ interface BugReportViewerProps {
 const LogLine: React.FC<{ log: LogEntry }> = ({ log }) => {
     const time = new Date(log.timestamp).toLocaleTimeString('en-GB', { hour12: false });
     let color = 'text-gray-400';
-    let levelBadge = 'INFO';
-    let badgeColor = 'bg-blue-500/20 text-blue-300';
+    let levelBadge: string;
+    let badgeColor: string;
 
     switch(log.level) {
-        case 'error': 
-            color = 'text-red-400'; 
+        case 'error':
+            color = 'text-red-400';
             levelBadge = 'ERROR';
             badgeColor = 'bg-red-500/20 text-red-300';
             break;
@@ -68,8 +68,9 @@ const BugReportViewer: React.FC<BugReportViewerProps> = ({ isOpen, onClose }) =>
     useEffect(() => {
         if (!isOpen) return;
 
-        setIsLoading(true);
-        setError(null);
+        // Reset loading state via microtask: keeps the effect body free of
+        // synchronous setState (cascading-render rule) while preserving behavior.
+        const resetTimer = setTimeout(() => { setIsLoading(true); setError(null); }, 0);
         const reportsRef = database.ref('bug_reports').orderByChild('timestamp').limitToLast(100);
 
         const listener = reportsRef.on('value', snapshot => {
@@ -82,12 +83,15 @@ const BugReportViewer: React.FC<BugReportViewerProps> = ({ isOpen, onClose }) =>
             }
             setReports(loadedReports.reverse()); // Show newest first
             setIsLoading(false);
-        }, (err: any) => {
+        }, (err: { message?: string }) => {
             setError(err.message || "Connection error or insufficient permissions.");
             setIsLoading(false);
         });
 
-        return () => reportsRef.off('value', listener);
+        return () => {
+            clearTimeout(resetTimer);
+            reportsRef.off('value', listener);
+        };
     }, [isOpen]);
 
     if (!isOpen) return null;

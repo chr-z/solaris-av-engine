@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import firebase from 'firebase/compat/app';
 import { database } from '../../config/firebase';
 import { UserProfile } from '../../types';
 import UserAvatar from '../Auth/UserAvatar';
+import { useI18n } from '../../i18n/I18nContext';
 
 const OnlineUsers: React.FC = () => {
+    const { t } = useI18n();
     const [onlineUsers, setOnlineUsers] = useState<UserProfile[]>([]);
 
     useEffect(() => {
         const presenceRef = database.ref('presence');
-        const listener = (snapshot: any) => {
-            const presences = snapshot.val() || {};
+        const listener = (snapshot: firebase.database.DataSnapshot) => {
+            // Presence nodes are UserProfile + presence metadata written by App's presence system
+            const presences: Record<string, UserProfile & { status?: string }> = snapshot.val() || {};
             const currentOnlineUsers: UserProfile[] = [];
-            Object.values(presences).forEach((presence: any) => {
+            Object.values(presences).forEach((presence) => {
                 if (presence.status === 'online') {
                     currentOnlineUsers.push(presence);
                 }
@@ -26,7 +30,7 @@ const OnlineUsers: React.FC = () => {
     if (onlineUsers.length === 0) return null;
 
     return (
-        <div className="flex items-center -space-x-2" title={`${onlineUsers.length} active user(s)`}>
+        <div className="flex items-center -space-x-2" title={t('users.activeCount', { count: onlineUsers.length })}>
             {onlineUsers.slice(0, 5).map(user => (
                 <UserAvatar 
                     key={user.id} 
