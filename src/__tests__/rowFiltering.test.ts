@@ -3,7 +3,6 @@ import {
   computeFilteredRows,
   classifyRow,
   applyRowFilters,
-  COLS,
 } from '../utils/rowFiltering';
 import type { RowWithSheetIndex } from '../components/Analysis/AnalysisSheet';
 import type { FilterState } from '../components/Analysis/FilterControls';
