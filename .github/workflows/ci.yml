@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main, v2-upgrade]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Secret scan (staged tree)
+        run: |
+          echo "Scanning tracked files for potential secrets..."
+          VIOLATIONS=0
+          # Scan all tracked files for high-signal secret patterns.
+          while IFS= read -r file; do
+            if grep -nIE \
+              '(AIza[0-9A-Za-z_-]{35}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|xox[baprs]-[A-Za-z0-9-]{10,})' \
+              "$file" 2>/dev/null; then
+              echo "::error::Potential secret found in $file"
+              VIOLATIONS=1
+            fi
+          done < <(git ls-files)
+          # .env files must never be tracked
+          if git ls-files -- '.env' '.env.*' '*.env' | grep -q .; then
+            echo "::error::An environment file is tracked in git:"
+            git ls-files -- '.env' '.env.*' '*.env'
+            VIOLATIONS=1
+          fi
+          exit $VIOLATIONS
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
