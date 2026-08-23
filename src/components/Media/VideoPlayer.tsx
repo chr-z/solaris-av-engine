@@ -29,6 +29,8 @@ interface VideoPlayerProps {
     seekToStart: () => void;
     changeVolume: (delta: number) => void;
   }) => () => void;
+  /** S5.2: transport telemetry for the A/B compare follower pane. */
+  onTransport?: (state: { time: number; playing: boolean; duration: number }) => void;
 }
 
 const formatTime = (totalSeconds: number): string => {
@@ -40,7 +42,7 @@ const formatTime = (totalSeconds: number): string => {
 
 
 const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
-  ({ src, videoId, title, overlaySettings, setOverlaySettings, isLoading: isMediaLoading, errorMessage, children, onRetry, onClose, registerPlayerControls }, ref) => {
+  ({ src, videoId, title, overlaySettings, setOverlaySettings, isLoading: isMediaLoading, errorMessage, children, onRetry, onClose, registerPlayerControls, onTransport }, ref) => {
     const { t } = useI18n();
     const internalVideoRef = ref as React.RefObject<HTMLVideoElement>;
     const containerRef = useRef<HTMLDivElement>(null);
@@ -284,6 +286,62 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
             },
         });
     }, [registerPlayerControls, handlePlayPause, internalVideoRef, isMuted, showControlsAndStartTimer]);
+
+    // S5.2: emit transport telemetry (time/play/duration) so the compare
+    // follower can stay in lockstep. Callback mirrored in a ref inside an
+    // effect; the listener binds once per src change.
+    const onTransportRef = useRef(onTransport);
+    useEffect(() => {
+        onTransportRef.current = onTransport;
+    });
+
+    useEffect(() => {
+        if (!onTransportRef.current) return;
+        const video = internalVideoRef.current;
+        if (!video) return;
+
+        let lastPlaying = false;
+        let lastTime = -1;
+
+        const emit = () => {
+            onTransportRef.current?.({
+                time: video.currentTime,
+                playing: !video.paused && !video.ended,
+                duration: Number.isFinite(video.duration) ? video.duration : 0,
+            });
+        };
+
+        const handleTimeUpdate = () => {
+            // Throttle: only forward when the second decimal actually moved.
+            if (Math.abs(video.currentTime - lastTime) >= 0.05) {
+                lastTime = video.currentTime;
+                emit();
+            }
+        };
+        const handlePlayState = () => {
+            const playing = !video.paused && !video.ended;
+            if (playing !== lastPlaying) {
+                lastPlaying = playing;
+                emit();
+            }
+        };
+
+        video.addEventListener('timeupdate', handleTimeUpdate);
+        video.addEventListener('play', handlePlayState);
+        video.addEventListener('playing', handlePlayState);
+        video.addEventListener('pause', handlePlayState);
+        video.addEventListener('ended', handlePlayState);
+        video.addEventListener('seeked', emit);
+
+        return () => {
+            video.removeEventListener('timeupdate', handleTimeUpdate);
+            video.removeEventListener('play', handlePlayState);
+            video.removeEventListener('playing', handlePlayState);
+            video.removeEventListener('pause', handlePlayState);
+            video.removeEventListener('ended', handlePlayState);
+            video.removeEventListener('seeked', emit);
+        };
+    }, [src, internalVideoRef]);
 
     // Render function, not a component (react-hooks/static-components):
     // returns fresh JSX without remounting state on each render.
