@@ -4,6 +4,7 @@ import {
   type InconformityDetails,
 } from '../utils/inconformityDetails';
 import { logCaptureService } from '../utils/logCapture';
+import type { UserProfile } from '../types';
 
 describe('inconformityDetails: catalog integrity', () => {
   it('has entries for every catalogued inconformity', () => {
@@ -74,7 +75,12 @@ describe('logCapture: report generation', () => {
   });
 
   it('keeps only safe user fields in the report', () => {
-    const user = { id: 'u1', name: 'Zee', email: 'z@x.com' } as any;
+    const user = {
+      id: 'u1',
+      name: 'Zee',
+      email: 'z@x.com',
+      role: 'admin',
+    } as unknown as UserProfile;
     const report = logCaptureService.generateReport('check', user);
     expect(report.user).toEqual({ id: 'u1', name: 'Zee', email: 'z@x.com' });
     expect(Object.keys(report.user as object)).toHaveLength(3);

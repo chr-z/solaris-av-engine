@@ -45,6 +45,17 @@ jobs:
           fi
           exit $VIOLATIONS
 
+      - name: Lint changed files (incremental ratchet)
+        run: |
+          BASE=$(git merge-base origin/main HEAD 2>/dev/null || git rev-parse HEAD~10)
+          CHANGED=$(git diff --name-only --diff-filter=d "$BASE"...HEAD -- 'src/**/*.ts' 'src/**/*.tsx' | tr '\n' ' ')
+          if [ -n "$(printf '%s' \"$CHANGED\" | tr -d '[:space:]')" ]; then
+            echo "Linting: $CHANGED"
+            npx eslint $CHANGED --max-warnings 0
+          else
+            echo "No changed TS files to lint."
+          fi
+
       - name: Tests
         run: npm test
 

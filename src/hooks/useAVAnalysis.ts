@@ -130,7 +130,7 @@ export const useAVAnalysis = (videoRef: React.RefObject<HTMLVideoElement>, video
 
       const newVideoData = runVideoAnalysis();
       let newVolume = 0;
-      let newFrequencyData = null;
+      let newFrequencyData: Uint8Array | null = null;
 
       if (analyserRef.current) {
         const analyser = analyserRef.current;

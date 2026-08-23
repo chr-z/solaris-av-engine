@@ -1,4 +1,4 @@
-import { RowData } from '../components/AnalysisSheet';
+import { RowData } from '../components/Analysis/AnalysisSheet';
 
 // Simulated Headers matching constants.ts
 export const DEMO_HEADERS = [

@@ -1,4 +1,4 @@
-import { RowData } from '../components/AnalysisSheet';
+import { RowData } from '../components/Analysis/AnalysisSheet';
 
 const DRAFTS_KEY = 'solaris_drafts';
 const DRAFT_UPDATE_EVENT = 'solaris_draft_update';

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { XIcon } from '../Core/icons';
 import { UserProfile } from '../../types';
 import { database } from '../../config/firebase';
-import { LogEntry } from '../utils/logCapture';
+import { LogEntry } from '../../utils/logCapture';
 import UserAvatar from '../Auth/UserAvatar';
 
 interface Report {
