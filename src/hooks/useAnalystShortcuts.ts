@@ -14,6 +14,8 @@ interface AnalystActions {
   /** Workspace controls. */
   openTimeMarkers?: () => void;
   saveAnalysis?: () => void;
+  /** S5.2: toggle the A/B compare split. */
+  toggleCompare?: () => void;
 }
 
 interface UseAnalystShortcutsOptions extends AnalystActions {
@@ -89,6 +91,7 @@ export function useAnalystShortcuts({
         case 'volumeUp': current.changeVolume?.(0.05); break;
         case 'volumeDown': current.changeVolume?.(-0.05); break;
         case 'markTime': current.openTimeMarkers?.(); break;
+        case 'toggleCompare': current.toggleCompare?.(); break;
         default: break;
       }
     };

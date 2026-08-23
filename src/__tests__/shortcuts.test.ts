@@ -8,6 +8,7 @@ import {
   isSaveCombo,
   groupShortcutsByScope,
 } from '../utils/shortcuts';
+import { en, pt } from '../i18n/translations';
 
 const key = (k: string) => ({ key: k });
 
@@ -25,6 +26,7 @@ describe('Analyst shortcuts — S5.1', () => {
       'volumeDown',
       'markTime',
       'saveAnalysis',
+      'toggleCompare',
     ]);
     const keys = ANALYST_SHORTCUTS.map(def => def.keys);
     expect(new Set(keys).size).toBe(keys.length); // no key collisions at all
@@ -80,7 +82,7 @@ describe('Analyst shortcuts — S5.1', () => {
     const groups = groupShortcutsByScope();
     expect(Object.keys(groups).sort()).toEqual(['global', 'player', 'workspace']);
     expect(groups.player.length).toBeGreaterThan(groups.workspace.length);
-    expect(groups.workspace.map(d => d.id)).toEqual(['markTime', 'saveAnalysis']);
+    expect(groups.workspace.map(d => d.id)).toEqual(['markTime', 'saveAnalysis', 'toggleCompare']);
     // Every definition lands in exactly one group.
     const total = groups.global.length + groups.player.length + groups.workspace.length;
     expect(total).toBe(ANALYST_SHORTCUTS.length);
@@ -90,7 +92,12 @@ describe('Analyst shortcuts — S5.1', () => {
     expect(SHORTCUT_HELP_KEY).toBe('header.shortcutHelp');
     expect(getShortcutById('saveAnalysis')?.display).toBe('Ctrl+S');
     for (const def of ANALYST_SHORTCUTS) {
-      expect(def.descriptionKey.startsWith('shortcuts.')).toBe(true);
+      const isShortcutsKey = def.descriptionKey.startsWith('shortcuts.');
+      const isCompareKey = def.descriptionKey.startsWith('compare.');
+      expect(isShortcutsKey || isCompareKey).toBe(true);
+      // Every referenced key must exist in both dictionaries.
+      expect(en[def.descriptionKey as keyof typeof en]).toBeTruthy();
+      expect(pt[def.descriptionKey as keyof typeof pt]).toBeTruthy();
     }
   });
 });

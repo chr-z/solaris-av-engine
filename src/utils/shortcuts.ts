@@ -45,6 +45,7 @@ export const ANALYST_SHORTCUTS: readonly ShortcutDef[] = [
   { id: 'volumeDown', keys: '-', scope: 'player', descriptionKey: 'shortcuts.volumeDown.description' },
   { id: 'markTime', keys: 't', display: 'T', scope: 'workspace', descriptionKey: 'shortcuts.markTime.description' },
   { id: 'saveAnalysis', keys: 's', display: 'Ctrl+S', scope: 'workspace', descriptionKey: 'shortcuts.saveAnalysis.description' },
+  { id: 'toggleCompare', keys: 'v', display: 'V', scope: 'workspace', descriptionKey: 'compare.open' },
 ];
 
 export const SHORTCUT_HELP_KEY = 'header.shortcutHelp';
