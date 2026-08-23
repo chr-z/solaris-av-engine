@@ -82,6 +82,22 @@ export const en = {
   'shortcuts.markTime.description': 'Open time markers at current time',
   'shortcuts.saveAnalysis.description': 'Save analysis',
 
+  // A/B compare mode (S5.2)
+  'compare.title': 'A/B Compare',
+  'compare.open': 'Toggle A/B compare (V)',
+  'compare.exit': 'Exit compare',
+  'compare.empty': 'Load the challenger media (side B)',
+  'compare.sourcePlaceholder': 'YouTube / Drive / direct URL',
+  'compare.load': 'Load side B',
+  'compare.changeSource': 'Change side B source',
+  'compare.loadFailed': 'Side B could not be loaded. The link may be private or unsupported.',
+  'compare.syncMode': 'Sync',
+  'compare.syncLocked': 'Locked to main player',
+  'compare.syncFree': 'Free run',
+  'compare.offsetLabel': 'Offset (s)',
+  'compare.offsetHint': '+ runs B ahead; − holds it back',
+  'compare.layout': 'Layout',
+
   // Auth errors
   'auth.loginFailed': 'Login failed.',
   'auth.popupClosed': 'Login popup closed.',
@@ -174,6 +190,22 @@ export const pt: Record<TranslationKey, string> = {
   'shortcuts.mute.description': 'Silenciar / reativar',
   'shortcuts.markTime.description': 'Abrir marcadores de tempo no ponto atual',
   'shortcuts.saveAnalysis.description': 'Salvar análise',
+
+  // Modo comparativo A/B (S5.2)
+  'compare.title': 'Comparar A/B',
+  'compare.open': 'Alternar comparação A/B (V)',
+  'compare.exit': 'Sair da comparação',
+  'compare.empty': 'Carregue a mídia desafiante (lado B)',
+  'compare.sourcePlaceholder': 'URL do YouTube / Drive / direta',
+  'compare.load': 'Carregar lado B',
+  'compare.changeSource': 'Trocar a fonte do lado B',
+  'compare.loadFailed': 'Não foi possível carregar o lado B. O link pode ser privado ou não suportado.',
+  'compare.syncMode': 'Sincronia',
+  'compare.syncLocked': 'Travada no player principal',
+  'compare.syncFree': 'Execução livre',
+  'compare.offsetLabel': 'Offset (s)',
+  'compare.offsetHint': '+ adianta o lado B; − atrasa',
+  'compare.layout': 'Layout',
 
   // Auth errors
   'auth.loginFailed': 'Falha no login.',
