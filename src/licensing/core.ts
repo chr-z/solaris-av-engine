@@ -78,6 +78,8 @@ function fromBase64Url(value: string): Uint8Array {
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
   return bytes;
 }
+// Reserved for future payload decoding (customer ref display in the Pro modal).
+void fromBase64Url;
 
 /** Encodes a string as UTF-8 bytes (works under jsdom and Node). */
 function encodeUtf8(text: string): Uint8Array {

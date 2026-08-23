@@ -55,7 +55,10 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     if (!storedKey || !ENV_LICENSE_SECRET) {
-      setSignatureVerified(null);
+      // Defer out of the effect body (react-hooks/set-state-in-effect).
+      queueMicrotask(() => {
+        if (!cancelled) setSignatureVerified(null);
+      });
       return;
     }
     validateLicenseKey(storedKey, ENV_LICENSE_SECRET, Date.now()).then(result => {

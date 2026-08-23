@@ -38,7 +38,7 @@ const Header: React.FC<HeaderProps> = ({
   onLogout
 }) => {
   const { t } = useI18n();
-  const { isPro, edition } = useLicense();
+  const { isPro } = useLicense();
   const [isBugReportModalOpen, setIsBugReportModalOpen] = useState(false);
   const [isBugReportViewerOpen, setIsBugReportViewerOpen] = useState(false);
   // S6.1: the lock overlay opens this via a window event (no prop drilling
