@@ -8,6 +8,7 @@ import {
   computeSyncCommand,
   nextCompareLayout,
   getCompareGridClass,
+  clampCompareOffset,
 } from '../utils/compareMode';
 
 describe('A/B compare mode — S5.2', () => {
@@ -86,5 +87,13 @@ describe('A/B compare mode — S5.2', () => {
     expect(nextCompareLayout('stacked')).toBe('side-by-side');
     expect(getCompareGridClass('side-by-side')).toContain('grid-cols-2');
     expect(getCompareGridClass('stacked')).toContain('grid-rows-2');
+  });
+
+  it('sanitizes user-typed offsets into safe bounds', () => {
+    expect(clampCompareOffset(30)).toBe(30);
+    expect(clampCompareOffset(NaN)).toBe(0);
+    expect(clampCompareOffset(Infinity)).toBe(0);
+    expect(clampCompareOffset(-99999)).toBe(-600);
+    expect(clampCompareOffset(99999)).toBe(600);
   });
 });

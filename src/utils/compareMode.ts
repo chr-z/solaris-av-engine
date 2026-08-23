@@ -122,6 +122,22 @@ export function nextCompareLayout(current: CompareLayout): CompareLayout {
   return current === 'side-by-side' ? 'stacked' : 'side-by-side';
 }
 
+/** Offset bounds (seconds) — generous but prevents absurd inputs. */
+export const MIN_COMPARE_OFFSET_SECONDS = -600;
+export const MAX_COMPARE_OFFSET_SECONDS = 600;
+
+/**
+ * Sanitizes user-typed offsets: non-numbers collapse to 0, values are
+ * clamped to the documented bounds.
+ */
+export function clampCompareOffset(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(
+    MIN_COMPARE_OFFSET_SECONDS,
+    Math.min(MAX_COMPARE_OFFSET_SECONDS, value),
+  );
+}
+
 /**
  * Tailwind classes for the grid container of each layout, kept here so the
  * component stays declarative and the mapping is testable without DOM.
