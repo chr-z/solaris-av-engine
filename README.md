@@ -1,72 +1,139 @@
 <div align="center">
-  <h1>SOLARIS | AV Analysis Engine</h1>
-  <p><strong>Production-Grade Technical Monitoring Platform for High-Scale Media Pipelines</strong></p>
 
-  <p>
-    <img src="https://img.shields.io/badge/Vite-5.0-B73BFE?style=for-the-badge&logo=vite" alt="Vite" />
-    <img src="https://img.shields.io/badge/React-18.2-61DAFB?style=for-the-badge&logo=react" alt="React" />
-    <img src="https://img.shields.io/badge/TypeScript-5.0-007ACC?style=for-the-badge&logo=typescript" alt="TypeScript" />
-    <img src="https://img.shields.io/badge/GCP-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white" alt="GCP" />
-    <img src="https://img.shields.io/badge/Firebase-10.12-FFCA28?style=for-the-badge&logo=firebase" alt="Firebase" />
-  </p>
+<img src="docs/hero.svg" alt="Solaris — AV Analysis Engine" width="100%" />
+
+# Solaris | AV Analysis Engine
+
+**Broadcast-grade technical QC for video & audio — entirely in the browser.**
+
+RGB parade, waveform, vectorscope and real-time FFT spectrograms for high-volume media pipelines. No plugins, no installs: open a URL and start analyzing.
+
+[![Live Demo](https://img.shields.io/badge/demo-solaris--av--engine.vercel.app-F97316?style=for-the-badge&logo=vercel)](https://solaris-av-engine.vercel.app)
+[![CI](https://github.com/chr-z/solaris-av-engine/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/chr-z/solaris-av-engine/actions/workflows/ci.yml)
+[![Tests](https://custom-icon.shields.io/badge/tests-Vitest_129_passing-6DA55D?style=for-the-badge&logo=vitest&logoColor=white)](https://github.com/chr-z/solaris-av-engine/actions)
+[![License](https://img.shields.io/github/license/chr-z/solaris-av-engine?style=for-the-badge&color=F97316)](LICENSE)
+
+EN / PT-BR · PWA offline-first · Keyboard-first analyst workflow
+
 </div>
 
-## Project Overview
+## Why Solaris
 
-Solaris is a specialized engineering solution designed to automate and streamline the Quality Control (QC) process for high-volume video production environments. 
+Manual QC doesn't scale. Solaris was originally architected to support an EdTech pipeline delivering thousands of hours of content per month — it replaces the "open three tools and eyeball it" workflow with one browser tab that scopes every asset before it ships.
 
-Originally architected to support a massive EdTech pipeline delivering thousands of hours of content monthly, this engine eliminates manual bottlenecks by providing real-time technical analysis tools directly in the browser.
+- **Zero-install QC** — analysts run full signal analysis from a URL; IT deploys nothing on workstations.
+- **Analyst-speed interaction** — J/K/L shuttle, frame-stepping, time markers and `Ctrl+S` keep hands on the keyboard, eyes on the scopes.
+- **Team-aware** — Firebase presence and optimistic locking let multiple analysts work the same queue without stepping on each other.
+- **Works offline** — installable PWA; cached shell + assets keep sessions alive through flaky studio connections.
 
-### Key Engineering Features
+## Features
 
-* **Browser-Based DSP:** Implements RGB scopes, Luma waveforms, and Vector scopes using the Canvas API with `willReadFrequently` optimizations for 60fps performance without WebGL overhead.
-* **Audio Intelligence:** Uses Web Audio API for real-time Fast Fourier Transform (FFT) spectrograms and RMS volume normalization detection.
-* **Secure Stream Proxying:** Features a custom Node.js middleware layer (Serverless Functions) to handle Google Drive and YouTube streams, bypassing CORS restrictions and enabling byte-range seeking.
-* **Distributed State:** Leverages Firebase Realtime Database to handle optimistic locking for concurrent editing and "presence" awareness for remote analyst teams.
+### Scopes & Monitors (Canvas DSP, 60 fps)
+
+| Monitor | What it tells you |
+| --- | --- |
+| **RGB Parade** | Per-channel exposure errors, color casts by column |
+| **Waveform** | Luma levels vs. broadcast-safe ranges (IRE graticule) |
+| **Vectorscope** | Chroma hue/saturation drift, skin-tone line reference |
+| **FFT Spectrogram** | Frequency content over time — hum, hiss, phase issues |
+| **Audio Waveform + RMS** | Loudness normalization problems at a glance |
+
+Rendering uses Canvas 2D with `willReadFrequently` pixel pipelines instead of WebGL — no GPU driver roulette on locked-down corporate machines, still smooth during 4K playback.
+
+### Analyst Workflow
+
+- **Presets** — one click reconfigures the whole monitor grid per content type: *Clean*, *Framing*, *Leveling*, *On-site Ceiling*, *Home Ceiling*.
+- **Keyboard shortcuts** — `Space`/`K` play-pause, `J`/`L` jump, `↑`/`↓` frame-step, `T` mark timecode, `Ctrl+S` save, `V` toggle compare, `?` help modal.
+- **Time markers & findings** — log inconformities against the timeline; drafts autosave locally.
+
+### Reporting
+
+- **QC Report export (free tier)** — self-contained HTML report of every finding, printable to PDF via print-optimized CSS. Attach it to the delivery ticket.
+- **A/B Compare (Pro)** — side-by-side two-media comparison with synced playback, for pre/post-encode or master/version checks.
+
+### Platform
+
+- **i18n EN/PT-BR** with instant switcher
+- **PWA offline-first**: precached shell, stale-while-revalidate hashed assets, graceful offline fallback
+- **Accessible**: visible focus rings, ARIA live regions, skip link, `prefers-reduced-motion` support
+- **Secure stream proxying**: serverless middleware for Google Drive/YouTube sources with byte-range seeking
+
+## Pricing
+
+| | Free | Pro |
+| --- | --- | --- |
+| Price | **$0** | **$9/mo** per seat |
+| All scopes & monitors | ✓ | ✓ |
+| QC report export | ✓ | ✓ |
+| Presets & keyboard workflow | ✓ | ✓ |
+| Offline PWA | ✓ | ✓ |
+| **A/B Compare mode** | — | ✓ |
+| Priority support | — | ✓ |
+
+Pro activates fully **offline**: paste your license key into *Upgrade to Pro* — entitlement is verified locally via HMAC-SHA256 (WebCrypto), no license server round-trip, works behind firewalls.
+
+> Licensing is owner-side: keys are generated with `scripts/gen_license_key.mjs` using a secret that lives only in the operator's environment — never in the repo, never in a `VITE_` variable.
+
+## Quick Start
+
+```bash
+git clone https://github.com/chr-z/solaris-av-engine.git
+cd solaris-av-engine
+npm install
+npm run dev        # http://localhost:5173
+```
+
+```bash
+npm test           # Vitest suite (unit, utils, hooks)
+npm run lint       # ESLint flat config
+npm run build      # production bundle w/ code splitting
+```
+
+Configure `.env` with your own Firebase / Google Cloud credentials (`VITE_GOOGLE_CLIENT_ID`, `VITE_GOOGLE_API_KEY`, `VITE_FIREBASE_*`). Optional build override: `VITE_SOLARIS_EDITION=free|pro`.
 
 ## Architecture Highlights
 
-### 1. The Core Engine
-The application decouples the visualization logic from the React render cycle. By using a custom hook architecture (`useAVAnalysis`), the heavy lifting of pixel manipulation is offloaded to efficient animation frames, ensuring the UI remains responsive even during 4K playback analysis.
-
-### 2. Infrastructure & Security
-* **Authentication:** OAuth 2.0 via Google Identity Services (GIS).
-* **Data Layer:** Google Sheets API v4 integration acting as a dynamic CMS for work order management.
-* **Role-Based Access:** Strict security rules validating user domains and permissions at the database level.
-
-## Getting Started
-
-1.  **Clone the repository**
-2.  **Install dependencies:** `npm install`
-3.  **Environment Setup:** Configure `.env` with your Firebase and Google Cloud Platform credentials.
-4.  **Run Development Server:** `npm run dev`
-
----
-
-### Solaris Pro Licensing (v2)
-
-Pro entitlements are resolved locally, in this order: stored license key →
-`VITE_SOLARIS_EDITION` build override → free tier. Free keeps the QC report
-export; **A/B Compare** is a Pro feature.
-
-Generating keys (owner only — run from the repo root):
-
-```bash
-SOLARIS_LICENSE_SECRET='your-long-random-secret' \
-  node scripts/gen_license_key.mjs --edition pro --expires 0 --payload customer-42
+```
+src/
+├── components/
+│   ├── Analysis/        # workspace, lazy-loaded compare panes
+│   ├── Monitors/        # scope canvases + preset selector
+│   └── Admin/           # pro upgrade flow, bug reports
+├── hooks/               # useAVAnalysis, useCompareMode, useAnalystShortcuts…
+├── utils/               # pure, tested cores: presets, shortcuts,
+│                        # qcReport, compareMode, rowFiltering…
+├── i18n/                # EN/PT dictionaries, t() helper
+└── pwa/                 # service worker registration, offline status
 ```
 
-The secret lives only in your environment or CI secret store — never in the
-repo, never in a `VITE_` variable (those ship to browsers). Paste the printed
-key into **Upgrade to Pro** inside the app; activation is fully offline
-(HMAC-SHA256 via WebCrypto).
+- **Decoupled render loop** — heavy pixel work runs in animation frames outside React's cycle (`useAVAnalysis`), keeping the UI responsive during 4K playback.
+- **Pure-core architecture** — filtering, preset resolution, shortcut matching, report generation and licensing logic are pure typed functions with dedicated Vitest coverage; components stay thin.
+- **Code splitting** — Firebase, React vendor and the analysis workspace ship as separate chunks; modals load on demand.
+- **Data layer** — Google Sheets API v4 as a dynamic CMS for work orders; Firebase RTDB presence + optimistic locking; role-based rules validate permissions at the database level.
 
-Environment variables expected by the app: `VITE_GOOGLE_CLIENT_ID`,
-`VITE_GOOGLE_API_KEY`, Firebase `VITE_FIREBASE_*`, optional
-`VITE_SOLARIS_EDITION` (`free`|`pro`). Owner-side only:
-`SOLARIS_LICENSE_SECRET`.
+## Roadmap
+
+- [x] Core engine: RGB/Waveform/Vectorscope/Spectrogram monitors
+- [x] Secure stream proxying (Drive/YouTube, byte-range)
+- [x] i18n EN/PT-BR + accessibility pass
+- [x] Offline PWA (manifest, service worker, offline indicator)
+- [x] Performance: code splitting, memoization, lazy monitors
+- [x] QC report export + print CSS
+- [x] Content-type presets & keyboard shortcut layer
+- [x] A/B compare mode (Pro) & offline licensing
+- [ ] Cloud-rendered batch reports API
+- [ ] Team seats dashboard & usage analytics
+
+## Contributing & Support
+
+Bug reports and PRs welcome — open an issue with your browser/OS and a clip that reproduces the problem. For commercial licensing of the Pro edition, reach out via GitHub.
 
 ---
 
-**Developed by Christian Eliel**
+<div align="center">
+
+**Developed by Christian Eliel** · [Portfolio apps](https://github.com/chr-z)
+
 *Software Engineer specializing in High-Performance Web Applications and Media Technology.*
+
+</div>

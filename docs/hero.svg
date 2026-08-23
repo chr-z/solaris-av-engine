@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="Solaris — AV Analysis Engine">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12100e"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fdba74"/>
+      <stop offset="0.45" stop-color="#f97316"/>
+      <stop offset="1" stop-color="#f97316" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fb923c"/>
+      <stop offset="0.5" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#fb923c"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="300" rx="16" fill="url(#bg)"/>
+
+  <!-- vectorscope motif -->
+  <g transform="translate(150,150)" opacity="0.9">
+    <circle r="86" fill="none" stroke="#3f3f46" stroke-width="2"/>
+    <circle r="58" fill="none" stroke="#3f3f46" stroke-width="1.5"/>
+    <circle r="29" fill="none" stroke="#3f3f46" stroke-width="1"/>
+    <line x1="-96" y1="0" x2="96" y2="0" stroke="#3f3f46" stroke-width="1"/>
+    <line x1="0" y1="-96" x2="0" y2="96" stroke="#3f3f46" stroke-width="1"/>
+    <circle cx="34" cy="-40" r="4" fill="#ef4444"/>
+    <circle cx="-38" cy="-42" r="4" fill="#22c55e"/>
+    <circle cx="2" cy="52" r="4" fill="#3b82f6"/>
+    <circle cx="12" cy="-12" r="3" fill="#fbbf24"/>
+    <circle cx="-14" cy="10" r="3" fill="#f8fafc"/>
+  </g>
+
+  <!-- waveform motif -->
+  <g transform="translate(600,150)">
+    <line x1="-330" y1="0" x2="330" y2="0" stroke="#27272a" stroke-width="1"/>
+    <path fill="none" stroke="url(#wave)" stroke-width="3" stroke-linecap="round"
+      d="M -320 0 L -300 0 Q -290 -64 -280 0 T -260 0 L -250 0 Q -240 44 -230 0 T -210 0 L -200 0 Q -190 -78 -180 0 T -160 0 L -150 0 Q -140 30 -130 0 T -110 0 L -100 0 Q -90 -52 -80 0 T -60 0 L -50 0 Q -40 66 -30 0 T -10 0 L 0 0 Q 10 -84 20 0 T 40 0 L 50 0 Q 60 36 70 0 T 90 0 L 100 0 Q 110 -58 120 0 T 140 0 L 150 0 Q 160 48 170 0 T 190 0 L 200 0 Q 210 -70 220 0 T 240 0 L 250 0 Q 260 28 270 0 T 290 0 L 320 0"/>
+    <!-- graticule -->
+    <line x1="-330" y1="-70" x2="330" y2="-70" stroke="#27272a" stroke-width="1" stroke-dasharray="4 6"/>
+    <line x1="-330" y1="70" x2="330" y2="70" stroke="#27272a" stroke-width="1" stroke-dasharray="4 6"/>
+  </g>
+
+  <!-- title block -->
+  <g font-family="'Segoe UI',system-ui,-apple-system,sans-serif">
+    <text x="900" y="118" text-anchor="middle" font-size="52" font-weight="700" letter-spacing="6" fill="#fafaf9">SOLARIS</text>
+    <text x="900" y="152" text-anchor="middle" font-size="20" font-weight="500" fill="#f97316" letter-spacing="2">AV ANALYSIS ENGINE</text>
+    <text x="900" y="186" text-anchor="middle" font-size="15" fill="#a1a1aa">Real-time QC scopes · Audio intelligence · Offline PWA</text>
+    <circle cx="762" cy="222" r="5" fill="#f97316"/>
+    <text x="775" y="227" font-size="13" fill="#d4d4d8">RGB Parade</text>
+    <circle cx="884" cy="222" r="5" fill="#22c55e"/>
+    <text x="897" y="227" font-size="13" fill="#d4d4d8">Waveform</text>
+    <circle cx="1000" cy="222" r="5" fill="#3b82f6"/>
+    <text x="1013" y="227" font-size="13" fill="#d4d4d8">Vectorscope</text>
+  </g>
+</svg>
