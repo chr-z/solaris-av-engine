@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import Header from './components/Layout/Header';
 import AnalysisSheetList from './components/Analysis/AnalysisSheet';
 import { RowWithSheetIndex, DriveFile, RowData } from './components/Analysis/AnalysisSheet';
@@ -13,10 +13,13 @@ import { FilterState } from './components/Analysis/FilterControls';
 import { WaveformCacheProvider } from './contexts/WaveformCacheContext';
 import { logCaptureService } from './utils/logCapture';
 import { DEMO_HEADERS, DEMO_ROWS } from './utils/demoData';
+import { useI18n } from './i18n/I18nContext';
+import { computeFilteredRows } from './utils/rowFiltering';
 
 // Initialize log capture service
 logCaptureService.init();
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Global GAPI declarations
 declare const gapi: any;
 declare const google: any;
@@ -53,9 +56,10 @@ const getInitialDateRange = (): { startDate: string; endDate: string } => {
 };
 
 const App: React.FC = () => {
+  const { t } = useI18n();
   // Media State
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
-  const [videoTitle, setVideoTitle] = useState<string>('No video loaded');
+  const [videoTitle, setVideoTitle] = useState<string | null>(null);
   const [currentVideoId, setCurrentVideoId] = useState<string | null>(null);
   const [isLocalVideo, setIsLocalVideo] = useState(false);
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>({
@@ -68,7 +72,7 @@ const App: React.FC = () => {
   const [lastMediaSource, setLastMediaSource] = useState<MediaSource | null>(null);
   
   const videoSrcRef = useRef(videoSrc);
-  videoSrcRef.current = videoSrc;
+  useEffect(() => { videoSrcRef.current = videoSrc; }, [videoSrc]);
 
   // Data State
   const [selectedOsIndex, setSelectedOsIndex] = useState<number | null>(null);
@@ -87,112 +91,21 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [initialLoadingMessage, setInitialLoadingMessage] = useState("Initializing application...");
+  const [initialLoadingMessage, setInitialLoadingMessage] = useState(t('loading.initializing'));
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<FilterState>({ ...getInitialDateRange(), inconformities: [], studio: '' });
-  const [filteredPendingRows, setFilteredPendingRows] = useState<RowWithSheetIndex[]>([]);
-  const [filteredCompletedRows, setFilteredCompletedRows] = useState<RowWithSheetIndex[]>([]);
-  const [filteredSpecialRows, setFilteredSpecialRows] = useState<RowWithSheetIndex[]>([]);
   
   const selectedOsIndexRef = useRef(selectedOsIndex);
-  selectedOsIndexRef.current = selectedOsIndex;
+  useEffect(() => { selectedOsIndexRef.current = selectedOsIndex; }, [selectedOsIndex]);
 
-  // --- Filtering Logic ---
-  useEffect(() => {
-    // If in Guest Mode, use demo data even if headers/rows seem inconsistent
-    if (userProfile?.id === 'guest-reviewer-id' && allRows.length > 0) {
-        // Simplified filtering for demo
-        const lowercasedFilter = searchTerm.toLowerCase();
-        const filtered = allRows.filter(({ row }) => {
-             const rowString = row.map(c => c.value).join(' ').toLowerCase();
-             return rowString.includes(lowercasedFilter);
-        });
-        setFilteredPendingRows(filtered);
-        setFilteredCompletedRows([]);
-        setFilteredSpecialRows([]);
-        return;
-    }
-
-    if (!allRows.length || !headers.length) {
-      setFilteredPendingRows([]);
-      setFilteredCompletedRows([]);
-      setFilteredSpecialRows([]);
-      return;
-    };
-
-    const eventIndex = headers.indexOf(COLS.EVENT);
-    const uniformIndex = headers.indexOf(COLS.UNIFORM);
-    const analystIndex = headers.indexOf(COLS.ANALYST);
-    const woIndex = headers.indexOf(COLS.WO);
-    const operatorIndex = headers.indexOf(COLS.OPERATOR);
-    const timeIndex = headers.indexOf(COLS.ANALYSIS_TIME);
-
-    const pending: RowWithSheetIndex[] = [];
-    const completed: RowWithSheetIndex[] = [];
-    const special: RowWithSheetIndex[] = [];
-
-    allRows.forEach((item) => {
-        if (!item.row[woIndex]?.value?.trim()) return;
-
-        const operatorVal = item.row[operatorIndex]?.value?.trim();
-        const timeVal = item.row[timeIndex]?.value?.trim();
-
-        // Detect Special/System Work Orders
-        if (!operatorVal || timeVal === '0' || timeVal === '00:00:00') {
-            special.push(item);
-            return; 
-        }
-
-        const eventVal = item.row[eventIndex]?.value?.trim();
-        const uniformVal = item.row[uniformIndex]?.value?.trim();
-        const analystVal = item.row[analystIndex]?.value?.trim();
-        
-        const isPendingOnSheet = !eventVal || !uniformVal || !analystVal;
-
-        if (isPendingOnSheet) {
-            pending.push(item);
-        } else {
-            completed.push(item);
-        }
-    });
-
-    // Apply Filters
-    const instructorIndex = headers.indexOf(COLS.INSTRUCTOR);
-    const studioIndex = headers.indexOf(COLS.STUDIO);
-    const inconformityIndices = filters.inconformities
-        .map(name => headers.indexOf(name))
-        .filter(index => index !== -1);
-    const lowercasedFilter = searchTerm.toLowerCase();
-
-    const filterList = (list: RowWithSheetIndex[]): RowWithSheetIndex[] => {
-        return list.filter(({ row }) => {
-            const woValue = String(row[woIndex]?.value || '').toLowerCase();
-            const instructor = String(row[instructorIndex]?.value || '').toLowerCase();
-            
-            if (searchTerm.trim() && !woValue.includes(lowercasedFilter) && !instructor.includes(lowercasedFilter)) {
-                return false;
-            }
-            if (filters.studio && studioIndex > -1) {
-                const studioValue = String(row[studioIndex]?.value || '');
-                if (studioValue !== filters.studio) return false;
-            }
-            if (inconformityIndices.length > 0) {
-                const hasInconformity = inconformityIndices.some(index => {
-                    const cellValue = row[index]?.value;
-                    return cellValue === 'TRUE' || cellValue === 'Noncompliant';
-                });
-                if (!hasInconformity) return false;
-            }
-            return true;
-        });
-    };
-
-    setFilteredPendingRows(filterList(pending));
-    setFilteredCompletedRows(filterList(completed));
-    setFilteredSpecialRows(filterList(special));
-  }, [allRows, headers, searchTerm, filters, userProfile]);
+  // --- Filtering Logic (pure pipeline, memoized) ---
+  const { pending: filteredPendingRows, completed: filteredCompletedRows, special: filteredSpecialRows } =
+    useMemo(
+      () => computeFilteredRows(allRows, headers, filters, searchTerm, userProfile?.id === 'guest-reviewer-id'),
+      [allRows, headers, filters, searchTerm, userProfile]
+    );
 
 
   const isWorkspaceOpen = selectedOsIndex !== null;
@@ -411,7 +324,7 @@ const App: React.FC = () => {
     setVideoSrc(null);
     setCurrentVideoId(null);
     setIsLocalVideo(false);
-    setVideoTitle('Loading...');
+    setVideoTitle(null);
     setSelectedOsIndex(rowIndex);
     setFullRowData(null);
     setIsRowLoading(true);
@@ -551,7 +464,7 @@ const App: React.FC = () => {
     setVideoSrc(null);
     setCurrentVideoId(null);
     setIsLocalVideo(false);
-    setVideoTitle('No video loaded');
+    setVideoTitle(null);
     setErrorMessage(null);
     setVideoChoices([]);
     setLastMediaSource(null);
@@ -575,23 +488,22 @@ const App: React.FC = () => {
   useEffect(() => {
     if (authStatus === 'initializing') {
         const messages = [
-            "Setting up workspace...",
-            "Powering on monitors...",
-            "Calibrating vectorscopes...",
-            "Tuning audio frequencies...",
-            "Checking pixel alignment...",
-            "Brewing analysis coffee...",
+            t('loading.step.workspace'),
+            t('loading.step.monitors'),
+            t('loading.step.vectorscopes'),
+            t('loading.step.audio'),
+            t('loading.step.pixels'),
+            t('loading.step.coffee'),
         ];
         
         let messageIndex = 0;
-        setInitialLoadingMessage(messages[0]);
         const intervalId = setInterval(() => {
             messageIndex = (messageIndex + 1) % messages.length;
             setInitialLoadingMessage(messages[messageIndex]);
         }, 2500);
         return () => clearInterval(intervalId);
     }
-  }, [authStatus]);
+  }, [authStatus, t]);
 
   // Presence System
   useEffect(() => {
@@ -712,15 +624,15 @@ const App: React.FC = () => {
       await auth.signInWithPopup(provider);
     } catch (error: any) {
         console.error("Firebase Auth Error:", error);
-        let message = 'Login failed.';
-        if (error.code === 'auth/popup-closed-by-user') message = 'Login popup closed.';
+        let message = t('auth.loginFailed');
+        if (error.code === 'auth/popup-closed-by-user') message = t('auth.popupClosed');
         else if (error.code === 'auth/cancelled-popup-request') { setIsAuthLoading(false); return; }
         setAuthError(message);
         setAuthStatus('signedOut');
     } finally {
         setIsAuthLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // Guest Logic (FIXED: Loads demo data)
   const handleGuestLogin = useCallback(() => {
@@ -816,7 +728,7 @@ const App: React.FC = () => {
                       selectedRow={fullRowData}
                       headers={headers}
                       videoSrc={videoSrc}
-                      videoTitle={videoTitle}
+                      videoTitle={videoTitle ?? t('workspace.noVideo')}
                       currentVideoId={currentVideoId}
                       isLocalVideo={isLocalVideo}
                       videoChoices={videoChoices}

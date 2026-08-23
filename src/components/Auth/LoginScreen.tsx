@@ -1,5 +1,7 @@
 import React from 'react';
 import { GoogleIcon } from '../Core/icons';
+import { useI18n } from '../../i18n/I18nContext';
+import LanguageSwitcher from '../../i18n/LanguageSwitcher';
 
 interface LoginScreenProps {
   onLogin: () => void;
@@ -9,6 +11,7 @@ interface LoginScreenProps {
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestLogin, isLoading, error }) => {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col items-center justify-center h-screen w-screen bg-solar-dark-bg text-gray-200 font-sans relative overflow-hidden">
       {/* Background Elements */}
@@ -16,11 +19,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestLogin, isLoad
       <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-solar-accent/10 rounded-full filter blur-3xl animate-pulse-slow"></div>
       <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-yellow-400/10 rounded-full filter blur-3xl animate-pulse-slow animation-delay-4000"></div>
 
+      {/* Language selector — fixed top-right */}
+      <div className="absolute top-4 right-4 z-20 bg-solar-dark-bg/60 rounded-md backdrop-blur-sm">
+        <LanguageSwitcher />
+      </div>
+
       <div className="relative z-10 flex flex-col items-center text-center p-8 max-w-md w-full bg-solar-dark-content/50 backdrop-blur-md rounded-xl border border-solar-dark-border shadow-2xl">
         <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full mb-6 shadow-lg"></div>
         <h1 className="text-5xl font-bold text-white tracking-tight">Solaris</h1>
-        <p className="mt-2 text-lg text-gray-400">Audiovisual Analysis Platform</p>
-        
+        <p className="mt-2 text-lg text-gray-400">{t('login.tagline')}</p>
+
         <div className="w-full h-px bg-solar-dark-border my-8"></div>
 
         <button
@@ -33,7 +41,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestLogin, isLoad
           ) : (
             <GoogleIcon className="w-6 h-6" />
           )}
-          <span>{isLoading ? 'Connecting...' : 'Sign in with Google'}</span>
+          <span>{isLoading ? t('login.connecting') : t('login.signInGoogle')}</span>
         </button>
 
         {/* Guest/Demo Button */}
@@ -43,13 +51,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestLogin, isLoad
               disabled={isLoading}
               className="mt-4 text-sm text-gray-400 hover:text-white transition-colors underline"
             >
-              Continue as Guest (Demo Mode)
+              {t('login.continueAsGuest')}
             </button>
         )}
 
         {error && (
-          <div className="mt-6 p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-300 text-sm w-full">
-            <p className="font-semibold">Authentication Error</p>
+          <div className="mt-6 p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-300 text-sm w-full" role="alert">
+            <p className="font-semibold">{t('login.authError')}</p>
             <p className="text-xs mt-1">{error}</p>
           </div>
         )}

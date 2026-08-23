@@ -47,6 +47,11 @@ export const en = {
   // Monitors / workspace
   'dock.expandMonitor': 'Expand monitor {monitor}',
   'users.activeCount': '{count} active user(s)',
+  'workspace.noVideo': 'No video loaded',
+
+  // Auth errors
+  'auth.loginFailed': 'Login failed.',
+  'auth.popupClosed': 'Login popup closed.',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -94,6 +99,11 @@ export const pt: Record<TranslationKey, string> = {
   // Monitors / workspace
   'dock.expandMonitor': 'Expandir monitor {monitor}',
   'users.activeCount': '{count} usuário(s) ativo(s)',
+  'workspace.noVideo': 'Nenhum vídeo carregado',
+
+  // Auth errors
+  'auth.loginFailed': 'Falha no login.',
+  'auth.popupClosed': 'Janela de login fechada.',
 };
 
 export const dictionaries = { en, pt } as const;

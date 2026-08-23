@@ -7,6 +7,8 @@ import OnlineUsers from './OnlineUsers';
 import UserAvatar from '../Auth/UserAvatar';
 import BugReportModal from '../Admin/BugReportModal';
 import BugReportViewer from '../Admin/BugReportViewer';
+import LanguageSwitcher from '../../i18n/LanguageSwitcher';
+import { useI18n } from '../../i18n/I18nContext';
 
 
 interface HeaderProps {
@@ -26,6 +28,7 @@ const Header: React.FC<HeaderProps> = ({
   userProfile,
   onLogout
 }) => {
+  const { t } = useI18n();
   const [isBugReportModalOpen, setIsBugReportModalOpen] = useState(false);
   const [isBugReportViewerOpen, setIsBugReportViewerOpen] = useState(false);
 
@@ -41,7 +44,7 @@ const Header: React.FC<HeaderProps> = ({
             onClick={onCloseWorkspace}
             className={`transition-all duration-300 ease-in-out flex items-center gap-2 ${isWorkspaceOpen ? 'w-auto opacity-100' : 'w-0 opacity-0 -translate-x-2'}`}
             disabled={!isWorkspaceOpen}
-            aria-label="Back to List"
+            aria-label={t('header.backToList')}
           >
             <ArrowLeftIcon className="w-5 h-5" />
           </button>
@@ -55,7 +58,7 @@ const Header: React.FC<HeaderProps> = ({
                 trigger={
                   <button className="flex items-center gap-2 px-3 py-2 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-light-content dark:focus:ring-offset-solar-dark-content focus:ring-solar-accent">
                     <VideoIcon className="w-5 h-5" />
-                    <span>Load Media</span>
+                    <span>{t('header.loadMedia')}</span>
                   </button>
                 }
               >
@@ -66,6 +69,8 @@ const Header: React.FC<HeaderProps> = ({
           <div className="h-6 w-px bg-solar-dark-border"></div>
           
           <OnlineUsers />
+
+          <LanguageSwitcher />
 
           {userProfile && (
               <Popover 
@@ -87,7 +92,7 @@ const Header: React.FC<HeaderProps> = ({
                           onClick={() => { setIsBugReportModalOpen(true); close(); }} 
                           className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
                         >
-                          Report Issue
+                          {t('header.reportIssue')}
                         </button>
                         {/* Admin Panel Link */}
                         {userProfile.email.endsWith('.admin') && (
@@ -95,7 +100,7 @@ const Header: React.FC<HeaderProps> = ({
                             onClick={() => { setIsBugReportViewerOpen(true); close(); }} 
                             className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
                           >
-                            System Reports
+                            {t('header.systemReports')}
                           </button>
                         )}
                     </div>
@@ -103,7 +108,7 @@ const Header: React.FC<HeaderProps> = ({
                       onClick={() => { onLogout(); close(); }} 
                       className="w-full text-left mt-1 px-3 py-2 text-sm rounded-md text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors border-t border-solar-dark-border"
                     >
-                      Sign Out
+                      {t('header.signOut')}
                     </button>
                   </div>
                 )}

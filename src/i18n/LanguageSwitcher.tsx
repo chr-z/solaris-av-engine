@@ -1,5 +1,6 @@
 import React from 'react';
-import { useI18n, Locale } from './I18nContext';
+import { useI18n } from './I18nContext';
+import { Locale } from './core';
 
 const LOCALES: { id: Locale; shortLabel: string; fullLabel: string }[] = [
   { id: 'en', shortLabel: 'EN', fullLabel: 'English' },
