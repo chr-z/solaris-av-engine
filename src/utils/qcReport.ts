@@ -6,9 +6,6 @@
 
 import { DEMO_HEADERS, DEMO_ROWS } from './demoData';
 
-/** Cell value extracted from a demo row cell */
-type Cell = { value: string; link?: string };
-
 /** Estrutura do relatório QC exportado */
 export interface QCReport {
   title: string;
@@ -32,7 +29,6 @@ export function generateQCReport(
 ): QCReport {
   const allRows = DEMO_ROWS;
   const totalRows = allRows.length;
-  const filteredRows = options.filtered ? totalRows : 0;
 
   // Extract analysis times from row[6] (ANALYSIS TIME column index, per AnalysisSheet structure)
   const analysisTimes = allRows

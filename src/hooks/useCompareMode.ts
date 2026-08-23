@@ -45,13 +45,6 @@ export function useCompareMode({ hasMedia }: UseCompareModeOptions) {
   useEffect(() => { syncModeRef.current = syncMode; }, [syncMode]);
   useEffect(() => { offsetRef.current = offsetSeconds; }, [offsetSeconds]);
 
-  // Leaving compare mode drops every follower subscription implicitly:
-  // ComparePane unmounts and its effect cleanup unsubscribes.
-  useEffect(() => {
-    if (!isActive || hasMedia) return;
-    setIsActive(false);
-  }, [isActive, hasMedia]);
-
   const slots = useMemo(() => {
     const base = createCompareSlots();
     // Slot A mirrors the leader conceptually; only B holds user input.
@@ -90,11 +83,21 @@ export function useCompareMode({ hasMedia }: UseCompareModeOptions) {
   }, []);
 
   const toggleActive = useCallback(() => {
-    setIsActive(active => !active);
-  }, []);
+    setIsActive(active => {
+      const next = !active;
+      // Guard: never enter compare without media on both sides.
+      return next && !hasMedia ? active : next;
+    });
+  }, [hasMedia]);
 
   const changeOffset = useCallback((delta: number) => {
     setOffsetSeconds(prev => clampCompareOffset(prev + delta));
+    rebroadcast();
+  }, [rebroadcast]);
+
+  /** Direct set from the numeric input (clamped + rebroadcast). */
+  const setOffset = useCallback((value: number) => {
+    setOffsetSeconds(clampCompareOffset(Number.isFinite(value) ? value : 0));
     rebroadcast();
   }, [rebroadcast]);
 
@@ -125,6 +128,7 @@ export function useCompareMode({ hasMedia }: UseCompareModeOptions) {
     subscribeToLeader,
     toggleActive,
     changeOffset,
+    setOffset,
     resetOffset,
     toggleSyncMode,
     toggleLayout,

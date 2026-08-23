@@ -30,13 +30,17 @@ const ComparePane: React.FC<ComparePaneProps> = ({
   onChangeSource,
   subscribeToLeader,
   syncNonce,
-  layout,
 }) => {
   const { t } = useI18n();
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastCommandRef = useRef<SyncCommand | null>(null);
   const [urlDraft, setUrlDraft] = useState('');
   const [hasError, setHasError] = useState(false);
+
+  // Derived: the error flag only makes sense for the current source.
+  // Keying by source resets it without any setState-in-effect.
+  const [errorSource, setErrorSource] = useState<string | null>(null);
+  const showLoadError = hasError && errorSource === source;
 
   // Transport lockstep: apply every command from the leader imperatively.
   useEffect(() => {
@@ -66,11 +70,6 @@ const ComparePane: React.FC<ComparePaneProps> = ({
       video.currentTime = command.time;
     }
   }, [syncNonce]);
-
-  // Fresh media (or retry after error) resets the error flag.
-  useEffect(() => {
-    setHasError(false);
-  }, [source]);
 
   const handleSubmitDraft = useCallback(() => {
     const trimmed = urlDraft.trim();
@@ -134,8 +133,9 @@ const ComparePane: React.FC<ComparePaneProps> = ({
           </div>
         )}
 
-        {resolvedSrc && !hasError && (
+        {resolvedSrc && !showLoadError && (
           <video
+            key={resolvedSrc}
             ref={videoRef}
             src={resolvedSrc}
             crossOrigin="anonymous"
@@ -143,11 +143,11 @@ const ComparePane: React.FC<ComparePaneProps> = ({
             playsInline
             controls
             className="w-full h-full object-contain"
-            onError={() => setHasError(true)}
+            onError={() => { setHasError(true); setErrorSource(source); }}
           />
         )}
 
-        {resolvedSrc && hasError && (
+        {resolvedSrc && showLoadError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
             <p className="text-sm text-red-400">{t('compare.loadFailed')}</p>
             <button

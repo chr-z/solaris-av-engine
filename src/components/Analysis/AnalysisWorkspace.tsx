@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 
 // --- IMPORTS CORRIGIDOS (NAVIGATION) ---
 import VideoPlayer from '../Media/VideoPlayer';
+import ComparePane from '../Media/ComparePane';
 import DriveFilePicker from '../Media/DriveFilePicker';
 import SourceSelector from '../Media/SourceSelector';
 import LocalFileHelper from '../Media/LocalFileHelper';
@@ -17,7 +18,7 @@ import Dock from '../Layout/Dock';
 import UserAvatar from '../Auth/UserAvatar';
 import Popover from '../Core/Popover';
 import ShortcutHelpModal from '../Core/ShortcutHelpModal';
-import { SaveIcon, ClipboardCheckIcon, YouTubeIcon, GoogleDriveIcon, XIcon, GridIcon, ClockIcon, PencilIcon, InfoIcon } from '../Core/icons';
+import { SaveIcon, ClipboardCheckIcon, YouTubeIcon, GoogleDriveIcon, XIcon, GridIcon, ClockIcon, PencilIcon, InfoIcon, ColumnsIcon, RowsIcon } from '../Core/icons';
 
 // Imports locais (mesma pasta Analysis)
 import AnalysisForm from './AnalysisForm';
@@ -26,9 +27,11 @@ import { RowData, updateSheetRow, DriveFile } from './AnalysisSheet';
 // Imports de Lógica (Hooks/Utils/Config)
 import { useAVAnalysis } from '../../hooks/useAVAnalysis';
 import { useAnalystShortcuts } from '../../hooks/useAnalystShortcuts';
+import { useCompareMode } from '../../hooks/useCompareMode';
 import { OverlaySettings, VideoChoice, UserProfile, Timestamp } from '../../types';
 import { useI18n } from '../../i18n/I18nContext';
 import { dropdownFields, inconformityToCategoryMap, resultFields, inconformityScores, categoryMaxScores } from '../../utils/constants';
+import { getCompareGridClass } from '../../utils/compareMode';
 import { database } from '../../config/firebase';
 import firebase from 'firebase/compat/app';
 
@@ -381,6 +384,13 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   // S5.1: keyboard shortcuts — "?" opens the quick-reference modal.
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
 
+  // S5.2: A/B compare orchestration (state + imperative sync channel).
+  const compare = useCompareMode({ hasMedia: !!videoSrc });
+  const handleToggleCompare = useCallback(() => {
+    if (!videoSrc) return;
+    compare.toggleActive();
+  }, [videoSrc, compare]);
+
   // S5.1: imperative handle registered by VideoPlayer for the global layer.
   const playerControlsRef = useRef<{
     togglePlay: () => void;
@@ -408,6 +418,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
     changeVolume: useCallback((delta: number) => playerControlsRef.current?.changeVolume(delta), []),
     openTimeMarkers: useCallback(() => { if (currentVideoId) setIsTimestampModalOpen(true); }, [currentVideoId]),
     saveAnalysis: useCallback(() => saveViaShortcutRef.current(), []),
+    toggleCompare: handleToggleCompare,
   });
 
   // S5.1: "?" toggles the shortcut reference (Shift+/ produces '?').
@@ -636,6 +647,58 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
       />
       <div className="w-2/3 h-full flex flex-col gap-4">
         <div className="flex-1 min-h-0">
+          {compare.isActive ? (
+            <div className={getCompareGridClass(compare.layout)}>
+              <div className="min-w-0 min-h-0">
+                <VideoPlayer
+                    ref={videoRef}
+                    src={videoSrc}
+                    videoId={currentVideoId}
+                    title={videoTitle}
+                    overlaySettings={overlaySettings}
+                    setOverlaySettings={setOverlaySettings}
+                    isLoading={isMediaLoading}
+                    errorMessage={errorMessage}
+                    onRetry={onRetryLoad}
+                    onClose={onClose}
+                    registerPlayerControls={registerPlayerControls}
+                    onTransport={compare.publishTransport}
+                >
+                    {videoChoices.length > 1 && (
+                        <VideoSourceChooser
+                            choices={videoChoices}
+                            onSelect={onLoadMedia}
+                            osIdentifier={osIdentifier}
+                        />
+                    )}
+                    {!videoSrc && retrievedFilePath && (
+                         <LocalFileHelper
+                            filePath={retrievedFilePath}
+                            onLoadMedia={onLoadMedia}
+                         />
+                    )}
+                    {!videoSrc && !retrievedFilePath && videoChoices.length <= 1 && !isPickerOpen && (
+                        <div className="flex flex-col items-center justify-center text-center text-gray-400 p-4">
+                            <p className="font-bold text-lg mb-2">{videoTitle}</p>
+                            <p className="mb-4">Select an option below to start analysis.</p>
+                            <div className="w-96">
+                                <SourceSelector onSourceSelected={onLoadMedia} />
+                            </div>
+                            <p className="text-sm mt-4">Or click the <GoogleDriveIcon className="inline-block w-4 h-4 align-text-bottom" /> button next to the "FOLDER" field.</p>
+                        </div>
+                    )}
+                </VideoPlayer>
+              </div>
+              {compare.isActive && (
+                <ComparePane
+                  source={compare.slotBSource}
+                  onChangeSource={compare.setSlotBSource}
+                  subscribeToLeader={compare.subscribeToLeader}
+                  syncNonce={compare.syncNonce}
+                />
+              )}
+            </div>
+          ) : (
             <VideoPlayer
                 ref={videoRef}
                 src={videoSrc}
@@ -648,6 +711,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                 onRetry={onRetryLoad}
                 onClose={onClose}
                 registerPlayerControls={registerPlayerControls}
+                onTransport={compare.publishTransport}
             >
                 {videoChoices.length > 1 && (
                     <VideoSourceChooser
@@ -657,7 +721,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                     />
                 )}
                 {!videoSrc && retrievedFilePath && (
-                     <LocalFileHelper 
+                     <LocalFileHelper
                         filePath={retrievedFilePath}
                         onLoadMedia={onLoadMedia}
                      />
@@ -673,7 +737,51 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                     </div>
                 )}
             </VideoPlayer>
+          )}
         </div>
+        {compare.isActive && (
+          <div
+            className="flex-shrink-0 flex items-center justify-center gap-3 py-1.5 px-4 rounded-lg bg-solar-light-content/80 dark:bg-solar-dark-content/80 backdrop-blur-md border border-solar-light-border dark:border-solar-dark-border text-sm"
+            role="toolbar"
+            aria-label={t('compare.title')}
+          >
+            <span className="font-bold text-xs uppercase tracking-wide text-solar-accent">{t('compare.title')}</span>
+            <button
+              onClick={compare.toggleSyncMode}
+              className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent ${compare.syncMode === 'locked' ? 'bg-solar-accent text-white hover:bg-solar-accent-hover' : 'bg-solar-dark-bg border border-solar-dark-border text-gray-300 hover:bg-gray-500/20'}`}
+              title={compare.syncMode === 'locked' ? t('compare.syncLocked') : t('compare.syncFree')}
+              aria-label={t('compare.syncMode')}
+            >
+              {compare.syncMode === 'locked' ? '⇄ ' + t('compare.syncLocked') : '✕ ' + t('compare.syncFree')}
+            </button>
+            <label className="flex items-center gap-1.5 text-gray-300">
+              <span className="text-xs">{t('compare.offsetLabel')}</span>
+              <input
+                type="number"
+                step="0.5"
+                value={compare.offsetSeconds}
+                onChange={e => compare.setOffset(parseFloat(e.target.value))}
+                aria-describedby="compare-offset-hint"
+                className="w-20 bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-0.5 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-solar-accent"
+              />
+            </label>
+            <span id="compare-offset-hint" className="text-[11px] text-gray-500 hidden lg:inline">{t('compare.offsetHint')}</span>
+            <button
+              onClick={compare.resetOffset}
+              className="px-2 py-0.5 rounded-md text-xs bg-solar-dark-bg border border-solar-dark-border text-gray-300 hover:bg-gray-500/20 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
+            >
+              0
+            </button>
+            <button
+              onClick={compare.toggleLayout}
+              className="p-1.5 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
+              title={t('compare.layout')}
+              aria-label={t('compare.layout')}
+            >
+              {compare.layout === 'side-by-side' ? <ColumnsIcon className="w-4 h-4" /> : <RowsIcon className="w-4 h-4" />}
+            </button>
+          </div>
+        )}
         <div className="h-32 flex-shrink-0 flex gap-4">
             <div className="flex-1">
                 <Dock title="RGB Parade" onZoom={() => setZoomedDock('rgbParade')}>
@@ -698,6 +806,17 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
               <h2 className="font-bold">Analysis Sheet</h2>
               <div className="flex items-center gap-2">
                   {saveStatus === 'error' && <p className="text-sm text-red-400 mr-2">{saveError}</p>}
+                  {/* S5.2: enter/exit A/B compare split (also via V). */}
+                  <button
+                    onClick={handleToggleCompare}
+                    disabled={!videoSrc}
+                    aria-pressed={compare.isActive}
+                    className={`p-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed ${compare.isActive ? 'bg-solar-accent/30 text-solar-accent hover:bg-solar-accent/40' : 'text-gray-400 hover:bg-gray-500/20 hover:text-white'}`}
+                    title={t('compare.open')}
+                    aria-label={t('compare.open')}
+                  >
+                    <ColumnsIcon className="w-5 h-5" />
+                  </button>
                   <button
                     onClick={() => setIsTimestampModalOpen(true)}
                     disabled={!currentVideoId}

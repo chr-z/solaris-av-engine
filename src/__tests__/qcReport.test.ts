@@ -5,7 +5,6 @@ import {
   getQCReportDataURI,
   getQCSummary,
   QCReport,
-  QCSummary,
 } from '../utils/qcReport';
 
 const sampleReport: QCReport = {
