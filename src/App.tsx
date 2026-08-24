@@ -14,12 +14,17 @@ import { logCaptureService } from './utils/logCapture';
 import { DEMO_HEADERS, DEMO_ROWS } from './utils/demoData';
 import { useI18n } from './i18n/I18nContext';
 import { computeFilteredRows } from './utils/rowFiltering';
+import { isAdminHash } from './utils/adminRoute';
+import { persistGuestEmail, clearGuestEmail } from './hooks/useAdminRole';
 
 // Code splitting (S3.1): the heavy analysis workspace (player + monitors + form)
 // is only fetched when an OS row is opened for the first time.
 const AnalysisWorkspace = React.lazy(
   () => import(/* webpackChunkName: "analysis-workspace" */ './components/Analysis/AnalysisWorkspace'),
 );
+
+// v3 admin console (#/admin) ships as its own chunk; fetched on first visit only.
+const AdminGate = React.lazy(() => import('./components/Admin/AdminGate'));
 
 // Initialize log capture service
 logCaptureService.init();
@@ -90,6 +95,14 @@ const App: React.FC = () => {
   // UI State
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [pickerFolderId, setPickerFolderId] = useState<string | null>(null);
+
+  // v3 admin route (#/admin): hash-driven, survives reload, back-button friendly.
+  const [isAdminRoute, setIsAdminRoute] = useState(() => isAdminHash(window.location.hash));
+  useEffect(() => {
+    const onHashChange = () => setIsAdminRoute(isAdminHash(window.location.hash));
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   // Auth State
   const [authStatus, setAuthStatus] = useState<AuthStatus>('initializing');
@@ -650,7 +663,8 @@ const App: React.FC = () => {
             picture: 'https://ui-avatars.com/api/?name=Guest+Reviewer&background=0D8ABC&color=fff', // Added better avatar
             email: 'guest@solaris.demo'
         });
-        
+        persistGuestEmail('guest@solaris.demo');
+
         // --- INJECT DEMO DATA HERE ---
         setHeaders(DEMO_HEADERS);
         setAllRows(DEMO_ROWS);
@@ -666,6 +680,7 @@ const App: React.FC = () => {
         await auth.signOut();
         setSelectedOsIndex(null);
         setVideoSrc(null);
+        clearGuestEmail(); // v3: guest identity must not leak into the next session's admin gate
         // Clear data on logout
         setAllRows([]);
         setHeaders([]);
@@ -695,6 +710,31 @@ const App: React.FC = () => {
           />
         );
       case 'signedIn':
+        // v3 admin console: replaces <main> while the app shell (Header) stays mounted.
+        if (isAdminRoute) {
+          return (
+            <WaveformCacheProvider>
+              <div className="flex flex-col h-screen font-sans text-sm bg-solar-light-bg dark:bg-solar-dark-bg text-gray-800 dark:text-gray-200 overflow-hidden">
+                <a href="#main-workspace" className="skip-link">{t('a11y.skipToContent')}</a>
+                <Header
+                  onSourceSelected={handleSourceSelected}
+                  isWorkspaceOpen={false}
+                  onCloseWorkspace={() => { /* no workspace behind the admin route */ }}
+                  title="Solaris"
+                  userProfile={userProfile}
+                  onLogout={handleLogout}
+                />
+                <React.Suspense fallback={
+                  <div className="flex items-center justify-center h-screen bg-solar-dark-bg">
+                    <LoadingIndicator statusText={t('loading.generic')} />
+                  </div>
+                }>
+                  <AdminGate />
+                </React.Suspense>
+              </div>
+            </WaveformCacheProvider>
+          );
+        }
         return (
           <WaveformCacheProvider>
             <div className="flex flex-col h-screen font-sans text-sm bg-solar-light-bg dark:bg-solar-dark-bg text-gray-800 dark:text-gray-200 overflow-hidden">

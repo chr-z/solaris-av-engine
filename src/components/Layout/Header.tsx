@@ -12,6 +12,7 @@ import { QCExportButton } from '../Analysis/QCExportButton';
 import ProUpgradeModal from '../Admin/ProUpgradeModal';
 import { useLicense } from '../../licensing/LicenseContext';
 import { describeFeature } from '../../licensing/core';
+import { useAdminRole } from '../../hooks/useAdminRole';
 
 // Code splitting (S3.1): admin/report modals ship in separate chunks and are
 // fetched only on first open. `isOpen && ...` keeps them out of the tree while
@@ -39,6 +40,7 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const { t } = useI18n();
   const { isPro } = useLicense();
+  const { isAdmin: isAdminUser } = useAdminRole();
   const [isBugReportModalOpen, setIsBugReportModalOpen] = useState(false);
   const [isBugReportViewerOpen, setIsBugReportViewerOpen] = useState(false);
   // S6.1: the lock overlay opens this via a window event (no prop drilling
@@ -149,6 +151,15 @@ const Header: React.FC<HeaderProps> = ({
                         >
                           {t('header.reportIssue')}
                         </button>
+                        {/* v3: Scoring Rules console (#/admin) — same RBAC decision as the gate. */}
+                        {isAdminUser && (
+                          <a
+                            href="#/admin"
+                            className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
+                          >
+                            {t('header.adminPanel')}
+                          </a>
+                        )}
                         {/* Admin Panel Link */}
                         {userProfile.email.endsWith('.admin') && (
                           <button 
