@@ -4,7 +4,7 @@
 // pure core in utils/dashboard.ts. All math lives in utils; this component
 // only orchestrates loading, dimension switching and rendering.
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   buildDashboardDataset,
   overallSummary,
@@ -34,10 +34,21 @@ import {
   formatScoreDisplay,
   type DashboardEntryInput,
 } from "../../utils/dashboardData";
+import {
+  DASHBOARD_SECTIONS,
+  nextDashboardSection,
+  prevDashboardSection,
+} from "../../utils/shortcuts";
+import { useAnalystShortcuts } from "../../hooks/useAnalystShortcuts";
+import ShortcutHelpModal from "../Core/ShortcutHelpModal";
 import { useI18n } from "../../i18n/I18nContext";
 import type { TranslationKey } from "../../i18n/translations";
 
-type Section = "summary" | "studios" | "instructors" | "analysts" | "trend";
+/**
+ * Section ids come from the canonical cycle in utils/shortcuts.ts so the
+ * keyboard navigation (N/P) can never drift from the rendered tab order.
+ */
+type Section = (typeof DASHBOARD_SECTIONS)[number];
 
 /** Active drill-down target: one table group or one trend month bucket. */
 interface DrillDown {
@@ -446,6 +457,13 @@ const DashboardPanel: React.FC = () => {
       csvFilename({ from: fromInput, to: toInput }),
     );
 
+  // v3 P8: latest export handler for the E shortcut — assigned after render
+  // so the shortcut always exports against current filter state.
+  const exportCsvRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    exportCsvRef.current = exportCsv;
+  });
+
   // P7 drill-down: selecting a table group or a trend month shows every O.S.
   // of that bucket (still honoring the period filter above). The selection is
   // derived — never stored — so period edits update it live.
@@ -468,6 +486,59 @@ const DashboardPanel: React.FC = () => {
     if (!drillDown) return;
     downloadCsv(drillRecords, drilldownFilename(range, drillDown.label));
   };
+
+  // v3 P8: keyboard shortcuts. Latest handlers live in refs so the global
+  // keydown listener (bound once) always dispatches against current state.
+  const clearPeriod = useCallback(() => {
+    setFromInput("");
+    setToInput("");
+  }, []);
+  const exitDrillDown = useCallback(() => setDrillDown(null), []);
+  const selectSection = useCallback((next: Section) => {
+    setSection(next);
+    setDrillDown(null);
+  }, []);
+
+  useAnalystShortcuts({
+    enabled: true,
+    scopeEnabled: { player: false, workspace: false, dashboard: true },
+    nextDashSection: useCallback(
+      () => setSection(cur => nextDashboardSection(cur)),
+      [],
+    ),
+    prevDashSection: useCallback(
+      () => setSection(cur => prevDashboardSection(cur)),
+      [],
+    ),
+    exportDashCsv: useCallback(() => exportCsvRef.current(), []),
+    clearDashPeriod: clearPeriod,
+    exitDashDrillDown: exitDrillDown,
+  });
+
+  const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
+
+  // S5.1 parity: "?" toggles the shortcut reference (Shift+/ produces '?').
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      const isFormField =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement;
+      if (
+        event.key === "?" &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !isFormField
+      ) {
+        event.preventDefault();
+        setIsShortcutHelpOpen(open => !open);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const deltaDisplay =
     lastDelta === null
@@ -514,6 +585,16 @@ const DashboardPanel: React.FC = () => {
             {t("dash.liveSource")}
           </span>
         )}
+        <button
+          type="button"
+          data-testid="dash-shortcut-help"
+          onClick={() => setIsShortcutHelpOpen(true)}
+          title={t("header.shortcutHelp")}
+          aria-label={t("header.shortcutHelp")}
+          className="ml-auto px-2 py-1 rounded-md text-xs font-mono border border-gray-600/60 text-gray-300 hover:bg-gray-500/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+        >
+          ?
+        </button>
       </div>
 
       <div
@@ -581,8 +662,7 @@ const DashboardPanel: React.FC = () => {
               data-testid={s.testId}
               aria-pressed={selected}
               onClick={() => {
-                setSection(s.id);
-                setDrillDown(null);
+                selectSection(s.id);
               }}
               className={`px-3 py-1.5 rounded-md text-sm transition-colors border ${
                 selected
@@ -731,6 +811,11 @@ const DashboardPanel: React.FC = () => {
           )}
         </>
       )}
+
+      <ShortcutHelpModal
+        isOpen={isShortcutHelpOpen}
+        onClose={() => setIsShortcutHelpOpen(false)}
+      />
     </section>
   );
 };
