@@ -161,3 +161,76 @@ export function summarizeRowMonths(row: HeatmapRow, months: string[]): string {
   });
   return parts.join(', ');
 }
+
+// ---------- Excel export (v3 P16 — twin of the CSV above) ----------
+
+import {
+  buildSingleSheetXlsx,
+  escapeXmlText,
+} from './dashboardXlsx';
+
+/**
+ * Spreadsheet column reference for a 0-based index using Excel's bijective
+ * base-26 (0→A … 25→Z, 26→AA, 27→AB…). Unlike the single-letter helper in
+ * dashboardXlsx.ts this stays valid for wide heatmaps (24+ month columns).
+ */
+function columnRef(index: number): string {
+  let n = Math.floor(index);
+  let ref = '';
+  do {
+    ref = String.fromCharCode(65 + (n % 26)) + ref;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return ref;
+}
+
+/** Emits one cell; counts are numeric, everything else an escaped inlineStr. */
+function heatmapCellXml(ref: string, value: string): string {
+  if (/^-?\d+(\.\d+)?$/.test(value)) {
+    return `<c r="${ref}"><v>${value}</v></c>`;
+  }
+  return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${escapeXmlText(value)}</t></is></c>`;
+}
+
+/** Worksheet XML of the matrix: header row + one row per rule, same order as the CSV. */
+export function buildHeatmapSheetXml(heatmap: MarkHeatmap): string {
+  // Column contract ('rule' + one ISO month per bucket) lives in
+  // buildHeatmapCsv — the XLSX is its byte-twin with numeric cells.
+  const headerValues = ['rule', ...heatmap.months];
+  const rows: string[] = [];
+  const headerCells = headerValues
+    .map((value, i) => heatmapCellXml(`${columnRef(i)}1`, value))
+    .join('');
+  rows.push(`<row r="1">${headerCells}</row>`);
+
+  heatmap.rows.forEach((row, rowIndex) => {
+    const rowNumber = rowIndex + 2;
+    const values = [row.name, ...row.cells.map(String)];
+    const cells = values
+      .map((value, i) => heatmapCellXml(`${columnRef(i)}${rowNumber}`, value))
+      .join('');
+    rows.push(`<row r="${rowNumber}">${cells}</row>`);
+  });
+
+  return (
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows.join('')}</sheetData></worksheet>`
+  );
+}
+
+/**
+ * Complete .xlsx package of the current matrix ('Heatmap' sheet).
+ * Deterministic for equal inputs; same ZIP/OOXML conventions as the P12/P14
+ * workbooks.
+ */
+export function buildHeatmapXlsx(heatmap: MarkHeatmap, timestamp: Date = new Date()): Uint8Array {
+  return buildSingleSheetXlsx('Heatmap', buildHeatmapSheetXml(heatmap), timestamp);
+}
+
+/**
+ * Stable filename mirroring `heatmapFilename` — the extension is the only
+ * difference, so paired CSV/XLSX downloads always share the name stem.
+ */
+export function heatmapXlsxFilename(range: PeriodRange = {}): string {
+  return heatmapFilename(range).replace(/\.csv$/, '.xlsx');
+}
