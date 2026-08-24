@@ -22,6 +22,8 @@ interface AnalystActions {
   exportDashCsv?: () => void;
   clearDashPeriod?: () => void;
   exitDashDrillDown?: () => void;
+  /** v3 P9: printable QC report of the current dashboard view. */
+  exportDashQcReport?: () => void;
 }
 
 interface UseAnalystShortcutsOptions extends AnalystActions {
@@ -113,6 +115,7 @@ export function useAnalystShortcuts({
         case 'dashPrevSection': current.prevDashSection?.(); break;
         case 'dashExportCsv': current.exportDashCsv?.(); break;
         case 'dashClearPeriod': current.clearDashPeriod?.(); break;
+        case 'dashExportQcReport': current.exportDashQcReport?.(); break;
         default: break;
       }
     };

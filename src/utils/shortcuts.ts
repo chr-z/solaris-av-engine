@@ -78,6 +78,8 @@ export const ANALYST_SHORTCUTS: readonly ShortcutDef[] = [
   { id: 'dashPrevSection', keys: 'p', display: 'P', scope: 'dashboard', descriptionKey: 'shortcuts.dashPrevSection.description' },
   { id: 'dashExportCsv', keys: 'e', display: 'E', scope: 'dashboard', descriptionKey: 'shortcuts.dashExportCsv.description' },
   { id: 'dashClearPeriod', keys: 'c', display: 'C', scope: 'dashboard', descriptionKey: 'shortcuts.dashClearPeriod.description' },
+  // v3 P9: printable QC report of the current dashboard view.
+  { id: 'dashExportQcReport', keys: 'r', display: 'R', scope: 'dashboard', descriptionKey: 'shortcuts.dashExportQcReport.description' },
 ];
 
 export const SHORTCUT_HELP_KEY = 'header.shortcutHelp';

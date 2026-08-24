@@ -88,6 +88,7 @@ export const en = {
   'shortcuts.dashPrevSection.description': 'Dashboards: previous section',
   'shortcuts.dashExportCsv.description': 'Dashboards: export current view to CSV',
   'shortcuts.dashClearPeriod.description': 'Dashboards: clear period filter',
+  'shortcuts.dashExportQcReport.description': 'Dashboards: download printable QC report of the current view',
 
   // A/B compare mode (S5.2)
   'compare.title': 'A/B Compare',
@@ -185,7 +186,10 @@ export const en = {
   'dash.period.title': 'Period filter',
   'dash.period.clear': 'Clear period',
   'dash.export': 'Export CSV',
-  'dash.export.title': 'Download the filtered records as CSV',
+  'dash.export.title': 'Downloads the filtered records as CSV',
+  'dash.qcReport': 'QC Report',
+  'dash.qcReport.title': 'Downloads a printable QC report (HTML → PDF via print) of the current view',
+  'dash.qcReport.done': 'QC report downloaded — open the HTML and use "Print → Save as PDF".',
   'dash.drill.back': 'Back to overview',
   'dash.drill.title': 'O.S. of {group}',
   'dash.drill.count': '{scored} scored of {count}',
@@ -281,6 +285,7 @@ export const pt: Record<TranslationKey, string> = {
   'shortcuts.dashPrevSection.description': 'Dashboards: seção anterior',
   'shortcuts.dashExportCsv.description': 'Dashboards: exportar visão atual em CSV',
   'shortcuts.dashClearPeriod.description': 'Dashboards: limpar filtro de período',
+  'shortcuts.dashExportQcReport.description': 'Dashboards: baixar relatório QC imprimível da visão atual',
 
   // Modo comparativo A/B (S5.2)
   'compare.title': 'Comparar A/B',
@@ -379,6 +384,9 @@ export const pt: Record<TranslationKey, string> = {
   'dash.period.clear': 'Limpar período',
   'dash.export': 'Exportar CSV',
   'dash.export.title': 'Baixa os registros filtrados em CSV',
+  'dash.qcReport': 'Relatório QC',
+  'dash.qcReport.title': 'Baixa um relatório QC imprimível (HTML → PDF via imprimir) da visão atual',
+  'dash.qcReport.done': 'Relatório QC baixado — abra o HTML e use "Imprimir → Salvar como PDF".',
   'dash.drill.back': 'Voltar à visão geral',
   'dash.drill.title': 'O.S. de {group}',
   'dash.drill.count': '{scored} pontuadas de {count}',
