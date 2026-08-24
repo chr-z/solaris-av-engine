@@ -64,6 +64,8 @@ import {
   rankingFilename,
   buildRankingXlsx,
   rankingXlsxFilename,
+  availableCategories,
+  filterByCategory,
 } from "../../utils/dashboardInconformities";
 // v3 P15: monthly heatmap of markings (rule × month matrix).
 import {
@@ -757,6 +759,9 @@ const DashboardPanel: React.FC = () => {
   const [qcToastVisible, setQcToastVisible] = useState(false);
   // v3 P11: A/B group comparison — null label means the side is unpinned.
   const [compareOpen, setCompareOpen] = useState(false);
+  // v3 P17: active scoring-rule category over the Recurring Issues view
+  // ('' = whole checklist). Applied AFTER the period, BEFORE aggregations.
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [sideA, setSideA] = useState<CompareSide>({
     dimension: "studio",
     label: "",
@@ -802,7 +807,21 @@ const DashboardPanel: React.FC = () => {
   );
   const periodActive = hasActiveBounds({ from: fromInput, to: toInput });
 
-  const summary = useMemo(() => overallSummary(filtered), [filtered]);
+  // v3 P17: category scope of the Recurring Issues view — records carrying at
+  // least one marking of the active family. Derived like the period filter;
+  // every aggregation below reads THIS dataset, so the ranking table, KPI
+  // cards, heatmap and all exports always tell the same story.
+  const categories = useMemo(() => availableCategories(dataset), [dataset]);
+  const categoryFiltered: Dataset = useMemo(
+    () =>
+      section === "inconformities" && categoryFilter
+        ? { records: filterByCategory(filtered.records, categoryFilter) }
+        : filtered,
+    [filtered, categoryFilter, section],
+  );
+  const categoryActive = section === "inconformities" && categoryFilter !== "";
+
+  const summary = useMemo(() => overallSummary(categoryFiltered), [categoryFiltered]);
   const trend = useMemo(() => trendByMonth(filtered), [filtered]);
   const lastDelta = useMemo(() => {
     if (trend.length < 2) return null;
@@ -829,23 +848,29 @@ const DashboardPanel: React.FC = () => {
   // v3 P13: recurring-inconformity ranking over the SAME filtered dataset —
   // period edits update it live like every other section.
   const ranking = useMemo(
-    () => (section === "inconformities" ? inconformityRanking(filtered) : []),
-    [filtered, section],
+    () =>
+      section === "inconformities"
+        ? inconformityRanking(categoryFiltered)
+        : [],
+    [categoryFiltered, section],
   );
   const rankSummary = useMemo(
     () =>
       section === "inconformities"
-        ? rankingSummary(filtered)
+        ? rankingSummary(categoryFiltered)
         : { markedRows: 0, distinctRules: 0, totalOccurrences: 0 },
-    [filtered, section],
+    [categoryFiltered, section],
   );
 
   // v3 P15: rule × month marking matrix over the SAME filtered dataset.
   // Derived like every other section view; empty until the tab is open so
   // the other sections never pay for it.
   const markHeatmap = useMemo(
-    () => (section === "inconformities" ? buildMarkHeatmap(filtered) : { months: [], rows: [] }),
-    [filtered, section],
+    () =>
+      section === "inconformities"
+        ? buildMarkHeatmap(categoryFiltered)
+        : { months: [], rows: [] },
+    [categoryFiltered, section],
   );
   const heatPeak = useMemo(() => heatmapPeak(markHeatmap), [markHeatmap]);
 
@@ -970,10 +995,12 @@ const DashboardPanel: React.FC = () => {
   // records as on screen, period bounds carried into header and filename.
   const exportQcReport = useCallback(() => {
     const report = withQcPeriod(
-      buildQcBatchReport(filtered, {
+      buildQcBatchReport(categoryFiltered, {
         kind: drillDown?.kind ?? "overview",
         dimension: drillDown?.dimension ?? "studio",
         label: drillDown?.label ?? "",
+        // v3 P17: the active category is part of the deliverable's context.
+        category: categoryActive ? categoryFilter : undefined,
       }),
       range,
     );
@@ -989,7 +1016,7 @@ const DashboardPanel: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
     setQcToastVisible(true);
-  }, [filtered, drillDown, range, locale]);
+  }, [categoryFiltered, categoryActive, categoryFilter, drillDown, range, locale]);
 
   // v3 P11: A/B comparison derived from the SAME filtered dataset as every
   // other view — period edits update it live; null while either side is
@@ -1017,6 +1044,13 @@ const DashboardPanel: React.FC = () => {
     setSection(next);
     setDrillDown(null);
   }, []);
+  // v3 P17: category scope follows the section — leaving Recurring Issues
+  // (click or N/P) resets it, so other views never inherit a hidden scope.
+  const selectSectionWithCategoryReset = useCallback((next: Section) => {
+    selectSection(next);
+    setCategoryFilter("");
+  }, [selectSection]);
+  const clearCategoryFilter = useCallback(() => setCategoryFilter(""), []);
 
   // v3 P11: comparison export + toggle (B shortcut). Handlers are plain
   // functions re-registered every render via the existing refs pattern.
@@ -1124,14 +1158,15 @@ const DashboardPanel: React.FC = () => {
   useAnalystShortcuts({
     enabled: true,
     scopeEnabled: { player: false, workspace: false, dashboard: true },
-    nextDashSection: useCallback(
-      () => setSection(cur => nextDashboardSection(cur)),
-      [],
-    ),
-    prevDashSection: useCallback(
-      () => setSection(cur => prevDashboardSection(cur)),
-      [],
-    ),
+    nextDashSection: useCallback(() => {
+      // v3 P17: leaving Recurring Issues resets the category scope.
+      if (section === "inconformities") setCategoryFilter("");
+      setSection(nextDashboardSection(section));
+    }, [section]),
+    prevDashSection: useCallback(() => {
+      if (section === "inconformities") setCategoryFilter("");
+      setSection(prevDashboardSection(section));
+    }, [section]),
     exportDashCsv: useCallback(() => exportCsvRef.current(), []),
     clearDashPeriod: clearPeriod,
     exitDashDrillDown: exitDrillDown,
@@ -1333,7 +1368,7 @@ const DashboardPanel: React.FC = () => {
               data-testid={s.testId}
               aria-pressed={selected}
               onClick={() => {
-                selectSection(s.id);
+                selectSectionWithCategoryReset(s.id);
               }}
               className={`px-3 py-1.5 rounded-md text-sm transition-colors border ${
                 selected
@@ -1586,6 +1621,71 @@ const DashboardPanel: React.FC = () => {
                   {t("dash.exportRanking.xlsx")}
                 </button>
               </div>
+
+              {/* v3 P17: category scope of the whole Recurring Issues view —
+                  chips narrow KPIs, table, heatmap and every export. */}
+              <div
+                data-testid="dash-cat-filter"
+                className="flex flex-wrap items-center gap-2 mb-4"
+              >
+                <span className="text-xs uppercase tracking-wide text-gray-400">
+                  {t("dash.cat.label")}
+                </span>
+                <button
+                  type="button"
+                  aria-pressed={!categoryActive}
+                  onClick={clearCategoryFilter}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent ${
+                    !categoryActive
+                      ? "bg-solar-accent/20 border-solar-accent text-solar-accent"
+                      : "border-gray-600/60 text-gray-300 hover:bg-gray-500/10"
+                  }`}
+                >
+                  {t("dash.cat.all")}
+                </button>
+                {categories.map((cat) => {
+                  const selected = categoryFilter === cat;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setCategoryFilter(selected ? "" : cat)}
+                      title={
+                        selected ? t("dash.cat.clear") : undefined
+                      }
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent ${
+                        selected
+                          ? "bg-solar-accent/20 border-solar-accent text-solar-accent"
+                          : "border-gray-600/60 text-gray-300 hover:bg-gray-500/10"
+                      }`}
+                    >
+                      {cat === "unknown" ? `(${cat})` : cat}
+                    </button>
+                  );
+                })}
+                {categoryActive && (
+                  <button
+                    type="button"
+                    data-testid="dash-cat-clear"
+                    onClick={clearCategoryFilter}
+                    title={t("dash.cat.clear")}
+                    aria-label={t("dash.cat.clear")}
+                    className="px-2 py-1 rounded-md text-xs font-medium text-gray-400 hover:text-gray-200 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {categoryActive && (
+                <p
+                  data-testid="dash-cat-hint"
+                  className="text-xs text-orange-300/90 mb-3"
+                  role="status"
+                >
+                  {t("dash.rank.filteredHint", { category: categoryFilter })}
+                </p>
+              )}
 
               <div
                 className="flex flex-wrap gap-3 mb-4"
