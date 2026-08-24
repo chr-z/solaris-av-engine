@@ -157,3 +157,81 @@ export function buildRankingCsv(ranking: InconformityStat[]): string {
   });
   return lines.join('\r\n');
 }
+
+// ---------- Excel export (v3 P14 — twin of the CSV above) ----------
+
+import {
+  buildSingleSheetXlsx,
+  columnIndexToLetter,
+  escapeXmlText,
+} from './dashboardXlsx';
+
+/**
+ * Same column set/order as `buildRankingCsv` — one source of truth per row
+ * shape. Counts land as numeric cells; rate/unit/impact as percent-style
+ * numbers with dot decimal (2.00 → 2) so Excel can sort and aggregate them.
+ */
+const RANKING_XLSX_COLUMNS: Array<{ header: string; pick: (stat: InconformityStat, rank: number) => string | null }> = [
+  { header: 'rank', pick: (_s, rank) => String(rank) },
+  { header: 'rule', pick: (s) => s.name },
+  { header: 'rule_id', pick: (s) => s.ruleId },
+  { header: 'category', pick: (s) => s.categoryId },
+  { header: 'occurrences', pick: (s) => String(s.count) },
+  { header: 'rate', pick: (s) => (s.rate * 100).toFixed(2) },
+  { header: 'unit_score', pick: (s) => s.unitScore.toFixed(2) },
+  { header: 'impact', pick: (s) => s.impact.toFixed(2) },
+];
+
+function rankingCellXml(ref: string, value: string | null): string {
+  if (value === null || value === '') return '';
+  // Numbers (rank/counts/percentages) become true numeric cells; everything
+  // else is an inline string. Mirrors the P12 cell emitter exactly.
+  if (/^-?\d+(\.\d+)?$/.test(value)) {
+    return `<c r="${ref}"><v>${value}</v></c>`;
+  }
+  return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${escapeXmlText(value)}</t></is></c>`;
+}
+
+/** Worksheet XML for the ranking table: header row + one row per stat, in rank order. */
+export function buildRankingSheetXml(ranking: InconformityStat[]): string {
+  const rows: string[] = [];
+  const headerCells = RANKING_XLSX_COLUMNS.map((c, i) =>
+    `<c r="${columnIndexToLetter(i)}1" t="inlineStr"><is><t xml:space="preserve">${escapeXmlText(c.header)}</t></is></c>`,
+  ).join('');
+  rows.push(`<row r="1">${headerCells}</row>`);
+
+  ranking.forEach((stat, idx) => {
+    const rowNumber = idx + 2;
+    const cells = RANKING_XLSX_COLUMNS.map((col, i) => {
+      const ref = `${columnIndexToLetter(i)}${rowNumber}`;
+      return rankingCellXml(ref, col.pick(stat, idx + 1));
+    })
+      .filter(Boolean)
+      .join('');
+    rows.push(`<row r="${rowNumber}">${cells}</row>`);
+  });
+
+  return (
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<worksheet xmlns="${SPREADSHEET_NS}"><sheetData>${rows.join('')}</sheetData></worksheet>`
+  );
+}
+
+const SPREADSHEET_NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+
+/**
+ * Complete .xlsx package of the current ranking view ('Ranking' sheet).
+ * Deterministic for equal inputs; same ZIP/OOXML conventions as the P12
+ * scores workbook.
+ */
+export function buildRankingXlsx(ranking: InconformityStat[], timestamp: Date = new Date()): Uint8Array {
+  return buildSingleSheetXlsx('Ranking', buildRankingSheetXml(ranking), timestamp);
+}
+
+/**
+ * Stable filename mirroring `rankingFilename` — the extension is the only
+ * difference, so paired CSV/XLSX downloads always share the name stem.
+ */
+export function rankingXlsxFilename(range: PeriodRange = {}): string {
+  return rankingFilename(range).replace(/\.csv$/, '.xlsx');
+}
