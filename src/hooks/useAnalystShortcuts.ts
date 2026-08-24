@@ -30,6 +30,8 @@ interface AnalystActions {
   exportDashXlsx?: () => void;
   /** v3 P13: export the recurring-inconformity ranking of the current view. */
   exportDashInconformities?: () => void;
+  /** v3 P15: export the rule × month marking heatmap of the current view. */
+  exportDashHeatmap?: () => void;
   /**
    * v3 P14: optional reroute of the X key inside dashboards — the panel makes
    * the Excel export follow the visible section (scores workbook on the
@@ -132,6 +134,7 @@ export function useAnalystShortcuts({
         case 'dashToggleCompare': current.dashToggleCompare?.(); break;
         case 'dashExportXlsx': (current.dashXlsxExport ?? current.exportDashXlsx)?.(); break;
         case 'dashExportInconformities': current.exportDashInconformities?.(); break;
+        case 'dashExportHeatmap': current.exportDashHeatmap?.(); break;
         default: break;
       }
     };

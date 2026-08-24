@@ -65,6 +65,14 @@ import {
   buildRankingXlsx,
   rankingXlsxFilename,
 } from "../../utils/dashboardInconformities";
+// v3 P15: monthly heatmap of markings (rule × month matrix).
+import {
+  buildMarkHeatmap,
+  heatmapPeak,
+  heatmapTier,
+  buildHeatmapCsv,
+  heatmapFilename,
+} from "../../utils/markHeatmap";
 import { useAnalystShortcuts } from "../../hooks/useAnalystShortcuts";
 import {
   buildComparison,
@@ -140,6 +148,18 @@ const DIMENSION_BY_SECTION: Partial<Record<Section, GroupDimension>> = {
 
 /** v3 P11: dimension picker options for the A/B comparison bar. */
 const DIMENSIONS: GroupDimension[] = ["studio", "instructor", "analyst"];
+
+/**
+ * v3 P15: cell background per heatmap tier — 0 keeps the plain surface,
+ * tiers 1..4 deepen the solar accent. Same count → same tint, always.
+ */
+const HEAT_TIER_CLASS = [
+  "bg-gray-800/40 text-gray-500 border border-gray-600/40",
+  "bg-solar-accent/15 text-orange-100",
+  "bg-solar-accent/35 text-white",
+  "bg-solar-accent/60 text-white",
+  "bg-solar-accent text-gray-900 font-bold",
+] as const;
 
 /** Dimension id → i18n key (table headers reuse the section labels). */
 const DIMENSION_LABEL_KEY: Record<
@@ -818,6 +838,15 @@ const DashboardPanel: React.FC = () => {
     [filtered, section],
   );
 
+  // v3 P15: rule × month marking matrix over the SAME filtered dataset.
+  // Derived like every other section view; empty until the tab is open so
+  // the other sections never pay for it.
+  const markHeatmap = useMemo(
+    () => (section === "inconformities" ? buildMarkHeatmap(filtered) : { months: [], rows: [] }),
+    [filtered, section],
+  );
+  const heatPeak = useMemo(() => heatmapPeak(markHeatmap), [markHeatmap]);
+
   const downloadCsv = (records: OsRecord[], filename: string) => {
     const csvText = buildDashboardCsv(records);
     const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
@@ -1034,6 +1063,23 @@ const DashboardPanel: React.FC = () => {
     exportRankingXlsxRef.current = exportRankingXlsx;
   });
 
+  // v3 P15: heatmap CSV export — same records/period as the visible matrix.
+  const exportHeatmapCsv = () => {
+    if (section !== "inconformities") return;
+    const csvText = buildHeatmapCsv(markHeatmap);
+    const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = heatmapFilename(range);
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  const exportHeatmapRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    exportHeatmapRef.current = exportHeatmapCsv;
+  });
+
   // v3 P14: the X shortcut follows the visible section — scores workbook on
   // every dashboard view, ranking workbook inside Recurring Issues.
   const dispatchXlsxExport = useCallback(() => {
@@ -1080,6 +1126,7 @@ const DashboardPanel: React.FC = () => {
     dashToggleCompare: toggleCompareBar,
     exportDashXlsx: dispatchXlsxExport,
     exportDashInconformities: useCallback(() => exportRankingRef.current(), []),
+    exportDashHeatmap: useCallback(() => exportHeatmapRef.current(), []),
   });
 
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
@@ -1621,6 +1668,112 @@ const DashboardPanel: React.FC = () => {
                   >
                     {t("dash.rank.hint")}
                   </p>
+
+                  {/* v3 P15: monthly heatmap of markings — same filtered
+                      dataset as the ranking above; cells drill into the
+                      month bucket (P10 hub) for the O.S. behind the number.
+                  */}
+                  {markHeatmap.months.length > 0 && (
+                    <div
+                      className="mt-6 pt-4 border-t border-gray-700/40"
+                      data-testid="dash-heatmap"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <h3 className="text-base font-bold text-gray-100">
+                          {t("dash.heat.title")}
+                        </h3>
+                        <button
+                          type="button"
+                          data-testid="dash-export-heatmap"
+                          onClick={() => exportHeatmapRef.current()}
+                          title={t("dash.exportHeatmap.title")}
+                          className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+                        >
+                          {t("dash.exportHeatmap")}
+                        </button>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table
+                          className="w-full text-sm border-collapse"
+                          data-testid="dash-heatmap-table"
+                        >
+                          <thead>
+                            <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-600/60">
+                              <th scope="col" className="py-2 pr-4">
+                                {t("dash.rank.table.rule")}
+                              </th>
+                              {markHeatmap.months.map((m) => (
+                                <th
+                                  key={m}
+                                  scope="col"
+                                  className="py-2 px-2 text-center whitespace-nowrap tabular-nums"
+                                >
+                                  {m}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {markHeatmap.rows.map((row) => {
+                              const peak = heatPeak;
+                              return (
+                                <tr
+                                  key={row.ruleId}
+                                  className="border-b border-gray-700/40 last:border-b-0"
+                                >
+                                  <td className="py-1.5 pr-4 text-gray-200">
+                                    {row.name}
+                                  </td>
+                                  {row.cells.map((count, colIndex) => {
+                                    const tier = heatmapTier(count, peak);
+                                    const month =
+                                      markHeatmap.months[colIndex] ?? "";
+                                    return (
+                                      <td
+                                        key={month}
+                                        className="py-1.5 px-1 text-center"
+                                      >
+                                        <button
+                                          type="button"
+                                          data-testid={`dash-heat-cell-${month}-${row.ruleId}`}
+                                          onClick={() =>
+                                            setDrillDown({
+                                              kind: "month",
+                                              dimension: "studio",
+                                              label: month,
+                                            })
+                                          }
+                                          title={t("dash.heat.cellLabel", {
+                                            rule: row.name,
+                                            count,
+                                            month,
+                                          })}
+                                          aria-label={t("dash.heat.cellLabel", {
+                                            rule: row.name,
+                                            count,
+                                            month,
+                                          })}
+                                          className={`w-full min-w-[2.75rem] rounded py-1 text-xs font-medium tabular-nums transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent ${HEAT_TIER_CLASS[tier]}`}
+                                        >
+                                          {count}
+                                        </button>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p
+                        className="text-xs text-gray-500 mt-2"
+                        data-testid="dash-heatmap-hint"
+                      >
+                        {t("dash.heat.hint")}
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
             </div>

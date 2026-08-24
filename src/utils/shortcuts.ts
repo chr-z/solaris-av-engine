@@ -93,6 +93,8 @@ export const ANALYST_SHORTCUTS: readonly ShortcutDef[] = [
   { id: 'dashExportXlsx', keys: 'x', display: 'X', scope: 'dashboard', descriptionKey: 'shortcuts.dashExportXlsx.description' },
   // v3 P13: export the recurring-inconformity ranking of the current view.
   { id: 'dashExportInconformities', keys: 'i', display: 'I', scope: 'dashboard', descriptionKey: 'shortcuts.dashExportInconformities.description' },
+  // v3 P15: download the rule × month marking heatmap CSV of the current view.
+  { id: 'dashExportHeatmap', keys: 'h', display: 'H', scope: 'dashboard', descriptionKey: 'shortcuts.dashExportHeatmap.description' },
 ];
 
 export const SHORTCUT_HELP_KEY = 'header.shortcutHelp';
