@@ -8,7 +8,8 @@
 // Everything here is unit-testable without DOM or fetch; the React panel
 // only renders what these functions return.
 
-import type { Dataset, GroupDimension, OsRecord } from './dashboard';
+import type { Dataset, GroupDimension, GroupStat, OsRecord } from './dashboard';
+import { groupAverageBy } from './dashboard';
 import { csvFilename } from './dashboardExport';
 
 /** Sentinel label used by groupAverageBy for records missing the dimension. */
@@ -119,4 +120,41 @@ export function drilldownFilename(
   label: string,
 ): string {
   return csvFilename(range).replace(/\.csv$/, `_${slugifyLabel(label)}.csv`);
+}
+
+// ---------- v3 P10 — Second-level drill-down (month → group) ----------
+
+/** Active second-level target inside a month bucket. */
+export interface MonthDrillDown {
+  dimension: GroupDimension;
+  label: string;
+}
+
+/**
+ * Group stats restricted to one 'YYYY-MM' month bucket, in the same
+ * deterministic order as the dashboard tables (average desc, count desc,
+ * label asc). Malformed/unknown months yield [] — never an error — so a
+ * stale selection degrades to an empty view instead of lying.
+ */
+export function groupAverageByMonth(
+  dataset: Dataset,
+  month: string,
+  dimension: GroupDimension,
+): GroupStat[] {
+  return groupAverageBy({ records: selectMonth(dataset, month) }, dimension);
+}
+
+/**
+ * Records of ONE group INSIDE one 'YYYY-MM' bucket (second-level leaf),
+ * same sentinel and deterministic reading order as the first-level
+ * selection. Unknown labels/months yield an empty selection.
+ */
+export function selectGroupInMonth(
+  dataset: Dataset,
+  month: string,
+  dimension: GroupDimension,
+  label: string,
+): DrillDownSelection {
+  const sel = selectGroup({ records: selectMonth(dataset, month) }, dimension, label);
+  return { ...sel, dimension, label };
 }
