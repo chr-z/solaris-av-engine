@@ -1,0 +1,589 @@
+{
+  "version": 1,
+  "effectiveFrom": "2025-01-01",
+  "meta": {
+    "name": "Solaris Scoring Rules",
+    "source": "Ported from Solaris-Web-MVP utils/inconformityDetails.ts (43 entries, verbatim PT-BR)",
+    "notes": [
+      "Divergência interna conhecida do MVP: 'Ruídos ambiente' e 'Ruído de atrito no microfone' têm scores trocados entre o catálogo (inconformityDetails.ts) e o constants.ts em produção. Seguido o catálogo, conforme especificação v3."
+    ]
+  },
+  "categories": [
+    {
+      "id": "ENQUADRAMENTO"
+    },
+    {
+      "id": "ILUMINAÇÃO"
+    },
+    {
+      "id": "OUTROS"
+    },
+    {
+      "id": "CENÁRIO"
+    },
+    {
+      "id": "ÁUDIO"
+    }
+  ],
+  "rules": [
+    {
+      "id": "camera-inclinada-torta",
+      "name": "Câmera inclinada/torta",
+      "categoryId": "ENQUADRAMENTO",
+      "definition": "Quando a câmera está inclinada de cima para baixo ou de baixo para cima, bem como quando está torta para um dos lados;",
+      "analystAction": "Quando a inclinação de referência reta ao fundo (normalmente a própria logo) ultrapassar a medida mínima estabelecida na vertical ou horizontal;",
+      "grade": 3,
+      "scoresByYear": {
+        "2024": 0.2,
+        "2025": 0.3
+      },
+      "active": true
+    },
+    {
+      "id": "muito-pouco-teto",
+      "name": "Muito/pouco teto",
+      "categoryId": "ENQUADRAMENTO",
+      "definition": "Quando há um excesso ou falta de espaço entra a cabeça do professor e o final do enquadramento;",
+      "analystAction": "Analisado nos primeiros 20 segundos: Quando o docente estiver enquadrado no momento inicial do bloco de forma a ficar acima ou abaixo da faixa de enquadramento de teto estabelecida (seja do presencial ou do home studio)",
+      "grade": 3,
+      "scoresByYear": {
+        "2024": 0.2,
+        "2025": 0.3
+      },
+      "active": true
+    },
+    {
+      "id": "logo-mal-enquadrada",
+      "name": "Logo mal enquadrada",
+      "categoryId": "ENQUADRAMENTO",
+      "definition": "Quando o enquadramento da logo ao fundo é feita fora do padrão esperado;",
+      "analystAction": "\"SEDE 10 ou 11: Logo descentralizada ou cortada (no plano frontal)\nNa sede 12: Logo cortada (no plano frontal)\nPKS adesivo: Logo não estiver similar à referência em .png; tendo margem para mostrar um pouco a mais da parte de cima ou de baixo a depender da altura do(a) docente.\"",
+      "grade": 3,
+      "scoresByYear": {
+        "2024": 0.15,
+        "2025": 0.2
+      },
+      "active": true
+    },
+    {
+      "id": "limites-do-banner-painel-chroma-visiveis",
+      "name": "Limites do banner/painel/chroma visíveis",
+      "categoryId": "ENQUADRAMENTO",
+      "definition": "\"Em regra: Quando os limites (bordas) do banner, painel ou pano do chroma estão visíveis, revelando além do cenário;\nOcasionalmente: Quando o obs/vmix está com a camada do cenário deslocada de modo a não estar posicionada corretamente, revelando uma barra preta;\"",
+      "analystAction": "Assim que perceber a inconformidade;",
+      "grade": 3,
+      "scoresByYear": {
+        "2024": 0.15,
+        "2025": 0.2
+      },
+      "active": true
+    },
+    {
+      "id": "professor-cortado-no-chroma",
+      "name": "Professor cortado no chroma",
+      "categoryId": "ENQUADRAMENTO",
+      "definition": "Quando o professor fica recortado no chroma por se movimentar e estar além do pano (exemplo: braço sem mão quando o professor gesticula)",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 2,
+      "scoresByYear": {
+        "2024": 0.15,
+        "2025": 0.1
+      },
+      "active": true
+    },
+    {
+      "id": "professor-muito-proximo-distante-da-camera",
+      "name": "Professor muito próximo/distante da câmera",
+      "categoryId": "ENQUADRAMENTO",
+      "definition": "Quando o enquadramento está muito aberto ou fechado - seja em razão do enquadramento, seja em razão da movimentação do professor;",
+      "analystAction": "\"Próximo: quando o enquadramento está mais fechado que um primeiro plano, virando close;\nDistante: quando o enquadramente está aberto de forma a ser mais amplo que um plano médio, virando quase um plano americano;\"",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.05,
+        "2025": 0.05
+      },
+      "active": true
+    },
+    {
+      "id": "camera-tremendo-instavel",
+      "name": "Câmera tremendo/instável?",
+      "categoryId": "ENQUADRAMENTO",
+      "definition": "Quando há tremores na imagem da gravação devido à instabilidade da câmera e/ou a outros fatores.",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.05,
+        "2025": 0.05
+      },
+      "active": true
+    },
+    {
+      "id": "professor-descentralizado",
+      "name": "Professor descentralizado",
+      "categoryId": "ENQUADRAMENTO",
+      "definition": "Quando o professor não está no centro do cenário (precisa ser planos centrais da sede ou estúdios sem a tv ao fundo)",
+      "analystAction": "Analisado nos primeiros 20 segundos: precisa estar visível que é um problema de enquadramento por parte da operação e não um posicionamento do professor (dica: posicionamento das mãos na cintiq)",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.05,
+        "2025": 0.04
+      },
+      "active": true
+    },
+    {
+      "id": "professor-a-frente-da-tv-virtual",
+      "name": "Professor à frente da tv virtual",
+      "categoryId": "ENQUADRAMENTO",
+      "definition": "Quando o professor está na frente da TV virtual, fazendo com que o aluno tenha dificuldade em enxergar ou copiar o conteúdo exibido na TV.",
+      "analystAction": "Analisado nos primeiros 20 segundos: Quando o professor estiver mais à frente da tv do que 2 quadrados do Grid 16x9",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.05,
+        "2025": 0.03
+      },
+      "active": true
+    },
+    {
+      "id": "iluminacao-estourando",
+      "name": "Iluminação estourando",
+      "categoryId": "ILUMINAÇÃO",
+      "definition": "Quando há perda de informação na imagem por partes \"estouradas\", com visualização do ponto estourado no Waveform Y;",
+      "analystAction": "Assim que perceber a inconformidade (em caso de roupa do docente, avaliar caso a caso a indicação de inconformidade - se for apenas um detalhe, não marcar)",
+      "grade": 3,
+      "scoresByYear": {
+        "2024": 0.15,
+        "2025": 0.3
+      },
+      "active": true
+    },
+    {
+      "id": "iluminacao-fraca",
+      "name": "Iluminação fraca",
+      "categoryId": "ILUMINAÇÃO",
+      "definition": "Quando a imagem parece pouco iluminada, com visualização da inconformidade no Waveform Y;",
+      "analystAction": "\"Assim que perceber a inconformidade (normalmente já deve ocorrer no início do bloco, mas pode ocorrer durante a aula) \n\nRegra geral: deve estar com o(a) docente acima de 50% de luminância;\n\nRegra específica (2ª fase da inconformidade): Deve se observar caso a caso com as referências existentes para o PKS(DEVE SE OBSERVAR CASO A CASO COM A PLANILHA DO PKS, se estiver 10% abaixo da planilha, mesmo acima de 50%, pode marcar a inconconformidade)\"",
+      "grade": 3,
+      "scoresByYear": {
+        "2024": 0.05,
+        "2025": 0.2
+      },
+      "active": true
+    },
+    {
+      "id": "iluminacao-nao-uniforme",
+      "name": "Iluminação não uniforme",
+      "categoryId": "ILUMINAÇÃO",
+      "definition": "\"2 situações:\n\nQuando a iluminação não está distribuída de forma homogênea e há pontos de luz marcados ou áreas mais escuras no enquadramento;\n\nQuando o preset de luz (ou seja, não é a luz natural) muda durante o bloco ou entre blocos.\"",
+      "analystAction": "\"Assim que perceber a inconformidade e a checar com a visualização gráfica do Waveform Y;\n\nÉ necessário que seja perceptível visualmente e que a distorção no gráfico de luminância ratifique a diferença do que é esperado para o estúdio (ou seja, das referências que possuímos);\n\nSe for mudança entre blocos, apenas a percepção disso basta para a marcação.\"",
+      "grade": 2,
+      "scoresByYear": {
+        "2024": 0.05,
+        "2025": 0.1
+      },
+      "active": true
+    },
+    {
+      "id": "sombras",
+      "name": "Sombras",
+      "categoryId": "ILUMINAÇÃO",
+      "definition": "Quando há sombras duras não previstas no mapa de luz, projetadas no cenário ou rosto do(a) docente.",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 2,
+      "scoresByYear": {
+        "2024": 0.15,
+        "2025": 0.1
+      },
+      "active": true
+    },
+    {
+      "id": "temperatura-de-luz-quente-fria",
+      "name": "Temperatura de luz quente/fria",
+      "categoryId": "ILUMINAÇÃO",
+      "definition": "Quando a temperatura de cor da iluminação está próxima de azul (7000k) ou laranja (3000k).",
+      "analystAction": "Assim que perceber a inconformidade, sendo necessário observar atentamente se é uma questão de iluminação ou se é cor desconforme.",
+      "grade": 2,
+      "scoresByYear": {
+        "2024": 0.1,
+        "2025": 0.1
+      },
+      "active": true
+    },
+    {
+      "id": "flicker",
+      "name": "Flicker",
+      "categoryId": "ILUMINAÇÃO",
+      "definition": "O piscar intermitente de determinado tipo de iluminação. Pode provocar o efeito de banda/barra ou a cintilação parcial nas imagens.",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.15,
+        "2025": 0.03
+      },
+      "active": true
+    },
+    {
+      "id": "luz-natural-oscilacao",
+      "name": "Luz natural (oscilação)",
+      "categoryId": "ILUMINAÇÃO",
+      "definition": "A incidência de luz natural e oscilação luminosa (dia para noite e vice-versa).",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.02,
+        "2025": 0.01
+      },
+      "active": true
+    },
+    {
+      "id": "reflexo-de-iluminacao-nos-oculos",
+      "name": "Reflexo de iluminação nos óculos",
+      "categoryId": "ILUMINAÇÃO",
+      "definition": "Reflexos dos equipamentos de iluminação diretamente nas lentes dos óculos.",
+      "analystAction": "Assim que perceber a inconformidade (precisa estar \"competindo\" com o olhar do(a) docente).",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.01,
+        "2025": 0.01
+      },
+      "active": true
+    },
+    {
+      "id": "reflexo-de-retorno-nos-oculos",
+      "name": "Reflexo de retorno nos óculos",
+      "categoryId": "ILUMINAÇÃO",
+      "definition": "Reflexos da interface do software de transmissão/gravação nas lentes dos óculos.",
+      "analystAction": "Assim que perceber a inconformidade (precisa estar \"competindo\" com o olhar do(a) docente).",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.02,
+        "2025": 0.01
+      },
+      "active": true
+    },
+    {
+      "id": "reflexo-de-equipamentos-no-vidro-tv-ao-fundo",
+      "name": "Reflexo de equipamentos no vidro/tv ao fundo",
+      "categoryId": "ILUMINAÇÃO",
+      "definition": "Reflexos dos equipamentos nas partes de vidro ou TV do cenário.",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.01,
+        "2025": 0.01
+      },
+      "active": true
+    },
+    {
+      "id": "imagem-desfocada",
+      "name": "Imagem desfocada",
+      "categoryId": "OUTROS",
+      "definition": "Quando o foco da imagem não está no(a) docente.",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 3,
+      "scoresByYear": {
+        "2024": 0.25,
+        "2025": 0.3
+      },
+      "active": true
+    },
+    {
+      "id": "resolucao-baixa",
+      "name": "Resolução baixa",
+      "categoryId": "OUTROS",
+      "definition": "Quando a resolução da videoaula está abaixo de 1080p ou, mesmo quando nessa resolução, está visivelmente com qualidade inferior e mascarada pela transmissão/gravação em 1080p",
+      "analystAction": "\"Assim que checar a resolução do arquivo;\n\nSe estiver 1080p e, mesmo assim, parecer abaixo - analisar caso a caso com o supervisor;\"",
+      "grade": 3,
+      "scoresByYear": {
+        "2024": 0.2,
+        "2025": 0.2
+      },
+      "active": true
+    },
+    {
+      "id": "cor-desconforme",
+      "name": "Cor desconforme",
+      "categoryId": "OUTROS",
+      "definition": "Quando o equilíbrio de cores, contraste ou saturação está fora do padrão estabelecido - pode ser constante ou com oscilação durante a aula.",
+      "analystAction": "\"Assim que perceber a inconformidade e a checar com a visualização gráfica do Parade RGB.\n\nÉ necessário que seja perceptível visualmente e que a distorção no gráfico esteja em desacordo com as planilhas  de referência (HS e presencial);\n\nCaso ainda não haja na planilha, a distorção de cor deve ser observada caso a caso utilizando do bom senso.\"",
+      "grade": 2,
+      "scoresByYear": {
+        "2024": 0.15,
+        "2025": 0.15
+      },
+      "active": true
+    },
+    {
+      "id": "camada-do-material-com-irregularidades",
+      "name": "Camada do material com irregularidades",
+      "categoryId": "OUTROS",
+      "definition": "Quando a cena do material no software de transmissão possui algum erro (podendo ser crop ou mal encaixe do material dentro da tela cheia)",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 2,
+      "scoresByYear": {
+        "2024": 0.15,
+        "2025": 0.15
+      },
+      "active": true
+    },
+    {
+      "id": "video-dessincronizado",
+      "name": "Vídeo dessincronizado",
+      "categoryId": "OUTROS",
+      "definition": "Quando vídeo e áudio estão dessincronizados.",
+      "analystAction": "Assim que perceber a inconformidade. Deve assistir em velocidade reduzida para confirmar a marcação e registrar momento que exemplifique e checar se o arquivo no drive também a apresenta (se for apenas no youtube, não marca)",
+      "grade": 2,
+      "scoresByYear": {
+        "2024": 0.2,
+        "2025": 0.15
+      },
+      "active": true
+    },
+    {
+      "id": "exposicao-oscilando",
+      "name": "Exposição Oscilando",
+      "categoryId": "OUTROS",
+      "definition": "Modo de exposição da câmera no automático que gera oscilação visível na intensidade da luz durante a videoaula.",
+      "analystAction": "Assim que perceber ao menos uma oscilação que represente um ajuste automático do equipamento..",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.15,
+        "2025": 0.08
+      },
+      "active": true
+    },
+    {
+      "id": "foco-oscilando",
+      "name": "Foco oscilando",
+      "categoryId": "OUTROS",
+      "definition": "Quando o foco está configurado no modo automático e oscilando durante a aula, normalmente de acordo com o movimento do professor.",
+      "analystAction": "Assim que perceber ao menos uma oscilação que represente um ajuste automático do equipamento..",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.15,
+        "2025": 0.08
+      },
+      "active": true
+    },
+    {
+      "id": "video-travando",
+      "name": "Vídeo travando",
+      "categoryId": "OUTROS",
+      "definition": "Quado a imagem congela durante a reprodução da videoaula, o áudio pode continuar normalmente ou também ser afetado.",
+      "analystAction": "Assim que perceber a inconformidade;",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.15,
+        "2025": 0.05
+      },
+      "active": true
+    },
+    {
+      "id": "queda-de-fps",
+      "name": "Queda de fps",
+      "categoryId": "OUTROS",
+      "definition": "Quando a taxa de queda de frames atinge 2% ou mais do total de frames em qualquer momento da videoaula.",
+      "analystAction": "Assim que perceber a infconformidade, ressaltando-se que ela é marcada em casos que ainda não configuram travamento, mas sim \"rastros\".",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.15,
+        "2025": 0.04
+      },
+      "active": true
+    },
+    {
+      "id": "material-fora-dos-padroes",
+      "name": "Material fora dos padrões",
+      "categoryId": "OUTROS",
+      "definition": "Quando o material de PPT está visivelmente inadequado com a identidade do Gran. Ou seja: quando há ausência de algum fundo padrão, quando o fundo está totalmente equivocado com o projeto da aula, quando há referências à concorrência ou quando há erro de gramática.",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.02,
+        "2025": 0.02
+      },
+      "active": true
+    },
+    {
+      "id": "bg-chroma-fora-do-padrao",
+      "name": "BG chroma fora do padrão",
+      "categoryId": "CENÁRIO",
+      "definition": "Quando a imagem de BG ao fundo não é a padrão, geralmente com cores alteradas.",
+      "analystAction": "Assim que perceber a inconformidade (fundo sem tv deve ser consultado se há liberação).",
+      "grade": 3,
+      "scoresByYear": {
+        "2024": 0.2,
+        "2025": 0.2
+      },
+      "active": true
+    },
+    {
+      "id": "material-mal-encaixado-na-tv-virtual",
+      "name": "Material mal encaixado na tv virtual",
+      "categoryId": "CENÁRIO",
+      "definition": "Quando o material em PPT não está encaixado corretamente na TV virtual",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 3,
+      "scoresByYear": {
+        "2024": 0.2,
+        "2025": 0.2
+      },
+      "active": true
+    },
+    {
+      "id": "falhas-no-chroma",
+      "name": "Falhas no chroma",
+      "categoryId": "CENÁRIO",
+      "definition": "\"Quando há 'serrilhados' e/ou a exclusão de objetos e/ou partes do corpo da pessoa na gravação.\"",
+      "analystAction": "Assim que perceber a inconformidade, em Home Studios validados por nós o nível dos halos deve ser superior ao da validação.",
+      "grade": 3,
+      "scoresByYear": {
+        "2024": 0.1,
+        "2025": 0.2
+      },
+      "active": true
+    },
+    {
+      "id": "sem-cenario-padrao",
+      "name": "Sem cenário padrão",
+      "categoryId": "CENÁRIO",
+      "definition": "Quando a aula não possui um dos cenários padrão Gran.",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 2,
+      "scoresByYear": {
+        "2024": 0.05,
+        "2025": 0.07
+      },
+      "active": true
+    },
+    {
+      "id": "poluicao-visual",
+      "name": "Poluição visual",
+      "categoryId": "CENÁRIO",
+      "definition": "Quando objetos que não fazem parte da gravação em cena de forma a atrapalhar a atenção de quem assiste (cabos bagunçados ao fundo, brinquedos e até mesmo pessoas interagindo com a câmera sem permissão).",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.04,
+        "2025": 0.02
+      },
+      "active": true
+    },
+    {
+      "id": "cenario-avariado",
+      "name": "Cenário avariado",
+      "categoryId": "CENÁRIO",
+      "definition": "Quando há, no cenário padrão, marcas de danos ou imperfeições, como manchas e sujeira, seja no chroma, painel ou adesivo.",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.04,
+        "2025": 0.01
+      },
+      "active": true
+    },
+    {
+      "id": "audio-estourando",
+      "name": "Áudio estourando",
+      "categoryId": "ÁUDIO",
+      "definition": "Quando o áudio ultrapassa a altura ideal e perde informação.",
+      "analystAction": "Quando perceber a inconformidade, sendo que a quantidade de alcances do pico 0db deve ser o bastante para atrapalhar a boa compreensão e conforto ao se assistir a aula",
+      "grade": 3,
+      "scoresByYear": {
+        "2024": 0.2,
+        "2025": 0.3
+      },
+      "active": true
+    },
+    {
+      "id": "volume-baixo",
+      "name": "Volume baixo",
+      "categoryId": "ÁUDIO",
+      "definition": "Quando o volume do áudio dificulta o entendimento da fala, geralmente ocorre quando está abaixo do limite de -20dB.",
+      "analystAction": "Quando o volume do áudio em estiver orbitando em -10dB ou inferior por +- 10 segundos ou de forma recorrente na gravação (ou seja, deve ser além do tom de voz e sim uma clara necessidade de ajuste da operação)",
+      "grade": 3,
+      "scoresByYear": {
+        "2024": 0.2,
+        "2025": 0.3
+      },
+      "active": true
+    },
+    {
+      "id": "audio-deformado",
+      "name": "Áudio deformado",
+      "categoryId": "ÁUDIO",
+      "definition": "Quando há distorção sonora, com aspecto metalizado por excesso de plugins ou características físicas do microfone, ou quando há cortes ou falhas de áudio.",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 2,
+      "scoresByYear": {
+        "2024": 0.15,
+        "2025": 0.15
+      },
+      "active": true
+    },
+    {
+      "id": "ruido-de-ar-condicionado",
+      "name": "Ruído de ar-condicionado",
+      "categoryId": "ÁUDIO",
+      "definition": "Quando o microfone capta o ruído característico do ar condicionado e também quando há ruídos similares e contínuos.",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.15,
+        "2025": 0.05
+      },
+      "active": true
+    },
+    {
+      "id": "ruido-de-atrito-no-microfone",
+      "name": "Ruído de atrito no microfone",
+      "categoryId": "ÁUDIO",
+      "definition": "Quando o ruído específico é captado, por respiração, pelo(a) docente ou partes da roupa/adereços que se atritam com o microfone.",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.1,
+        "2025": 0.04
+      },
+      "active": true
+    },
+    {
+      "id": "ruidos-ambiente",
+      "name": "Ruídos ambiente",
+      "categoryId": "ÁUDIO",
+      "definition": "Quando o microfone capta ruídos alheios à gravação, como sons de conversa paralela e barulhos do ambiente.",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.1,
+        "2025": 0.05
+      },
+      "active": true
+    },
+    {
+      "id": "reverberacao",
+      "name": "Reverberação",
+      "categoryId": "ÁUDIO",
+      "definition": "Quando o áudio sofre distorção causada pela acústica do ambiente, que reflete as ondas sonoras e provoca o prolongamento na propagação do som, similar ao aspecto de eco.",
+      "analystAction": "\"Assim que perceber a inconformidade.\n\nNos estúdios presenciais, basta a presença de reverb acima do nível esperado;\nNos estúdios de home studio, deve-se observar as referências de validação para o parâmetro mínimo\"",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.04,
+        "2025": 0.03
+      },
+      "active": true
+    },
+    {
+      "id": "audio-com-interferencia",
+      "name": "Áudio com interferência",
+      "categoryId": "ÁUDIO",
+      "definition": "Quando há interferência externa no áudio ou mal contato do microfone - alterando e prejudicando a qualidade do áudio.",
+      "analystAction": "Assim que perceber a inconformidade.",
+      "grade": 1,
+      "scoresByYear": {
+        "2024": 0.1,
+        "2025": 0.02
+      },
+      "active": true
+    }
+  ]
+}
