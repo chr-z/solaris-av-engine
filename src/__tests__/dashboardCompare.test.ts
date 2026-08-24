@@ -152,9 +152,9 @@ describe('P11 dashboard group comparison — direction + formatting', () => {
 
   it('filename carries range bounds and a slugged dimension', () => {
     expect(compareFilename({}, 'instructor')).toBe('solaris-dashboard_ab-instructor.csv');
-    const named = compareFilename({ from: '2024-02', to: '2024-03' }, 'By Studio');
+    const named = compareFilename({ from: '2024-02', to: '2024-03' }, 'analyst');
     expect(named.startsWith('solaris-dashboard_2024-02_2024-03_')).toBe(true);
-    expect(named.endsWith('_ab-by-studio.csv')).toBe(true);
+    expect(named.endsWith('_ab-analyst.csv')).toBe(true);
   });
 });
 
