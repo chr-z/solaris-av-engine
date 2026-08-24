@@ -53,3 +53,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Optionallerna-debug.log*
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/gen/

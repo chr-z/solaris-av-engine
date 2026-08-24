@@ -61,7 +61,7 @@ pub struct WindowMatchCandidate {
     pub confidence_hint: &'static str,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize)]
 pub struct AlfredScanReport {
     pub root: String,
     pub scanned_dirs: u32,
