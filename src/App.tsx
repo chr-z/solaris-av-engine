@@ -14,6 +14,7 @@ import { logCaptureService } from './utils/logCapture';
 import { DEMO_HEADERS, DEMO_ROWS } from './utils/demoData';
 import { useI18n } from './i18n/I18nContext';
 import { computeFilteredRows } from './utils/rowFiltering';
+import { isStandalone } from './config/runtimeMode';
 
 // Code splitting (S3.1): the heavy analysis workspace (player + monitors + form)
 // is only fetched when an OS row is opened for the first time.
@@ -537,7 +538,22 @@ const App: React.FC = () => {
   }, [authStatus, userProfile]);
 
   // Auth & Init Flow
+  // STANDALONE (desktop/on-premise): sem Google libraries nem Firebase Auth —
+  // entra direto como revisor local com os dados demo. Nenhum poll de gapi.
   useEffect(() => {
+    if (isStandalone()) {
+      setUserProfile({
+        id: 'local-reviewer',
+        name: 'Revisor Local',
+        givenName: 'Revisor',
+        picture: '',
+        email: 'revisor@local.solaris',
+      });
+      setHeaders(DEMO_HEADERS);
+      setAllRows(DEMO_ROWS);
+      setAuthStatus('signedIn');
+      return;
+    }
     const initializeGapiForUser = async (user: firebase.User) => {
         try {
             await new Promise<void>((resolve, reject) => gapi.load('client', { callback: resolve, onerror: reject }));
@@ -669,6 +685,18 @@ const App: React.FC = () => {
         // Clear data on logout
         setAllRows([]);
         setHeaders([]);
+        // STANDALONE: sem tela de login — volta direto pra sessão local.
+        if (isStandalone()) {
+            setUserProfile({
+                id: 'local-reviewer',
+                name: 'Revisor Local',
+                givenName: 'Revisor',
+                picture: '',
+                email: 'revisor@local.solaris',
+            });
+            setHeaders(DEMO_HEADERS);
+            setAllRows(DEMO_ROWS);
+        }
     } catch (error) { console.error("Sign out error", error); }
   }, []);
 
