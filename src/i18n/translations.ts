@@ -89,6 +89,7 @@ export const en = {
   'shortcuts.dashExportCsv.description': 'Dashboards: export current view to CSV',
   'shortcuts.dashClearPeriod.description': 'Dashboards: clear period filter',
   'shortcuts.dashExportQcReport.description': 'Dashboards: download printable QC report of the current view',
+  'shortcuts.dashToggleCompare.description': 'Dashboards: toggle the A/B group comparison bar',
 
   // A/B compare mode (S5.2)
   'compare.title': 'A/B Compare',
@@ -190,6 +191,18 @@ export const en = {
   'dash.qcReport': 'QC Report',
   'dash.qcReport.title': 'Downloads a printable QC report (HTML → PDF via print) of the current view',
   'dash.qcReport.done': 'QC report downloaded — open the HTML and use "Print → Save as PDF".',
+  // v3 P11: group A/B comparison
+  'dash.compare': 'A/B Compare',
+  'dash.compare.title': 'Compare two groups of the same dimension',
+  'dash.compare.side': 'Side {side}',
+  'dash.compare.placeholder': 'Select a group…',
+  'dash.compare.clear': 'Clear comparison',
+  'dash.compare.delta': 'Δ average (B vs A)',
+  'dash.compare.empty': 'Pin side {side} to start the comparison.',
+  'dash.compare.dimMismatch': 'Sides must belong to the same dimension.',
+  'dash.compare.better': 'B is better than A',
+  'dash.compare.worse': 'B is worse than A',
+  'dash.compare.tie': 'Tied averages',
   'dash.drill.back': 'Back to overview',
   'dash.drill.title': 'O.S. of {group}',
   'dash.drill.count': '{scored} scored of {count}',
@@ -289,6 +302,7 @@ export const pt: Record<TranslationKey, string> = {
   'shortcuts.dashExportCsv.description': 'Dashboards: exportar visão atual em CSV',
   'shortcuts.dashClearPeriod.description': 'Dashboards: limpar filtro de período',
   'shortcuts.dashExportQcReport.description': 'Dashboards: baixar relatório QC imprimível da visão atual',
+  'shortcuts.dashToggleCompare.description': 'Dashboards: alternar a barra de comparação A/B de grupos',
 
   // Modo comparativo A/B (S5.2)
   'compare.title': 'Comparar A/B',
@@ -390,6 +404,18 @@ export const pt: Record<TranslationKey, string> = {
   'dash.qcReport': 'Relatório QC',
   'dash.qcReport.title': 'Baixa um relatório QC imprimível (HTML → PDF via imprimir) da visão atual',
   'dash.qcReport.done': 'Relatório QC baixado — abra o HTML e use "Imprimir → Salvar como PDF".',
+  // v3 P11: comparação A/B de grupos
+  'dash.compare': 'Comparar A/B',
+  'dash.compare.title': 'Compare dois grupos da mesma dimensão',
+  'dash.compare.side': 'Lado {side}',
+  'dash.compare.placeholder': 'Selecione um grupo…',
+  'dash.compare.clear': 'Limpar comparação',
+  'dash.compare.delta': 'Δ média (B vs A)',
+  'dash.compare.empty': 'Fixe o lado {side} para iniciar a comparação.',
+  'dash.compare.dimMismatch': 'Os lados devem ser da mesma dimensão.',
+  'dash.compare.better': 'B melhor que A',
+  'dash.compare.worse': 'B pior que A',
+  'dash.compare.tie': 'Médias empatadas',
   'dash.drill.back': 'Voltar à visão geral',
   'dash.drill.title': 'O.S. de {group}',
   'dash.drill.count': '{scored} pontuadas de {count}',
