@@ -24,6 +24,8 @@ interface AnalystActions {
   exitDashDrillDown?: () => void;
   /** v3 P9: printable QC report of the current dashboard view. */
   exportDashQcReport?: () => void;
+  /** v3 P11: toggle the dashboard group A/B comparison bar. */
+  dashToggleCompare?: () => void;
 }
 
 interface UseAnalystShortcutsOptions extends AnalystActions {
@@ -116,6 +118,7 @@ export function useAnalystShortcuts({
         case 'dashExportCsv': current.exportDashCsv?.(); break;
         case 'dashClearPeriod': current.clearDashPeriod?.(); break;
         case 'dashExportQcReport': current.exportDashQcReport?.(); break;
+        case 'dashToggleCompare': current.dashToggleCompare?.(); break;
         default: break;
       }
     };

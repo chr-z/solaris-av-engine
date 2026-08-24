@@ -80,6 +80,8 @@ export const ANALYST_SHORTCUTS: readonly ShortcutDef[] = [
   { id: 'dashClearPeriod', keys: 'c', display: 'C', scope: 'dashboard', descriptionKey: 'shortcuts.dashClearPeriod.description' },
   // v3 P9: printable QC report of the current dashboard view.
   { id: 'dashExportQcReport', keys: 'r', display: 'R', scope: 'dashboard', descriptionKey: 'shortcuts.dashExportQcReport.description' },
+  // v3 P11: toggle the group A/B comparison bar.
+  { id: 'dashToggleCompare', keys: 'b', display: 'B', scope: 'dashboard', descriptionKey: 'shortcuts.dashToggleCompare.description' },
 ];
 
 export const SHORTCUT_HELP_KEY = 'header.shortcutHelp';
