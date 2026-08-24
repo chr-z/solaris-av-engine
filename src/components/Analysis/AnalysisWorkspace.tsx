@@ -18,7 +18,7 @@ import Dock from '../Layout/Dock';
 import UserAvatar from '../Auth/UserAvatar';
 import Popover from '../Core/Popover';
 import ShortcutHelpModal from '../Core/ShortcutHelpModal';
-import { SaveIcon, ClipboardCheckIcon, YouTubeIcon, GoogleDriveIcon, XIcon, GridIcon, ClockIcon, PencilIcon, InfoIcon, ColumnsIcon, RowsIcon } from '../Core/icons';
+import { SaveIcon, ClipboardCheckIcon, YouTubeIcon, GoogleDriveIcon, XIcon, GridIcon, ClockIcon, PencilIcon, InfoIcon, ColumnsIcon, RowsIcon, RefreshIcon } from '../Core/icons';
 
 // Imports locais (mesma pasta Analysis)
 import AnalysisForm from './AnalysisForm';
@@ -35,6 +35,13 @@ import { dropdownFields, inconformityToCategoryMap, resultFields, inconformitySc
 import { getCompareGridClass } from '../../utils/compareMode';
 import { database } from '../../config/firebase';
 import firebase from 'firebase/compat/app';
+
+// Solaris v3: scoring + sheet-sync modules
+import { recalculateScoresWithEngine, isScorableHeader, applyScoreUpdates } from '../../config/engineBridge';
+import { updateSheetRow as syncUpdateSheetRow } from '../../services/sheetSync';
+
+// Local alias keeps the legacy name space untouched inside this component.
+const applyScoreUpdatesLocal = applyScoreUpdates;
 
 // --- SUB-COMPONENTS ---
 
@@ -385,6 +392,11 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   // S5.1: keyboard shortcuts — "?" opens the quick-reference modal.
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
 
+  // v3 sheet-sync state (idempotent write + local audit trail)
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [syncError, setSyncError] = useState<string | null>(null);
+
   // S5.2: A/B compare orchestration (state + imperative sync channel).
   const compare = useCompareMode({ hasMedia: !!videoSrc });
   // S6.1: compare mode is a Pro feature — the toggle is flag-gated.
@@ -514,16 +526,23 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   const handleDataChange = useCallback((columnIndex: number, value: string) => {
     setLocalRowData(prevData => {
       if (!prevData) return null;
-      
+
       const newData = [...prevData];
       const newCell = { ...(newData[columnIndex] || {}), value };
       newData[columnIndex] = newCell;
 
       const fieldName = headers[columnIndex];
-      if (Object.prototype.hasOwnProperty.call(inconformityToCategoryMap, fieldName)) {
-          return recalculateScores(newData, headers);
+      // v3: score via the ScoringEngine (versioned rules) when the field is a
+      // known inconformity — covers v2 EN headers and legacy MVP PT-BR ones.
+      // Falls back to the legacy hardcoded table for unknown fields.
+      if (
+        Object.prototype.hasOwnProperty.call(inconformityToCategoryMap, fieldName) ||
+        isScorableHeader(fieldName)
+      ) {
+          const { cellUpdates } = recalculateScoresWithEngine(newData, headers);
+          return applyScoreUpdatesLocal(newData, cellUpdates);
       }
-      
+
       return newData;
     });
   }, [headers]);
@@ -556,6 +575,40 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   useEffect(() => {
     saveViaShortcutRef.current = () => { void handleSave(); };
   });
+
+  // v3: "Sincronizar com planilha" — resilient idempotent write of the current
+  // row through the SheetConnector (retry + backoff + audit log). Uses the same
+  // Google access token the app already holds from sign-in.
+  const gapiToken = () => {
+    try {
+      return (window as unknown as { gapi?: { client?: { getToken?: () => { access_token?: string } | null } } })
+        .gapi?.client?.getToken?.()?.access_token ?? null;
+    } catch { return null; }
+  };
+
+  const handleSyncToSheet = async () => {
+    if (!localRowData || selectedOsIndex === null) return;
+    const token = gapiToken();
+    if (!token) {
+      setSyncError('Sessão Google expirada. Conecte-se novamente para sincronizar.');
+      setSyncStatus('error');
+      return;
+    }
+    setIsSyncing(true);
+    setSyncError(null);
+    setSyncStatus('idle');
+    try {
+      await syncUpdateSheetRow(selectedOsIndex, localRowData, { accessToken: token });
+      onSaveSuccess(localRowData);
+      setSyncStatus('success');
+      setTimeout(() => setSyncStatus('idle'), 2500);
+    } catch (error: unknown) {
+      setSyncError(error instanceof Error ? error.message : 'Falha na sincronização com a planilha.');
+      setSyncStatus('error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   if (isRowLoading) {
     return (
@@ -600,6 +653,34 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
       </button>
     );
   };
+
+  // v3: sync button + inline status, rendered next to the legacy Save button.
+  const renderSyncButton = () => (
+    <div className="flex items-center gap-2">
+      {syncStatus === 'success' && (
+        <div className="flex items-center gap-1.5 text-green-400 text-sm">
+          <ClipboardCheckIcon className="w-4 h-4" />
+          <span>Planilha sincronizada</span>
+        </div>
+      )}
+      {syncStatus === 'error' && syncError && (
+        <p className="text-sm text-red-400 max-w-[280px] truncate" title={syncError}>{syncError}</p>
+      )}
+      <button
+        onClick={() => { void handleSyncToSheet(); }}
+        disabled={isSyncing || isSaving}
+        title="Grava a linha da O.S. na planilha (escrita idempotente com auditoria)"
+        className="flex items-center gap-2 px-4 py-2 rounded-md border border-solar-accent/60 text-solar-accent hover:bg-solar-accent/10 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50"
+      >
+        {isSyncing ? (
+          <div className="w-5 h-5 border-2 border-solar-accent border-t-transparent rounded-full animate-spin"></div>
+        ) : (
+          <RefreshIcon className="w-5 h-5" />
+        )}
+        <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar com planilha'}</span>
+      </button>
+    </div>
+  );
 
   const osIdentifier = localRowData ? (localRowData[headers.indexOf('W.O.')]?.value || '') : '';
 
@@ -883,6 +964,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                     </button>
                   )}
                   {renderSaveButton()}
+                  {renderSyncButton()}
               </div>
           </header>
           <div className="flex-1 overflow-y-auto">
