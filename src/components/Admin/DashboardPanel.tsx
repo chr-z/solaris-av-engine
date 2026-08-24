@@ -51,6 +51,14 @@ import {
   renderQcBatchHtml,
 } from "../../utils/qcBatch";
 import { useAnalystShortcuts } from "../../hooks/useAnalystShortcuts";
+import {
+  buildComparison,
+  deltaDirection,
+  formatSignedDelta,
+  compareFilename,
+  buildCompareCsv,
+  type CompareSide,
+} from "../../utils/dashboardCompare";
 import ShortcutHelpModal from "../Core/ShortcutHelpModal";
 import { useI18n } from "../../i18n/I18nContext";
 import type { TranslationKey } from "../../i18n/translations";
@@ -108,6 +116,90 @@ const DIMENSION_BY_SECTION: Partial<Record<Section, GroupDimension>> = {
   studios: "studio",
   instructors: "instructor",
   analysts: "analyst",
+};
+
+/** v3 P11: dimension picker options for the A/B comparison bar. */
+const DIMENSIONS: GroupDimension[] = ["studio", "instructor", "analyst"];
+
+/** Dimension id → i18n key (table headers reuse the section labels). */
+const DIMENSION_LABEL_KEY: Record<
+  GroupDimension,
+  TranslationKey
+> = {
+  studio: "dash.section.studios",
+  instructor: "dash.section.instructors",
+  analyst: "dash.section.analysts",
+};
+
+/** v3 P11: human verdict for the delta card, localized via t(). */
+const verdictText = (
+  direction: ReturnType<typeof deltaDirection>,
+  t: (key: TranslationKey) => string,
+): string => {
+  if (direction === "better") return t("dash.compare.better");
+  if (direction === "worse") return t("dash.compare.worse");
+  if (direction === "tie") return t("dash.compare.tie");
+  return "";
+};
+
+/**
+ * v3 P11: one side of the A/B comparison — dimension + group pickers.
+ * Presentational; selection state lives in the panel so both sides stay
+ * in sync while switching dimensions.
+ */
+const CompareSidePicker: React.FC<{
+  side: "A" | "B";
+  dimension: GroupDimension;
+  label: string;
+  labels: string[];
+  onDimensionChange: (dimension: GroupDimension) => void;
+  onLabelChange: (label: string) => void;
+}> = ({
+  side,
+  dimension,
+  label,
+  labels,
+  onDimensionChange,
+  onLabelChange,
+}) => {
+  const { t } = useI18n();
+  return (
+    <div className="flex items-center gap-1.5">
+      <span
+        data-testid={`dash-compare-side-${side.toLowerCase()}`}
+        className="text-xs font-bold uppercase text-solar-accent"
+      >
+        {t("dash.compare.side", { side })}
+      </span>
+      <select
+        aria-label={`${t("dash.compare.side", { side })}: ${t(
+          DIMENSION_LABEL_KEY[dimension],
+        )}`}
+        value={dimension}
+        onChange={(e) => onDimensionChange(e.target.value as GroupDimension)}
+        className="rounded-md border border-gray-600/60 bg-gray-900/70 px-1.5 py-1 text-xs text-gray-100 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+      >
+        {DIMENSIONS.map((d) => (
+          <option key={d} value={d}>
+            {t(DIMENSION_LABEL_KEY[d])}
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label={t("dash.compare.side", { side })}
+        value={label}
+        onChange={(e) => onLabelChange(e.target.value)}
+        className="max-w-[12rem] rounded-md border border-gray-600/60 bg-gray-900/70 px-1.5 py-1 text-xs text-gray-100 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+      >
+        <option value="">{t("dash.compare.placeholder")}</option>
+        {labels.map((l) => (
+          <option key={l} value={l}>
+            {l}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
 };
 
 /** KPI card — presentational only. */
@@ -188,7 +280,9 @@ const GroupTable: React.FC<{
   stats: GroupStat[];
   emptyText: string;
   onSelect: (label: string) => void;
-}> = ({ stats, emptyText, onSelect }) => {
+  /** v3 P11: renders an inline "A/B" pin per row when provided. */
+  onPinCompare?: (label: string) => void;
+}> = ({ stats, emptyText, onSelect, onPinCompare }) => {
   const { t } = useI18n();
   if (stats.length === 0) {
     return (
@@ -237,6 +331,18 @@ const GroupTable: React.FC<{
               >
                 {s.label}
               </button>
+              {onPinCompare && (
+                <button
+                  type="button"
+                  data-testid={`dash-pin-${s.label}`}
+                  onClick={() => onPinCompare(s.label)}
+                  title={t("dash.compare.title")}
+                  aria-label={t("dash.compare.title")}
+                  className="ml-2 px-1.5 py-0.5 rounded border border-gray-600/60 font-mono text-[10px] uppercase text-gray-400 hover:text-solar-accent hover:border-solar-accent transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+                >
+                  A/B
+                </button>
+              )}
             </td>
             <td className="py-2 pr-4 text-right tabular-nums text-gray-300">
               {s.count}
@@ -275,7 +381,9 @@ const MonthHubView: React.FC<{
   onBack: () => void;
   onSelectGroup: (label: string) => void;
   onExport: () => void;
-}> = ({ month, stats, summary, onBack, onSelectGroup, onExport }) => {
+  /** v3 P11: inline A/B pin per row when the comparison bar is open. */
+  onPinCompare?: (label: string) => void;
+}> = ({ month, stats, summary, onBack, onSelectGroup, onExport, onPinCompare }) => {
   const { t } = useI18n();
   return (
     <div data-testid="dash-month-hub">
@@ -383,6 +491,18 @@ const MonthHubView: React.FC<{
                   >
                     {s.label}
                   </button>
+                  {onPinCompare && (
+                    <button
+                      type="button"
+                      data-testid={`dash-pin-${month}-${s.label}`}
+                      onClick={() => onPinCompare(s.label)}
+                      title={t("dash.compare.title")}
+                      aria-label={t("dash.compare.title")}
+                      className="ml-2 px-1.5 py-0.5 rounded border border-gray-600/60 font-mono text-[10px] uppercase text-gray-400 hover:text-solar-accent hover:border-solar-accent transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+                    >
+                      A/B
+                    </button>
+                  )}
                 </td>
                 <td className="py-2 pr-4 text-right tabular-nums text-gray-300">
                   {s.count}
@@ -582,6 +702,16 @@ const DashboardPanel: React.FC = () => {
   const [toInput, setToInput] = useState("");
   // v3 P9: one-shot confirmation after a QC report download.
   const [qcToastVisible, setQcToastVisible] = useState(false);
+  // v3 P11: A/B group comparison — null label means the side is unpinned.
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [sideA, setSideA] = useState<CompareSide>({
+    dimension: "studio",
+    label: "",
+  });
+  const [sideB, setSideB] = useState<CompareSide>({
+    dimension: "studio",
+    label: "",
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -630,6 +760,17 @@ const DashboardPanel: React.FC = () => {
   const groupStats = useMemo(
     () => (dimension ? groupAverageBy(filtered, dimension) : []),
     [filtered, dimension],
+  );
+
+  // v3 P11: available labels per dimension (same order as the tables),
+  // feeding the A/B pickers.
+  const labelsByDimension = useMemo(
+    () => ({
+      studio: groupAverageBy(filtered, "studio").map((s) => s.label),
+      instructor: groupAverageBy(filtered, "instructor").map((s) => s.label),
+      analyst: groupAverageBy(filtered, "analyst").map((s) => s.label),
+    }),
+    [filtered],
   );
 
   const downloadCsv = (records: OsRecord[], filename: string) => {
@@ -735,6 +876,21 @@ const DashboardPanel: React.FC = () => {
     setQcToastVisible(true);
   }, [filtered, drillDown, range, locale]);
 
+  // v3 P11: A/B comparison derived from the SAME filtered dataset as every
+  // other view — period edits update it live; null while either side is
+  // unpinned or the sides diverge in dimension (bar shows the hint instead).
+  const pinned =
+    sideA.label !== "" &&
+    sideB.label !== "" &&
+    sideA.dimension === sideB.dimension;
+  const comparison = useMemo(
+    () =>
+      pinned
+        ? buildComparison(filtered, sideA, sideB)
+        : null,
+    [pinned, filtered, sideA, sideB],
+  );
+
   // v3 P8: keyboard shortcuts. Latest handlers live in refs so the global
   // keydown listener (bound once) always dispatches against current state.
   const clearPeriod = useCallback(() => {
@@ -746,6 +902,45 @@ const DashboardPanel: React.FC = () => {
     setSection(next);
     setDrillDown(null);
   }, []);
+
+  // v3 P11: comparison export + toggle (B shortcut). Handlers are plain
+  // functions re-registered every render via the existing refs pattern.
+  const exportCompareCsv = () => {
+    if (!comparison) return;
+    const csvText = buildCompareCsv(comparison);
+    const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = compareFilename(range, comparison.dimension);
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  const toggleCompareBar = useCallback(
+    () => setCompareOpen((open) => !open),
+    [],
+  );
+
+  // v3 P11: pinning from a table row opens the bar and fills the first
+  // free slot of the SAME dimension; a dimension switch restarts the pair,
+  // and a click with both slots filled replaces B (last click wins).
+  const pinCompareGroup = (dim: GroupDimension, label: string) => {
+    setCompareOpen(true);
+    if (sideA.label === "") {
+      setSideA({ dimension: dim, label });
+      return;
+    }
+    if (sideB.label === "") {
+      if (sideB.dimension === dim) {
+        setSideB({ dimension: dim, label });
+      } else {
+        setSideA({ dimension: dim, label });
+        setSideB({ dimension: dim, label: "" });
+      }
+      return;
+    }
+    setSideB({ dimension: dim, label });
+  };
 
   useAnalystShortcuts({
     enabled: true,
@@ -762,6 +957,7 @@ const DashboardPanel: React.FC = () => {
     clearDashPeriod: clearPeriod,
     exitDashDrillDown: exitDrillDown,
     exportDashQcReport: exportQcReport,
+    dashToggleCompare: toggleCompareBar,
   });
 
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
@@ -834,6 +1030,32 @@ const DashboardPanel: React.FC = () => {
             {t("dash.liveSource")}
           </span>
         )}
+        {compareOpen && (
+          <button
+            type="button"
+            data-testid="dash-compare-export"
+            onClick={exportCompareCsv}
+            disabled={!comparison}
+            title={t("dash.export.title")}
+            className={`ml-auto px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent enabled:hover:bg-solar-accent/10 transition-colors enabled:cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent`}
+          >
+            {t("dash.export")}
+          </button>
+        )}
+        <button
+          type="button"
+          data-testid="dash-compare-toggle"
+          aria-pressed={compareOpen}
+          onClick={() => setCompareOpen((open) => !open)}
+          title={t("dash.compare.title")}
+          className={`${compareOpen ? "" : "ml-auto "}px-3 py-1.5 rounded-md text-sm font-medium border transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent ${
+            compareOpen
+              ? "bg-solar-accent/20 border-solar-accent text-solar-accent"
+              : "border-gray-600/60 text-gray-300 hover:bg-gray-500/10"
+          }`}
+        >
+          {t("dash.compare")}
+        </button>
         <button
           type="button"
           data-testid="dash-shortcut-help"
@@ -934,6 +1156,107 @@ const DashboardPanel: React.FC = () => {
         })}
       </nav>
 
+      {compareOpen && (
+        <div
+          data-testid="dash-compare-bar"
+          className="mb-5 rounded-lg border border-gray-600/60 bg-gray-800/50 px-3 py-3"
+        >
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="text-xs uppercase tracking-wide text-gray-400">
+              {t("dash.compare")}
+            </span>
+            <CompareSidePicker
+              side="A"
+              dimension={sideA.dimension}
+              label={sideA.label}
+              labels={labelsByDimension[sideA.dimension]}
+              onDimensionChange={(d) => setSideA({ dimension: d, label: "" })}
+              onLabelChange={(label) =>
+                setSideA((cur) => ({ ...cur, label }))
+              }
+            />
+            <CompareSidePicker
+              side="B"
+              dimension={sideB.dimension}
+              label={sideB.label}
+              labels={labelsByDimension[sideB.dimension]}
+              onDimensionChange={(d) => setSideB({ dimension: d, label: "" })}
+              onLabelChange={(label) =>
+                setSideB((cur) => ({ ...cur, label }))
+              }
+            />
+            <button
+              type="button"
+              data-testid="dash-compare-clear"
+              onClick={() => {
+                setSideA({ dimension: sideA.dimension, label: "" });
+                setSideB({ dimension: sideB.dimension, label: "" });
+              }}
+              className="px-2 py-1 rounded-md text-xs border border-gray-600/60 text-gray-300 hover:bg-gray-500/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+            >
+              {t("dash.compare.clear")}
+            </button>
+          </div>
+
+          {!pinned ? (
+            <p
+              className="mt-2 text-xs text-gray-500"
+              data-testid="dash-compare-empty"
+            >
+              {sideA.dimension !== sideB.dimension &&
+              sideA.label !== "" &&
+              sideB.label !== ""
+                ? t("dash.compare.dimMismatch")
+                : t("dash.compare.empty", {
+                    side: sideA.label === "" ? "A" : "B",
+                  })}
+            </p>
+          ) : comparison === null ? (
+            <p className="mt-2 text-xs text-gray-500" data-testid="dash-compare-empty">
+              {t("dash.empty")}
+            </p>
+          ) : (
+            <div
+              className="flex flex-wrap gap-3 mt-3"
+              data-testid="dash-compare-result"
+            >
+              <Card
+                label={`${sideA.label} · ${t("dash.table.avg")}`}
+                value={formatScoreDisplay(comparison.a.average)}
+                sub={t("dash.drill.count", {
+                  scored: comparison.a.scoredCount,
+                  count: comparison.a.count,
+                })}
+                testId="dash-compare-card-a"
+              />
+              <Card
+                label={`${sideB.label} · ${t("dash.table.avg")}`}
+                value={formatScoreDisplay(comparison.b.average)}
+                sub={t("dash.drill.count", {
+                  scored: comparison.b.scoredCount,
+                  count: comparison.b.count,
+                })}
+                testId="dash-compare-card-b"
+              />
+              <Card
+                label={t("dash.compare.delta")}
+                value={
+                  formatSignedDelta(
+                    comparison.avgDelta,
+                    locale === "pt",
+                  ) ?? "—"
+                }
+                sub={verdictText(
+                  deltaDirection(comparison.avgDelta),
+                  t,
+                )}
+                testId="dash-compare-delta"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {inMonthHub && drillDown && (
         <MonthHubView
           month={drillDown.label}
@@ -954,6 +1277,11 @@ const DashboardPanel: React.FC = () => {
             )
           }
           onExport={exportDrillCsv}
+          onPinCompare={
+            compareOpen
+              ? (label) => pinCompareGroup(drillDown.dimension, label)
+              : undefined
+          }
         />
       )}
 
@@ -1031,6 +1359,11 @@ const DashboardPanel: React.FC = () => {
               emptyText={t("dash.empty")}
               onSelect={(label) =>
                 setDrillDown({ kind: "group", dimension, label })
+              }
+              onPinCompare={
+                compareOpen
+                  ? (label) => pinCompareGroup(dimension, label)
+                  : undefined
               }
             />
           )}
