@@ -34,6 +34,12 @@ import {
   hasActiveBounds,
 } from "../../utils/dashboardExport";
 import {
+  buildDashboardXlsx,
+  xlsxFilename,
+  xlsxDrilldownFilename,
+  xlsxMonthGroupFilename,
+} from "../../utils/dashboardXlsx";
+import {
   loadDashboardEntries,
   barHeightRatio,
   formatScoreDisplay,
@@ -547,9 +553,11 @@ const DrillDownView: React.FC<{
   records: OsRecord[];
   onBack: () => void;
   onExport: () => void;
+  /** v3 P12: Excel (.xlsx) export scoped to this bucket. */
+  onExportXlsx: () => void;
   /** v3 P9: printable QC report scoped to this bucket. */
   onExportQc: () => void;
-}> = ({ dimension, label, monthScope, backLabel, selection, records, onBack, onExport, onExportQc }) => {
+}> = ({ dimension, label, monthScope, backLabel, selection, records, onBack, onExport, onExportXlsx, onExportQc }) => {
   const { t } = useI18n();
   const dimensionLabel =
     dimension === "studio"
@@ -615,6 +623,15 @@ const DrillDownView: React.FC<{
             className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
           >
             {t("dash.export")}
+          </button>
+          <button
+            type="button"
+            data-testid="dash-drill-export-xlsx"
+            onClick={onExportXlsx}
+            title={t("dash.exportXlsx.title")}
+            className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+          >
+            {t("dash.exportXlsx")}
           </button>
         </div>
       </div>
@@ -789,11 +806,34 @@ const DashboardPanel: React.FC = () => {
       csvFilename({ from: fromInput, to: toInput }),
     );
 
+  // v3 P12: same records/order as the CSV export, packaged as a real Excel
+  // spreadsheet (numeric scores) — zero-dependency OOXML writer in utils.
+  const downloadXlsx = (records: OsRecord[], filename: string) => {
+    const bytes = buildDashboardXlsx(records);
+    const blob = new Blob([bytes], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  const exportXlsx = () =>
+    downloadXlsx(filtered.records, xlsxFilename({ from: fromInput, to: toInput }));
+
   // v3 P8: latest export handler for the E shortcut — assigned after render
   // so the shortcut always exports against current filter state.
   const exportCsvRef = useRef<() => void>(() => {});
   useEffect(() => {
     exportCsvRef.current = exportCsv;
+  });
+
+  // v3 P12: latest XLSX handler for the X shortcut (same pattern).
+  const exportXlsxRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    exportXlsxRef.current = exportXlsx;
   });
 
   // P7/P10 drill-down: selecting a table group or a trend month shows every
@@ -846,6 +886,21 @@ const DashboardPanel: React.FC = () => {
       downloadCsv(
         drillRecords,
         monthGroupFilename(range, drillDown.label, drillDown.month.label),
+      );
+    }
+  };
+
+  // v3 P12: Excel twin of every drill-down CSV export.
+  const exportDrillXlsx = () => {
+    if (!drillDown) return;
+    if (drillDown.kind === "group") {
+      downloadXlsx(drillRecords, xlsxDrilldownFilename(range, drillDown.label));
+    } else if (!drillDown.month) {
+      downloadXlsx(drillRecords, xlsxDrilldownFilename(range, drillDown.label));
+    } else {
+      downloadXlsx(
+        drillRecords,
+        xlsxMonthGroupFilename(range, drillDown.label, drillDown.month.label),
       );
     }
   };
@@ -958,6 +1013,7 @@ const DashboardPanel: React.FC = () => {
     exitDashDrillDown: exitDrillDown,
     exportDashQcReport: exportQcReport,
     dashToggleCompare: toggleCompareBar,
+    exportDashXlsx: useCallback(() => exportXlsxRef.current(), []),
   });
 
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
@@ -1126,9 +1182,18 @@ const DashboardPanel: React.FC = () => {
           data-testid="dash-export-csv"
           onClick={exportCsv}
           title={t("dash.export.title")}
-          className="ml-auto px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors"
+          className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors"
         >
           {t("dash.export")}
+        </button>
+        <button
+          type="button"
+          data-testid="dash-export-xlsx"
+          onClick={exportXlsx}
+          title={t("dash.exportXlsx.title")}
+          className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors"
+        >
+          {t("dash.exportXlsx")}
         </button>
       </div>
 
@@ -1311,6 +1376,7 @@ const DashboardPanel: React.FC = () => {
               : setDrillDown(null)
           }
           onExport={exportDrillCsv}
+          onExportXlsx={exportDrillXlsx}
           onExportQc={exportQcReport}
         />
       )}
