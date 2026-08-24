@@ -137,6 +137,16 @@ export const en = {
   // PWA / offline
   'pwa.offlineBadge': 'Offline — cached mode',
   'pwa.offlineBadgeTitle': 'You are offline. The app shell keeps working; media and cloud features need a connection.',
+
+  // Admin console (v3 scoring rules)
+  'header.adminPanel': 'Scoring Rules',
+  'admin.checkingRole': 'Checking permissions...',
+  'admin.deniedTitle': 'Restricted access',
+  'admin.deniedBody': 'The Scoring Rules panel requires an admin profile (role=admin Firebase claim) or a local demo allowlist entry.',
+  'admin.backToApp': 'Back to app',
+  'admin.roleSourceTitle': 'Permission origin',
+  'admin.roleViaClaim': 'role via Firebase claim',
+  'admin.roleViaLocal': 'role via local allowlist',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -274,6 +284,16 @@ export const pt: Record<TranslationKey, string> = {
   // PWA / offline
   'pwa.offlineBadge': 'Offline — modo cacheado',
   'pwa.offlineBadgeTitle': 'Você está offline. O app continua funcionando; mídia e recursos na nuvem precisam de conexão.',
+
+  // Admin console (v3 scoring rules)
+  'header.adminPanel': 'Regras de Pontuação',
+  'admin.checkingRole': 'Verificando permissões...',
+  'admin.deniedTitle': 'Acesso restrito',
+  'admin.deniedBody': 'O Painel de Pontuações exige perfil admin (claim role=admin no Firebase) ou entrada na allowlist local de demonstração.',
+  'admin.backToApp': 'Voltar ao app',
+  'admin.roleSourceTitle': 'Origem da permissão',
+  'admin.roleViaClaim': 'permissão via Firebase claim',
+  'admin.roleViaLocal': 'permissão via allowlist local',
 };
 
 export const dictionaries = { en, pt } as const;
