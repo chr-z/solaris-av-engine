@@ -18,6 +18,7 @@ import { describeFeature } from '../../licensing/core';
 // closed, so the chunk request never fires until actually needed.
 const BugReportModal = React.lazy(() => import('../Admin/BugReportModal'));
 const BugReportViewer = React.lazy(() => import('../Admin/BugReportViewer'));
+const SourcesAdmin = React.lazy(() => import('../Admin/SourcesAdmin'));
 
 
 interface HeaderProps {
@@ -41,6 +42,7 @@ const Header: React.FC<HeaderProps> = ({
   const { isPro } = useLicense();
   const [isBugReportModalOpen, setIsBugReportModalOpen] = useState(false);
   const [isBugReportViewerOpen, setIsBugReportViewerOpen] = useState(false);
+  const [isSourcesAdminOpen, setIsSourcesAdminOpen] = useState(false);
   // S6.1: the lock overlay opens this via a window event (no prop drilling
   // through the workspace tree).
   const [isProUpgradeOpen, setIsProUpgradeOpen] = useState(false);
@@ -151,12 +153,20 @@ const Header: React.FC<HeaderProps> = ({
                         </button>
                         {/* Admin Panel Link */}
                         {userProfile.email.endsWith('.admin') && (
-                          <button 
-                            onClick={() => { setIsBugReportViewerOpen(true); close(); }} 
-                            className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
-                          >
-                            {t('header.systemReports')}
-                          </button>
+                          <>
+                            <button
+                              onClick={() => { setIsSourcesAdminOpen(true); close(); }}
+                              className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
+                            >
+                              {t('admin.sources.title')}
+                            </button>
+                            <button
+                              onClick={() => { setIsBugReportViewerOpen(true); close(); }}
+                              className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
+                            >
+                              {t('header.systemReports')}
+                            </button>
+                          </>
                         )}
                     </div>
                     <button 
@@ -188,6 +198,16 @@ const Header: React.FC<HeaderProps> = ({
           <BugReportViewer
             isOpen
             onClose={() => setIsBugReportViewerOpen(false)}
+          />
+        </React.Suspense>
+      )}
+
+      {/* Admin → Fontes (Saturno/Alfred/Planilha) — chunk separado, lazy. */}
+      {isSourcesAdminOpen && (
+        <React.Suspense fallback={null}>
+          <SourcesAdmin
+            isOpen
+            onClose={() => setIsSourcesAdminOpen(false)}
           />
         </React.Suspense>
       )}

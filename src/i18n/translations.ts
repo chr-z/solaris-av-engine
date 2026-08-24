@@ -137,6 +137,31 @@ export const en = {
   // PWA / offline
   'pwa.offlineBadge': 'Offline — cached mode',
   'pwa.offlineBadgeTitle': 'You are offline. The app shell keeps working; media and cloud features need a connection.',
+
+  // Admin — Sources (Saturno / Alfred / Sheet)
+  'admin.sources.title': 'Sources',
+  'admin.sources.subtitle': 'Configure where OSs and videos come from.',
+  'admin.sources.saturno': 'Saturno (OS source)',
+  'admin.sources.saturno.enabled': 'Enabled',
+  'admin.sources.saturno.baseUrl': 'Base URL',
+  'admin.sources.saturno.apiKey': 'API Key',
+  'admin.sources.saturno.headerName': 'Auth header',
+  'admin.sources.saturno.authScheme': 'Value prefix (Authorization only)',
+  'admin.sources.saturno.endpointTemplate': 'Endpoint template ({os_id})',
+  'admin.sources.saturno.responseMode': 'Response mode',
+  'admin.sources.responseMode.json': 'Standard JSON',
+  'admin.sources.responseMode.quirky': 'Saturno quirky (tolerant)',
+  'admin.sources.timeout': 'Timeout (ms)',
+  'admin.sources.save': 'Save sources config',
+  'admin.sources.savedAt': 'Saved at {{time}}',
+  'admin.sources.fallbackNotice': 'Saturno disabled — OSs come from the Sheet (manual mode). No cookies involved, by design.',
+  'admin.sources.alfred': 'Alfred (video root)',
+  'admin.sources.alfred.root': 'ALFRED_ROOT (on-premise path)',
+  'admin.sources.alfred.maxDepth': 'Max scan depth',
+  'admin.sources.alfred.osRegex': 'OS folder regex',
+  'admin.sources.sheet': 'Sheet (fallback source)',
+  'admin.sources.sheet.id': 'Spreadsheet ID',
+  'admin.sources.sheet.tab': 'Tab name',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -274,6 +299,31 @@ export const pt: Record<TranslationKey, string> = {
   // PWA / offline
   'pwa.offlineBadge': 'Offline — modo cacheado',
   'pwa.offlineBadgeTitle': 'Você está offline. O app continua funcionando; mídia e recursos na nuvem precisam de conexão.',
+
+  // Admin — Fontes (Saturno / Alfred / Planilha)
+  'admin.sources.title': 'Fontes',
+  'admin.sources.subtitle': 'Configure de onde vêm as OSs e os vídeos.',
+  'admin.sources.saturno': 'Saturno (fonte de OSs)',
+  'admin.sources.saturno.enabled': 'Habilitado',
+  'admin.sources.saturno.baseUrl': 'Base URL',
+  'admin.sources.saturno.apiKey': 'API Key',
+  'admin.sources.saturno.headerName': 'Header de autenticação',
+  'admin.sources.saturno.authScheme': 'Prefixo do valor (só Authorization)',
+  'admin.sources.saturno.endpointTemplate': 'Template do endpoint ({os_id})',
+  'admin.sources.saturno.responseMode': 'Modo de resposta',
+  'admin.sources.responseMode.json': 'JSON padrão',
+  'admin.sources.responseMode.quirky': 'Saturno quirky (tolerante)',
+  'admin.sources.timeout': 'Timeout (ms)',
+  'admin.sources.save': 'Salvar configuração das fontes',
+  'admin.sources.savedAt': 'Salvo em {{time}}',
+  'admin.sources.fallbackNotice': 'Saturno desabilitado — OSs vêm da Planilha (modo manual). Sem gambiarra de cookies, por design.',
+  'admin.sources.alfred': 'Alfred (raiz de vídeos)',
+  'admin.sources.alfred.root': 'RAIZ_ALFRED (caminho on-premise)',
+  'admin.sources.alfred.maxDepth': 'Profundidade máx. do scan',
+  'admin.sources.alfred.osRegex': 'Regex de pasta da OS',
+  'admin.sources.sheet': 'Planilha (fonte fallback)',
+  'admin.sources.sheet.id': 'ID da planilha',
+  'admin.sources.sheet.tab': 'Nome da aba',
 };
 
 export const dictionaries = { en, pt } as const;
