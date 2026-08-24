@@ -30,6 +30,13 @@ interface AnalystActions {
   exportDashXlsx?: () => void;
   /** v3 P13: export the recurring-inconformity ranking of the current view. */
   exportDashInconformities?: () => void;
+  /**
+   * v3 P14: optional reroute of the X key inside dashboards — the panel makes
+   * the Excel export follow the visible section (scores workbook on the
+   * overview, ranking workbook inside Recurring Issues). Falls back to
+   * `exportDashXlsx` when absent.
+   */
+  dashXlsxExport?: () => void;
 }
 
 interface UseAnalystShortcutsOptions extends AnalystActions {
@@ -123,7 +130,7 @@ export function useAnalystShortcuts({
         case 'dashClearPeriod': current.clearDashPeriod?.(); break;
         case 'dashExportQcReport': current.exportDashQcReport?.(); break;
         case 'dashToggleCompare': current.dashToggleCompare?.(); break;
-        case 'dashExportXlsx': current.exportDashXlsx?.(); break;
+        case 'dashExportXlsx': (current.dashXlsxExport ?? current.exportDashXlsx)?.(); break;
         case 'dashExportInconformities': current.exportDashInconformities?.(); break;
         default: break;
       }
