@@ -38,6 +38,8 @@ describe('Analyst shortcuts — S5.1', () => {
       'dashClearPeriod',
       // v3 P9: printable QC report
       'dashExportQcReport',
+      // v3 P11: group A/B comparison bar
+      'dashToggleCompare',
     ]);
     const keys = ANALYST_SHORTCUTS.map(def => def.keys);
     expect(new Set(keys).size).toBe(keys.length); // no key collisions at all
@@ -100,6 +102,7 @@ describe('Analyst shortcuts — S5.1', () => {
       'dashExportCsv',
       'dashClearPeriod',
       'dashExportQcReport',
+      'dashToggleCompare',
     ]);
     // Every definition lands in exactly one group.
     const total =
