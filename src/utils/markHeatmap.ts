@@ -13,18 +13,8 @@
 
 import type { Dataset } from './dashboard';
 import { DEFAULT_MARKABLE_RULES } from './ruleMarks';
-import type { InconformityStat } from './dashboardInconformities';
 import { normalizeBound } from './dashboardExport';
 import type { PeriodRange } from './dashboardExport';
-
-const round2 = (v: number): number => Math.round((v + Number.EPSILON) * 100) / 100;
-
-/** One cell of the heatmap: markings of `ruleId` inside `month`. */
-export interface HeatmapCell {
-  ruleId: string;
-  month: string; // 'YYYY-MM'
-  count: number;
-}
 
 /** One heatmap row: a rule plus its counts for EVERY column of the matrix. */
 export interface HeatmapRow {
