@@ -44,6 +44,8 @@ describe('Analyst shortcuts — S5.1', () => {
       'dashExportXlsx',
       // v3 P13: recurring-inconformity ranking export
       'dashExportInconformities',
+      // v3 P15: rule × month marking heatmap export
+      'dashExportHeatmap',
     ]);
     const keys = ANALYST_SHORTCUTS.map(def => def.keys);
     expect(new Set(keys).size).toBe(keys.length); // no key collisions at all
@@ -112,6 +114,7 @@ describe('Analyst shortcuts — S5.1', () => {
       'dashToggleCompare',
       'dashExportXlsx',
       'dashExportInconformities',
+      'dashExportHeatmap',
     ]);
     // Every definition lands in exactly one group.
     const total =

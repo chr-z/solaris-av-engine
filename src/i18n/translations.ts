@@ -92,6 +92,7 @@ export const en = {
   'shortcuts.dashToggleCompare.description': 'Dashboards: toggle the A/B group comparison bar',
   'shortcuts.dashExportXlsx.description': 'Dashboards: export current view to Excel (.xlsx)',
   'shortcuts.dashExportInconformities.description': 'Dashboards: export the recurring-inconformity ranking as CSV',
+  'shortcuts.dashExportHeatmap.description': 'Dashboards: download the rule × month marking heatmap as CSV',
 
   // A/B compare mode (S5.2)
   'compare.title': 'A/B Compare',
@@ -237,6 +238,8 @@ export const en = {
   'dash.heat.hint': 'Darker cells mean more O.S. with that inconformity in the month. Select a cell to inspect the month.',
   'dash.heat.empty': 'No dated marking in the selected period.',
   'dash.heat.cellLabel': '{rule}: {count} in {month}',
+  'dash.exportHeatmap': 'Export Heatmap',
+  'dash.exportHeatmap.title': 'Downloads the rule × month marking matrix of the current view as CSV',
   'drill.table.date': 'Date',
   'drill.table.wo': 'W.O.',
   'drill.table.event': 'Event',
@@ -333,6 +336,7 @@ export const pt: Record<TranslationKey, string> = {
   'shortcuts.dashToggleCompare.description': 'Dashboards: alternar a barra de comparação A/B de grupos',
   'shortcuts.dashExportXlsx.description': 'Dashboards: exportar visão atual em Excel (.xlsx)',
   'shortcuts.dashExportInconformities.description': 'Dashboards: exportar o ranking de inconformidades recorrentes em CSV',
+  'shortcuts.dashExportHeatmap.description': 'Dashboards: baixar o heatmap regra × mês das marcações em CSV',
 
   // Modo comparativo A/B (S5.2)
   'compare.title': 'Comparar A/B',
@@ -478,6 +482,8 @@ export const pt: Record<TranslationKey, string> = {
   'dash.heat.hint': 'Células mais escuras indicam mais O.S. com a inconformidade no mês. Selecione uma célula para inspecionar o mês.',
   'dash.heat.empty': 'Nenhuma marcação com data no período selecionado.',
   'dash.heat.cellLabel': '{rule}: {count} em {month}',
+  'dash.exportHeatmap': 'Exportar Heatmap',
+  'dash.exportHeatmap.title': 'Baixa a matriz regra × mês das marcações da visão atual em CSV',
   'drill.table.date': 'Data',
   'drill.table.wo': 'W.O.',
   'drill.table.event': 'Evento',
