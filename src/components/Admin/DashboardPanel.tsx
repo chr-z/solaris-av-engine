@@ -72,6 +72,8 @@ import {
   heatmapTier,
   buildHeatmapCsv,
   heatmapFilename,
+  buildHeatmapXlsx,
+  heatmapXlsxFilename,
 } from "../../utils/markHeatmap";
 import { useAnalystShortcuts } from "../../hooks/useAnalystShortcuts";
 import {
@@ -1080,6 +1082,17 @@ const DashboardPanel: React.FC = () => {
     exportHeatmapRef.current = exportHeatmapCsv;
   });
 
+  // v3 P16: Excel twin of the heatmap CSV export — same rule × month matrix
+  // as the visible table ('Heatmap' tab, counts as numeric cells).
+  const exportHeatmapXlsx = () => {
+    if (section !== "inconformities") return;
+    saveXlsxBytes(buildHeatmapXlsx(markHeatmap), heatmapXlsxFilename(range));
+  };
+  const exportHeatmapXlsxRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    exportHeatmapXlsxRef.current = exportHeatmapXlsx;
+  });
+
   // v3 P14: the X shortcut follows the visible section — scores workbook on
   // every dashboard view, ranking workbook inside Recurring Issues.
   const dispatchXlsxExport = useCallback(() => {
@@ -1690,6 +1703,15 @@ const DashboardPanel: React.FC = () => {
                           className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
                         >
                           {t("dash.exportHeatmap")}
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="dash-export-heatmap-xlsx"
+                          onClick={() => exportHeatmapXlsxRef.current()}
+                          title={t("dash.exportHeatmap.xlsxTitle")}
+                          className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+                        >
+                          {t("dash.exportHeatmap.xlsx")}
                         </button>
                       </div>
                       <div className="overflow-x-auto">

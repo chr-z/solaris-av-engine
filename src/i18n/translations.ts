@@ -240,6 +240,9 @@ export const en = {
   'dash.heat.cellLabel': '{rule}: {count} in {month}',
   'dash.exportHeatmap': 'Export Heatmap',
   'dash.exportHeatmap.title': 'Downloads the rule × month marking matrix of the current view as CSV',
+  // v3 P16: Excel twin of the heatmap export.
+  'dash.exportHeatmap.xlsx': 'Export Excel',
+  'dash.exportHeatmap.xlsxTitle': 'Downloads the rule × month marking matrix of the current view as an Excel spreadsheet (.xlsx)',
   'drill.table.date': 'Date',
   'drill.table.wo': 'W.O.',
   'drill.table.event': 'Event',
@@ -484,6 +487,9 @@ export const pt: Record<TranslationKey, string> = {
   'dash.heat.cellLabel': '{rule}: {count} em {month}',
   'dash.exportHeatmap': 'Exportar Heatmap',
   'dash.exportHeatmap.title': 'Baixa a matriz regra × mês das marcações da visão atual em CSV',
+  // v3 P16: Excel twin of the heatmap export.
+  'dash.exportHeatmap.xlsx': 'Exportar Excel',
+  'dash.exportHeatmap.xlsxTitle': 'Baixa a matriz regra × mês das marcações da visão atual como planilha do Excel (.xlsx)',
   'drill.table.date': 'Data',
   'drill.table.wo': 'W.O.',
   'drill.table.event': 'Evento',
