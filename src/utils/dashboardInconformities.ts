@@ -113,6 +113,17 @@ export function categoryImpact(
 
 // ---------- CSV export ----------
 
+import type { PeriodRange } from './dashboardExport';
+import { normalizeBound } from './dashboardExport';
+
+/** Stable filename; carries the range when one is active (csvFilename parity). */
+export function rankingFilename(range: PeriodRange = {}): string {
+  const from = normalizeBound(range.from);
+  const to = normalizeBound(range.to);
+  if (!from && !to) return 'solaris-inconformity-ranking.csv';
+  return `solaris-inconformity-ranking_${from ?? 'start'}_${to ?? 'latest'}.csv`;
+}
+
 /** Escapes a field only when required (comma/quote/newline/padding). */
 function escapeCsvField(value: string): string {
   const text = value ?? '';
