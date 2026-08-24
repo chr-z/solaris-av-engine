@@ -9,6 +9,10 @@
 // and dot are accepted — the sheet mixes locales over time).
 
 import type { RowData } from '../services/sheetSync';
+import {
+  collectMarkings,
+  DEFAULT_MARKABLE_RULES,
+} from './ruleMarks';
 
 // ---------- Types ----------
 
@@ -32,6 +36,11 @@ export interface OsRecord {
   analyst: string;
   /** Parsed FINAL score (finite, >= 0) or null when absent/unparseable. */
   finalScore: number | null;
+  /**
+   * v3 P13: scoring rules marked 'TRUE' on this row (rule ids, seed order).
+   * Empty for datasets built before mark extraction existed.
+   */
+  marks?: string[];
 }
 
 export interface Dataset {
@@ -146,7 +155,11 @@ const cellValue = (cells: RowData, idx: number): string =>
 
 // ---------- Dataset ----------
 
-/** Converts raw entries into typed records, skipping malformed rows. */
+/**
+ * Converts raw entries into typed records, skipping malformed rows.
+ * v3 P13: also extracts the row's marked scoring rules ('TRUE' cells in
+ * markable rule columns) so the inconformity ranking consumes one dataset.
+ */
 export function buildDashboardDataset(entries: DashboardEntryInput[]): Dataset {
   const records: OsRecord[] = [];
   for (const entry of entries ?? []) {
@@ -163,6 +176,9 @@ export function buildDashboardDataset(entries: DashboardEntryInput[]): Dataset {
       instructor: cellValue(entry.cells, cols.instructor).trim(),
       analyst: cellValue(entry.cells, cols.analyst).trim(),
       finalScore: parseFinalScore(cellValue(entry.cells, cols.finalScore)),
+      ...(Array.isArray(entry.headers)
+        ? { marks: collectMarkings(entry.headers, entry.cells, DEFAULT_MARKABLE_RULES) }
+        : {}),
     });
   }
   return { records };
