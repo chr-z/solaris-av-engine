@@ -4,11 +4,12 @@
 
 import React from 'react';
 import AdminRulesPanel from './AdminRulesPanel';
+import DashboardPanel from './DashboardPanel';
 import { useAdminRole } from '../../hooks/useAdminRole';
 import LoadingIndicator from '../Core/LoadingIndicator';
 import { useI18n } from '../../i18n/I18nContext';
 
-const AdminGate: React.FC = () => {
+const AdminGate: React.FC<{ dashboards?: boolean }> = ({ dashboards = false }) => {
   const { t } = useI18n();
   const { isAdmin, source, loading } = useAdminRole();
 
@@ -58,7 +59,7 @@ const AdminGate: React.FC = () => {
           {source === 'firebase-claim' ? t('admin.roleViaClaim') : t('admin.roleViaLocal')}
         </span>
       </div>
-      <AdminRulesPanel />
+      {dashboards ? <DashboardPanel /> : <AdminRulesPanel />}
     </main>
   );
 };
