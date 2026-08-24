@@ -243,6 +243,11 @@ export const en = {
   // v3 P16: Excel twin of the heatmap export.
   'dash.exportHeatmap.xlsx': 'Export Excel',
   'dash.exportHeatmap.xlsxTitle': 'Downloads the rule × month marking matrix of the current view as an Excel spreadsheet (.xlsx)',
+  // v3 P17: category filter over the Recurring Issues view.
+  'dash.cat.label': 'Category',
+  'dash.cat.all': 'All',
+  'dash.cat.clear': 'Clear category filter',
+  'dash.rank.filteredHint': 'Filtered to category {category}. KPIs, ranking, heatmap and exports reflect it.',
   'drill.table.date': 'Date',
   'drill.table.wo': 'W.O.',
   'drill.table.event': 'Event',
@@ -490,6 +495,11 @@ export const pt: Record<TranslationKey, string> = {
   // v3 P16: Excel twin of the heatmap export.
   'dash.exportHeatmap.xlsx': 'Exportar Excel',
   'dash.exportHeatmap.xlsxTitle': 'Baixa a matriz regra × mês das marcações da visão atual como planilha do Excel (.xlsx)',
+  // v3 P17: category filter over the Recurring Issues view.
+  'dash.cat.label': 'Categoria',
+  'dash.cat.all': 'Todas',
+  'dash.cat.clear': 'Limpar filtro de categoria',
+  'dash.rank.filteredHint': 'Filtrado pela categoria {category}. KPIs, ranking, heatmap e exportações refletem o filtro.',
   'drill.table.date': 'Data',
   'drill.table.wo': 'W.O.',
   'drill.table.event': 'Evento',
