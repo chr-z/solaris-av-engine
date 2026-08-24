@@ -17,7 +17,14 @@ export type ShortcutContext = 'global' | 'workspace' | 'player' | 'dashboard';
  * DashboardPanel derives its Section type from this list, so the keyboard
  * navigation cycle can never drift from the rendered tab order.
  */
-export const DASHBOARD_SECTIONS = ['summary', 'studios', 'instructors', 'analysts', 'trend'] as const;
+export const DASHBOARD_SECTIONS = [
+  'summary',
+  'studios',
+  'instructors',
+  'analysts',
+  'inconformities',
+  'trend',
+] as const;
 
 export type DashboardSectionId = (typeof DASHBOARD_SECTIONS)[number];
 
@@ -84,6 +91,8 @@ export const ANALYST_SHORTCUTS: readonly ShortcutDef[] = [
   { id: 'dashToggleCompare', keys: 'b', display: 'B', scope: 'dashboard', descriptionKey: 'shortcuts.dashToggleCompare.description' },
   // v3 P12: native Excel export of the current view.
   { id: 'dashExportXlsx', keys: 'x', display: 'X', scope: 'dashboard', descriptionKey: 'shortcuts.dashExportXlsx.description' },
+  // v3 P13: export the recurring-inconformity ranking of the current view.
+  { id: 'dashExportInconformities', keys: 'i', display: 'I', scope: 'dashboard', descriptionKey: 'shortcuts.dashExportInconformities.description' },
 ];
 
 export const SHORTCUT_HELP_KEY = 'header.shortcutHelp';

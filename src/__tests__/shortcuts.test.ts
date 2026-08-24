@@ -42,6 +42,8 @@ describe('Analyst shortcuts — S5.1', () => {
       'dashToggleCompare',
       // v3 P12: Excel export of the current view
       'dashExportXlsx',
+      // v3 P13: recurring-inconformity ranking export
+      'dashExportInconformities',
     ]);
     const keys = ANALYST_SHORTCUTS.map(def => def.keys);
     expect(new Set(keys).size).toBe(keys.length); // no key collisions at all
@@ -109,6 +111,7 @@ describe('Analyst shortcuts — S5.1', () => {
       'dashExportQcReport',
       'dashToggleCompare',
       'dashExportXlsx',
+      'dashExportInconformities',
     ]);
     // Every definition lands in exactly one group.
     const total =
@@ -168,7 +171,8 @@ describe('Dashboard shortcuts — v3 P8', () => {
     expect(nextDashboardSection('summary')).toBe('studios');
     expect(nextDashboardSection('studios')).toBe('instructors');
     expect(nextDashboardSection('instructors')).toBe('analysts');
-    expect(nextDashboardSection('analysts')).toBe('trend');
+    expect(nextDashboardSection('analysts')).toBe('inconformities');
+    expect(nextDashboardSection('inconformities')).toBe('trend');
     expect(nextDashboardSection('trend')).toBe('summary');
   });
 
@@ -177,7 +181,8 @@ describe('Dashboard shortcuts — v3 P8', () => {
     expect(prevDashboardSection('studios')).toBe('summary');
     expect(prevDashboardSection('instructors')).toBe('studios');
     expect(prevDashboardSection('analysts')).toBe('instructors');
-    expect(prevDashboardSection('trend')).toBe('analysts');
+    expect(prevDashboardSection('inconformities')).toBe('analysts');
+    expect(prevDashboardSection('trend')).toBe('inconformities');
   });
 
   it('degrades an unknown section id to the first section instead of throwing', () => {
@@ -187,6 +192,6 @@ describe('Dashboard shortcuts — v3 P8', () => {
   });
 
   it('DASHBOARD_SECTIONS is the canonical cycle shared with the panel', () => {
-    expect(DASHBOARD_SECTIONS).toEqual(['summary', 'studios', 'instructors', 'analysts', 'trend']);
+    expect(DASHBOARD_SECTIONS).toEqual(['summary', 'studios', 'instructors', 'analysts', 'inconformities', 'trend']);
   });
 });

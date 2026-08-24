@@ -56,6 +56,13 @@ import {
   qcBatchFilename,
   renderQcBatchHtml,
 } from "../../utils/qcBatch";
+// v3 P13: recurring-inconformity ranking (pitch item D).
+import {
+  inconformityRanking,
+  rankingSummary,
+  buildRankingCsv,
+  rankingFilename,
+} from "../../utils/dashboardInconformities";
 import { useAnalystShortcuts } from "../../hooks/useAnalystShortcuts";
 import {
   buildComparison,
@@ -114,6 +121,11 @@ const SECTIONS: SectionDef[] = [
     id: "analysts",
     labelKey: "dash.section.analysts",
     testId: "dash-section-analysts",
+  },
+  {
+    id: "inconformities",
+    labelKey: "dash.section.inconformities",
+    testId: "dash-section-inconformities",
   },
   { id: "trend", labelKey: "dash.section.trend", testId: "dash-section-trend" },
 ];
@@ -790,6 +802,20 @@ const DashboardPanel: React.FC = () => {
     [filtered],
   );
 
+  // v3 P13: recurring-inconformity ranking over the SAME filtered dataset —
+  // period edits update it live like every other section.
+  const ranking = useMemo(
+    () => (section === "inconformities" ? inconformityRanking(filtered) : []),
+    [filtered, section],
+  );
+  const rankSummary = useMemo(
+    () =>
+      section === "inconformities"
+        ? rankingSummary(filtered)
+        : { markedRows: 0, distinctRules: 0, totalOccurrences: 0 },
+    [filtered, section],
+  );
+
   const downloadCsv = (records: OsRecord[], filename: string) => {
     const csvText = buildDashboardCsv(records);
     const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
@@ -976,6 +1002,24 @@ const DashboardPanel: React.FC = () => {
     [],
   );
 
+  // v3 P13: ranking CSV export (I shortcut). Latest handler via the same
+  // refs pattern so the keydown listener always exports current state.
+  const exportRanking = () => {
+    if (section !== "inconformities") return;
+    const csvText = buildRankingCsv(ranking);
+    const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = rankingFilename(range);
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  const exportRankingRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    exportRankingRef.current = exportRanking;
+  });
+
   // v3 P11: pinning from a table row opens the bar and fills the first
   // free slot of the SAME dimension; a dimension switch restarts the pair,
   // and a click with both slots filled replaces B (last click wins).
@@ -1014,6 +1058,7 @@ const DashboardPanel: React.FC = () => {
     exportDashQcReport: exportQcReport,
     dashToggleCompare: toggleCompareBar,
     exportDashXlsx: useCallback(() => exportXlsxRef.current(), []),
+    exportDashInconformities: useCallback(() => exportRankingRef.current(), []),
   });
 
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
@@ -1432,6 +1477,123 @@ const DashboardPanel: React.FC = () => {
                   : undefined
               }
             />
+          )}
+
+          {/* v3 P13: recurring-inconformity ranking (pitch item D). */}
+          {section === "inconformities" && (
+            <div data-testid="dash-ranking">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <h2 className="text-lg font-bold text-gray-100">
+                  {t("dash.rank.title")}
+                </h2>
+                <button
+                  type="button"
+                  data-testid="dash-export-ranking"
+                  onClick={exportRanking}
+                  title={t("dash.exportRanking.title")}
+                  className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+                >
+                  {t("dash.exportRanking")}
+                </button>
+              </div>
+
+              <div
+                className="flex flex-wrap gap-3 mb-4"
+                data-testid="dash-ranking-cards"
+              >
+                <Card
+                  label={t("dash.rank.kpi.marked")}
+                  value={String(rankSummary.markedRows)}
+                  testId="dash-card-marked"
+                />
+                <Card
+                  label={t("dash.rank.kpi.distinct")}
+                  value={String(rankSummary.distinctRules)}
+                />
+                <Card
+                  label={t("dash.rank.kpi.occurrences")}
+                  value={String(rankSummary.totalOccurrences)}
+                />
+              </div>
+
+              {ranking.length === 0 ? (
+                <p
+                  className="text-sm text-gray-400 py-6"
+                  data-testid="dash-ranking-empty"
+                >
+                  {t("dash.rank.empty")}
+                </p>
+              ) : (
+                <>
+                  <table
+                    data-testid="dash-ranking-table"
+                    className="w-full text-sm border-collapse"
+                  >
+                    <thead>
+                      <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-600/60">
+                        <th scope="col" className="py-2 pr-4">
+                          #
+                        </th>
+                        <th scope="col" className="py-2 pr-4">
+                          {t("dash.rank.table.rule")}
+                        </th>
+                        <th scope="col" className="py-2 pr-4">
+                          {t("dash.rank.table.category")}
+                        </th>
+                        <th scope="col" className="py-2 pr-4 text-right">
+                          {t("dash.rank.table.count")}
+                        </th>
+                        <th scope="col" className="py-2 pr-4 text-right">
+                          {t("dash.rank.table.rate")}
+                        </th>
+                        <th scope="col" className="py-2 pr-4 text-right">
+                          {t("dash.rank.table.unit")}
+                        </th>
+                        <th scope="col" className="py-2 text-right">
+                          {t("dash.rank.table.impact")}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ranking.map((stat, index) => (
+                        <tr
+                          key={stat.ruleId}
+                          className="border-b border-gray-700/40 last:border-b-0"
+                        >
+                          <td className="py-2 pr-4 tabular-nums text-gray-500">
+                            {index + 1}
+                          </td>
+                          <td className="py-2 pr-4 font-medium text-gray-200">
+                            {stat.name}
+                          </td>
+                          <td className="py-2 pr-4 text-gray-300">
+                            {stat.categoryId || "—"}
+                          </td>
+                          <td className="py-2 pr-4 text-right tabular-nums text-gray-300">
+                            {stat.count}
+                          </td>
+                          <td className="py-2 pr-4 text-right tabular-nums text-gray-300">
+                            {formatScoreDisplay(stat.rate * 100)}%
+                          </td>
+                          <td className="py-2 pr-4 text-right tabular-nums text-gray-400">
+                            {formatScoreDisplay(stat.unitScore)}
+                          </td>
+                          <td className="py-2 text-right tabular-nums font-semibold text-orange-300">
+                            {formatScoreDisplay(stat.impact)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p
+                    className="text-xs text-gray-500 mt-2"
+                    data-testid="dash-ranking-hint"
+                  >
+                    {t("dash.rank.hint")}
+                  </p>
+                </>
+              )}
+            </div>
           )}
 
           {section === "trend" && (

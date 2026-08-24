@@ -28,6 +28,8 @@ interface AnalystActions {
   dashToggleCompare?: () => void;
   /** v3 P12: Excel (.xlsx) export of the current dashboard view. */
   exportDashXlsx?: () => void;
+  /** v3 P13: export the recurring-inconformity ranking of the current view. */
+  exportDashInconformities?: () => void;
 }
 
 interface UseAnalystShortcutsOptions extends AnalystActions {
@@ -122,6 +124,7 @@ export function useAnalystShortcuts({
         case 'dashExportQcReport': current.exportDashQcReport?.(); break;
         case 'dashToggleCompare': current.dashToggleCompare?.(); break;
         case 'dashExportXlsx': current.exportDashXlsx?.(); break;
+        case 'dashExportInconformities': current.exportDashInconformities?.(); break;
         default: break;
       }
     };
