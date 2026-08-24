@@ -10,6 +10,18 @@ import {
   DEFAULT_MARKABLE_RULES,
   ruleUnitScore,
 } from './ruleMarks';
+import { SEED_RULES_CONFIG } from '../config/scoringRules';
+
+/**
+ * Seed category order (Gran checklist families). The chip bar follows this
+ * order; anything outside it (legacy/unknown) goes last, alphabetically.
+ */
+const SEED_CATEGORY_ORDER: string[] = (SEED_RULES_CONFIG.categories ?? []).map(
+  (c) => c.id,
+);
+
+/** Bucket for markings whose rule has no seed match ('unknown' chip). */
+export const UNKNOWN_CATEGORY = 'unknown';
 
 /** Ranked row of the inconformity ranking table. */
 export interface InconformityStat {
@@ -234,4 +246,58 @@ export function buildRankingXlsx(ranking: InconformityStat[], timestamp: Date = 
  */
 export function rankingXlsxFilename(range: PeriodRange = {}): string {
   return rankingFilename(range).replace(/\.csv$/, '.xlsx');
+}
+
+// ---------- Category filter (v3 P17) ----------
+//
+// The ranking answers "which inconformities dominate"; the category filter
+// narrows the whole Recurring Issues view to one family of problems
+// (ENQUADRAMENTO, ÁUDIO…). Like the period bounds, filtering is applied to
+// the dataset BEFORE any aggregation so KPIs, table, heatmap and exports all
+// tell exactly the same story.
+
+/** A dataset whose records carry optional scoring-rule markings. */
+type MarkedDataset = { records: Array<{ marks?: string[] }> };
+
+/**
+ * Canonical category list for the chip bar: seed order (Gran checklist
+ * families), only categories that actually appear in the data. Unknown/legacy
+ * markings degrade to 'unknown' instead of disappearing from the filters.
+ * Pure over the input — never mutates the dataset.
+ */
+export function availableCategories(dataset: MarkedDataset): string[] {
+  const present = new Set<string>();
+  for (const rec of dataset.records) {
+    const marks = Array.isArray(rec.marks) ? rec.marks : [];
+    for (const id of marks) {
+      const meta = DEFAULT_MARKABLE_RULES.find((r) => r.ruleId === id);
+      present.add(meta?.categoryId ?? 'unknown');
+    }
+  }
+  const seedOrder = SEED_CATEGORY_ORDER.filter((c) => present.has(c));
+  const extras = [...present]
+    .filter((c) => !SEED_CATEGORY_ORDER.includes(c))
+    .sort((a, b) => a.localeCompare(b));
+  return [...seedOrder, ...extras];
+}
+
+/**
+ * Records carrying at least ONE marking of `categoryId`. Unknown categories
+ * (or rules without a seed match) still resolve — they bucket as 'unknown'.
+ */
+export function filterByCategory<T extends { marks?: string[] }>(
+  records: T[],
+  categoryId: string,
+): T[] {
+  if (!categoryId) return records;
+  const ruleIds = new Set(
+    DEFAULT_MARKABLE_RULES.filter((r) => r.categoryId === categoryId).map((r) => r.ruleId),
+  );
+  const matchesUnknown = categoryId === UNKNOWN_CATEGORY;
+  return records.filter((rec) => {
+    const marks = Array.isArray(rec.marks) ? rec.marks : [];
+    return marks.some(
+      (id) => (ruleIds.size > 0 && ruleIds.has(id)) || (matchesUnknown && !DEFAULT_MARKABLE_RULES.some((r) => r.ruleId === id)),
+    );
+  });
 }

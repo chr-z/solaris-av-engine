@@ -34,6 +34,11 @@ export interface QcBatchReportData {
   kind: 'overview' | 'group' | 'month';
   dimension: GroupDimension;
   label: string;
+  /**
+   * v3 P17: scoring-rule category applied to the scope, when one is active
+   * ('ÁUDIO', 'ENQUADRAMENTO'…). Absent = whole checklist (no filter).
+   */
+  category?: string;
   generatedAtIso: string;
   period: { from: string | null; to: string | null };
   count: number;
@@ -48,6 +53,8 @@ export interface BuildQcBatchOptions {
   kind?: 'overview' | 'group' | 'month';
   dimension?: GroupDimension;
   label?: string;
+  /** v3 P17: active scoring-rule category ('ÁUDIO'…); undefined = no filter. */
+  category?: string;
   nowIso?: string;
 }
 
@@ -61,6 +68,7 @@ export function buildQcBatchReport(
   const kind = options.kind ?? 'overview';
   const dimension = options.dimension ?? 'studio';
   const label = options.label ?? '';
+  const category = options.category;
 
   let records: OsRecord[];
   if (kind === 'month') {
@@ -77,6 +85,7 @@ export function buildQcBatchReport(
     kind,
     dimension,
     label,
+    ...(category ? { category } : {}),
     generatedAtIso: options.nowIso ?? new Date().toISOString(),
     period: { from: null, to: null },
     count: records.length,
@@ -118,7 +127,10 @@ export function qcBatchFilename(report: QcBatchReportData): string {
       : '';
   const scope =
     report.kind === 'overview' ? '' : `_${slugifyLabel(report.label || report.dimension)}`;
-  return `solaris-qc-report${span}${scope}.html`;
+  // v3 P17: active category rides the filename so paired exports never mix
+  // filtered and unfiltered deliverables under one name.
+  const cat = report.category ? `_cat-${slugifyLabel(report.category)}` : '';
+  return `solaris-qc-report${span}${scope}${cat}.html`;
 }
 
 // ---------- Printable HTML ----------
@@ -161,6 +173,8 @@ export function renderQcBatchHtml(
     scopeGroup: (l: string) =>
       isPt ? `Escopo: ${DIMENSION_LABELS[report.dimension][locale]} ${l}` : `Scope: ${DIMENSION_LABELS[report.dimension][locale]} ${l}`,
     scopeMonth: (m: string) => (isPt ? `Escopo: mês ${m}` : `Scope: month ${m}`),
+    category: isPt ? 'Categoria aplicada' : 'Applied category',
+    catAll: isPt ? 'todas' : 'all',
     period: isPt ? 'Período aplicado' : 'Applied period',
     periodAll: isPt ? 'todos' : 'all',
     kpiTotal: isPt ? 'O.S. no escopo' : 'O.S. in scope',
@@ -192,6 +206,10 @@ export function renderQcBatchHtml(
     report.period.from || report.period.to
       ? `${report.period.from ?? '…'} → ${report.period.to ?? '…'}`
       : dict.periodAll;
+
+  // v3 P17: the active category is part of the deliverable's context — a
+  // printed PDF must state that only ÁUDIO rows are in scope.
+  const categoryText = report.category ?? dict.catAll;
 
   const rows = report.records
     .map(
@@ -275,6 +293,7 @@ export function renderQcBatchHtml(
     <div class="meta">
       <span><strong>${dict.generated}:</strong> ${escapeQcHtml(fmtDate(report.generatedAtIso))}</span>
       <span><strong>${scopeLine}</strong></span>
+      <span><strong>${dict.category}:</strong> ${escapeQcHtml(categoryText)}</span>
       <span><strong>${dict.period}:</strong> ${escapeQcHtml(periodText)}</span>
     </div>
   </header>
