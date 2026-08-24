@@ -82,6 +82,8 @@ export const ANALYST_SHORTCUTS: readonly ShortcutDef[] = [
   { id: 'dashExportQcReport', keys: 'r', display: 'R', scope: 'dashboard', descriptionKey: 'shortcuts.dashExportQcReport.description' },
   // v3 P11: toggle the group A/B comparison bar.
   { id: 'dashToggleCompare', keys: 'b', display: 'B', scope: 'dashboard', descriptionKey: 'shortcuts.dashToggleCompare.description' },
+  // v3 P12: native Excel export of the current view.
+  { id: 'dashExportXlsx', keys: 'x', display: 'X', scope: 'dashboard', descriptionKey: 'shortcuts.dashExportXlsx.description' },
 ];
 
 export const SHORTCUT_HELP_KEY = 'header.shortcutHelp';

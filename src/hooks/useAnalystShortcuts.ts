@@ -26,6 +26,8 @@ interface AnalystActions {
   exportDashQcReport?: () => void;
   /** v3 P11: toggle the dashboard group A/B comparison bar. */
   dashToggleCompare?: () => void;
+  /** v3 P12: Excel (.xlsx) export of the current dashboard view. */
+  exportDashXlsx?: () => void;
 }
 
 interface UseAnalystShortcutsOptions extends AnalystActions {
@@ -119,6 +121,7 @@ export function useAnalystShortcuts({
         case 'dashClearPeriod': current.clearDashPeriod?.(); break;
         case 'dashExportQcReport': current.exportDashQcReport?.(); break;
         case 'dashToggleCompare': current.dashToggleCompare?.(); break;
+        case 'dashExportXlsx': current.exportDashXlsx?.(); break;
         default: break;
       }
     };

@@ -40,6 +40,8 @@ describe('Analyst shortcuts — S5.1', () => {
       'dashExportQcReport',
       // v3 P11: group A/B comparison bar
       'dashToggleCompare',
+      // v3 P12: Excel export of the current view
+      'dashExportXlsx',
     ]);
     const keys = ANALYST_SHORTCUTS.map(def => def.keys);
     expect(new Set(keys).size).toBe(keys.length); // no key collisions at all
@@ -73,7 +75,10 @@ describe('Analyst shortcuts — S5.1', () => {
   it('ignores modifier combos, form fields and unknown keys', () => {
     expect(matchShortcut(key('k'), { hasModifier: true })).toBeNull();
     expect(matchShortcut(key('t'), { isEditableTarget: true })).toBeNull();
-    expect(matchShortcut(key('x'))).toBeNull();
+    // v3 P12: 'x' is now the dashboard XLSX export — 'z' stays unassigned.
+    expect(matchShortcut(key('z'))).toBeNull();
+    expect(matchShortcut(key('x'), { scopeEnabled: { dashboard: false } })).toBeNull();
+    expect(matchShortcut(key('x'))?.id).toBe('dashExportXlsx');
   });
 
   it('respects scope gating (player off → player keys stop matching)', () => {
@@ -103,6 +108,7 @@ describe('Analyst shortcuts — S5.1', () => {
       'dashClearPeriod',
       'dashExportQcReport',
       'dashToggleCompare',
+      'dashExportXlsx',
     ]);
     // Every definition lands in exactly one group.
     const total =

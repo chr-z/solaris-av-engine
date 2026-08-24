@@ -90,6 +90,7 @@ export const en = {
   'shortcuts.dashClearPeriod.description': 'Dashboards: clear period filter',
   'shortcuts.dashExportQcReport.description': 'Dashboards: download printable QC report of the current view',
   'shortcuts.dashToggleCompare.description': 'Dashboards: toggle the A/B group comparison bar',
+  'shortcuts.dashExportXlsx.description': 'Dashboards: export current view to Excel (.xlsx)',
 
   // A/B compare mode (S5.2)
   'compare.title': 'A/B Compare',
@@ -188,6 +189,8 @@ export const en = {
   'dash.period.clear': 'Clear period',
   'dash.export': 'Export CSV',
   'dash.export.title': 'Downloads the filtered records as CSV',
+  'dash.exportXlsx': 'Export Excel',
+  'dash.exportXlsx.title': 'Downloads the filtered records as an Excel spreadsheet (.xlsx)',
   'dash.qcReport': 'QC Report',
   'dash.qcReport.title': 'Downloads a printable QC report (HTML → PDF via print) of the current view',
   'dash.qcReport.done': 'QC report downloaded — open the HTML and use "Print → Save as PDF".',
@@ -303,6 +306,7 @@ export const pt: Record<TranslationKey, string> = {
   'shortcuts.dashClearPeriod.description': 'Dashboards: limpar filtro de período',
   'shortcuts.dashExportQcReport.description': 'Dashboards: baixar relatório QC imprimível da visão atual',
   'shortcuts.dashToggleCompare.description': 'Dashboards: alternar a barra de comparação A/B de grupos',
+  'shortcuts.dashExportXlsx.description': 'Dashboards: exportar visão atual em Excel (.xlsx)',
 
   // Modo comparativo A/B (S5.2)
   'compare.title': 'Comparar A/B',
@@ -401,6 +405,8 @@ export const pt: Record<TranslationKey, string> = {
   'dash.period.clear': 'Limpar período',
   'dash.export': 'Exportar CSV',
   'dash.export.title': 'Baixa os registros filtrados em CSV',
+  'dash.exportXlsx': 'Exportar Excel',
+  'dash.exportXlsx.title': 'Baixa os registros filtrados em planilha Excel (.xlsx)',
   'dash.qcReport': 'Relatório QC',
   'dash.qcReport.title': 'Baixa um relatório QC imprimível (HTML → PDF via imprimir) da visão atual',
   'dash.qcReport.done': 'Relatório QC baixado — abra o HTML e use "Imprimir → Salvar como PDF".',
