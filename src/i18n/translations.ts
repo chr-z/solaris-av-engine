@@ -181,6 +181,13 @@ export const en = {
   'dash.period.clear': 'Clear period',
   'dash.export': 'Export CSV',
   'dash.export.title': 'Download the filtered records as CSV',
+  'dash.drill.back': 'Back to overview',
+  'dash.drill.title': 'O.S. of {group}',
+  'dash.drill.count': '{scored} scored of {count}',
+  'drill.table.date': 'Date',
+  'drill.table.wo': 'W.O.',
+  'drill.table.event': 'Event',
+  'drill.table.score': 'Final score',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -362,6 +369,13 @@ export const pt: Record<TranslationKey, string> = {
   'dash.period.clear': 'Limpar período',
   'dash.export': 'Exportar CSV',
   'dash.export.title': 'Baixa os registros filtrados em CSV',
+  'dash.drill.back': 'Voltar à visão geral',
+  'dash.drill.title': 'O.S. de {group}',
+  'dash.drill.count': '{scored} pontuadas de {count}',
+  'drill.table.date': 'Data',
+  'drill.table.wo': 'W.O.',
+  'drill.table.event': 'Evento',
+  'drill.table.score': 'Nota final',
 };
 
 export const dictionaries = { en, pt } as const;
