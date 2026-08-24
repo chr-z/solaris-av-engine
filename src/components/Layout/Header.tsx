@@ -160,6 +160,16 @@ const Header: React.FC<HeaderProps> = ({
                             {t('header.adminPanel')}
                           </a>
                         )}
+                        {/* P5: Scoring dashboards (#/admin/dashboards) — same RBAC decision. */}
+                        {isAdminUser && (
+                          <a
+                            href="#/admin/dashboards"
+                            data-testid="header-dashboards-link"
+                            className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
+                          >
+                            {t('header.dashboards')}
+                          </a>
+                        )}
                         {/* Admin Panel Link */}
                         {userProfile.email.endsWith('.admin') && (
                           <button 

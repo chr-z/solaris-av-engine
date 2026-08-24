@@ -14,7 +14,7 @@ import { logCaptureService } from './utils/logCapture';
 import { DEMO_HEADERS, DEMO_ROWS } from './utils/demoData';
 import { useI18n } from './i18n/I18nContext';
 import { computeFilteredRows } from './utils/rowFiltering';
-import { isAdminHash } from './utils/adminRoute';
+import { isAdminHash, isDashboardsHash } from './utils/adminRoute';
 import { persistGuestEmail, clearGuestEmail } from './hooks/useAdminRole';
 
 // Code splitting (S3.1): the heavy analysis workspace (player + monitors + form)
@@ -98,8 +98,13 @@ const App: React.FC = () => {
 
   // v3 admin route (#/admin): hash-driven, survives reload, back-button friendly.
   const [isAdminRoute, setIsAdminRoute] = useState(() => isAdminHash(window.location.hash));
+  // P5 dashboards sub-route (#/admin/dashboards) — same RBAC gate, own panel.
+  const [isDashboardsRoute, setIsDashboardsRoute] = useState(() => isDashboardsHash(window.location.hash));
   useEffect(() => {
-    const onHashChange = () => setIsAdminRoute(isAdminHash(window.location.hash));
+    const onHashChange = () => {
+      setIsAdminRoute(isAdminHash(window.location.hash));
+      setIsDashboardsRoute(isDashboardsHash(window.location.hash));
+    };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
@@ -729,7 +734,7 @@ const App: React.FC = () => {
                     <LoadingIndicator statusText={t('loading.generic')} />
                   </div>
                 }>
-                  <AdminGate />
+                  <AdminGate dashboards={isDashboardsRoute} />
                 </React.Suspense>
               </div>
             </WaveformCacheProvider>
