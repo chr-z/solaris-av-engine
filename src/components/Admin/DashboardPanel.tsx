@@ -20,7 +20,12 @@ import {
 import {
   selectGroup,
   selectMonth,
+  selectMonthSummary,
+  groupAverageByMonth,
+  selectGroupInMonth,
   drilldownFilename,
+  monthGroupFilename,
+  type MonthDrillDown,
 } from "../../utils/dashboardDrilldown";
 import {
   filterByPeriod,
@@ -62,6 +67,11 @@ interface DrillDown {
   dimension: GroupDimension;
   /** Group label, or the month key when kind === 'month'. */
   label: string;
+  /**
+   * v3 P10 second level: group target INSIDE the month bucket. An empty
+   * `label` means the month hub is open without a leaf selected yet.
+   */
+  month?: MonthDrillDown;
 }
 
 interface SectionDef {
@@ -248,6 +258,154 @@ const GroupTable: React.FC<{
 };
 
 /**
+ * v3 P10 second-level hub: the month bucket broken down by one dimension.
+ * Group rows drill into a leaf view; back returns to the trend section.
+ * Pure data comes from utils/dashboardDrilldown.ts; this only renders.
+ */
+const MonthHubView: React.FC<{
+  month: string;
+  stats: GroupStat[];
+  summary: {
+    count: number;
+    scoredCount: number;
+    average: number | null;
+    min: number | null;
+    max: number | null;
+  };
+  onBack: () => void;
+  onSelectGroup: (label: string) => void;
+  onExport: () => void;
+}> = ({ month, stats, summary, onBack, onSelectGroup, onExport }) => {
+  const { t } = useI18n();
+  return (
+    <div data-testid="dash-month-hub">
+      <button
+        type="button"
+        data-testid="dash-month-hub-back"
+        onClick={onBack}
+        className="mb-3 px-3 py-1.5 rounded-md text-sm border border-gray-600/60 text-gray-300 hover:bg-gray-500/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+      >
+        ← {t("dash.drill.back")}
+      </button>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-gray-400">
+            {t("dash.section.trend")}
+          </p>
+          <h2
+            className="text-lg font-bold text-gray-100"
+            data-testid="dash-month-hub-title"
+          >
+            {t("dash.drill.monthScope", { month })}
+          </h2>
+          <p
+            className="text-xs text-gray-500 mt-0.5"
+            data-testid="dash-month-hub-count"
+          >
+            {t("dash.drill.count", {
+              scored: summary.scoredCount,
+              count: summary.count,
+            })}
+          </p>
+        </div>
+        <button
+          type="button"
+          data-testid="dash-month-hub-export"
+          onClick={onExport}
+          title={t("dash.export.title")}
+          className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+        >
+          {t("dash.export")}
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-3 mb-4" data-testid="dash-month-hub-cards">
+        <Card label={t("dash.kpi.total")} value={String(summary.count)} />
+        <Card
+          label={t("dash.table.avg")}
+          value={formatScoreDisplay(summary.average)}
+        />
+        <Card
+          label={t("dash.table.min")}
+          value={formatScoreDisplay(summary.min)}
+        />
+        <Card
+          label={t("dash.table.max")}
+          value={formatScoreDisplay(summary.max)}
+        />
+      </div>
+
+      {stats.length === 0 ? (
+        <p
+          className="text-sm text-gray-400 py-6"
+          data-testid="dash-month-hub-empty"
+        >
+          {t("dash.empty")}
+        </p>
+      ) : (
+        <table
+          data-testid="dash-month-hub-table"
+          className="w-full text-sm border-collapse"
+        >
+          <thead>
+            <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-600/60">
+              <th scope="col" className="py-2 pr-4">
+                {t("dash.table.group")}
+              </th>
+              <th scope="col" className="py-2 pr-4 text-right">
+                {t("dash.table.count")}
+              </th>
+              <th scope="col" className="py-2 pr-4 text-right">
+                {t("dash.table.avg")}
+              </th>
+              <th scope="col" className="py-2 pr-4 text-right">
+                {t("dash.table.min")}
+              </th>
+              <th scope="col" className="py-2 text-right">
+                {t("dash.table.max")}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {stats.map((s) => (
+              <tr
+                key={s.label}
+                className="border-b border-gray-700/40 last:border-b-0"
+              >
+                <td className="py-2 pr-4 font-medium text-gray-200">
+                  <button
+                    type="button"
+                    data-testid={`dash-drill-month-${month}-group-${s.label}`}
+                    onClick={() => onSelectGroup(s.label)}
+                    title={t("dash.drill.title", { group: s.label })}
+                    className="text-left underline decoration-dotted underline-offset-4 decoration-gray-500 hover:text-solar-accent hover:decoration-solar-accent transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent rounded-sm cursor-pointer"
+                  >
+                    {s.label}
+                  </button>
+                </td>
+                <td className="py-2 pr-4 text-right tabular-nums text-gray-300">
+                  {s.count}
+                </td>
+                <td className="py-2 pr-4 text-right tabular-nums text-orange-300 font-semibold">
+                  {formatScoreDisplay(s.average)}
+                </td>
+                <td className="py-2 pr-4 text-right tabular-nums text-gray-400">
+                  {formatScoreDisplay(s.min)}
+                </td>
+                <td className="py-2 text-right tabular-nums text-gray-400">
+                  {formatScoreDisplay(s.max)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+};
+
+/**
  * Drill-down detail: every O.S. of one group/month bucket, with its own
  * summary header and a scoped CSV export. Pure data comes from
  * utils/dashboardDrilldown.ts; this component only renders.
@@ -255,6 +413,10 @@ const GroupTable: React.FC<{
 const DrillDownView: React.FC<{
   dimension: GroupDimension;
   label: string;
+  /** v3 P10: month context line above the dimension label (month leaf). */
+  monthScope?: string | null;
+  /** v3 P10: swaps the back button target ('Back to month' vs overview). */
+  backLabel?: string;
   selection: {
     count: number;
     scoredCount: number;
@@ -267,7 +429,7 @@ const DrillDownView: React.FC<{
   onExport: () => void;
   /** v3 P9: printable QC report scoped to this bucket. */
   onExportQc: () => void;
-}> = ({ dimension, label, selection, records, onBack, onExport, onExportQc }) => {
+}> = ({ dimension, label, monthScope, backLabel, selection, records, onBack, onExport, onExportQc }) => {
   const { t } = useI18n();
   const dimensionLabel =
     dimension === "studio"
@@ -283,11 +445,19 @@ const DrillDownView: React.FC<{
         onClick={onBack}
         className="mb-3 px-3 py-1.5 rounded-md text-sm border border-gray-600/60 text-gray-300 hover:bg-gray-500/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
       >
-        ← {t("dash.drill.back")}
+        ← {backLabel ?? t("dash.drill.back")}
       </button>
 
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div>
+          {monthScope && (
+            <p
+              className="text-xs uppercase tracking-wide text-solar-accent mb-0.5"
+              data-testid="dash-drill-month-scope"
+            >
+              {monthScope}
+            </p>
+          )}
           <p className="text-xs uppercase tracking-wide text-gray-400">
             {dimensionLabel}
           </p>
@@ -485,15 +655,20 @@ const DashboardPanel: React.FC = () => {
     exportCsvRef.current = exportCsv;
   });
 
-  // P7 drill-down: selecting a table group or a trend month shows every O.S.
-  // of that bucket (still honoring the period filter above). The selection is
-  // derived — never stored — so period edits update it live.
+  // P7/P10 drill-down: selecting a table group or a trend month shows every
+  // O.S. of that bucket (still honoring the period filter above). The
+  // selection is derived — never stored — so period edits update it live.
+  // v3 P10: inside a month, an empty month.label means the second-level HUB
+  // (whole month); a filled one is the group LEAF.
   const range = useMemo(
     () => ({ from: fromInput, to: toInput }),
     [fromInput, toInput],
   );
   const drillSelection = useMemo(() => {
     if (!drillDown) return null;
+    if (drillDown.kind === "month") {
+      return selectMonthSummary(filtered, drillDown.label);
+    }
     return selectGroup(filtered, drillDown.dimension, drillDown.label);
   }, [drillDown, filtered]);
   const drillRecords = useMemo(() => {
@@ -503,9 +678,35 @@ const DashboardPanel: React.FC = () => {
       : (drillSelection?.records ?? []);
   }, [drillDown, filtered, drillSelection]);
 
+  // v3 P10: second-level state derived from the same single drillDown source.
+  const inMonthHub = drillDown?.kind === "month" && !drillDown.month;
+  const monthLeaf = drillDown?.kind === "month" ? (drillDown.month ?? null) : null;
+  const monthGroupStats = useMemo(() => {
+    if (drillDown?.kind !== "month") return [];
+    return groupAverageByMonth(filtered, drillDown.label, drillDown.dimension);
+  }, [drillDown, filtered]);
+  const monthLeafSelection = useMemo(() => {
+    if (drillDown?.kind !== "month" || !drillDown.month) return null;
+    return selectGroupInMonth(
+      filtered,
+      drillDown.label,
+      drillDown.month.dimension,
+      drillDown.month.label,
+    );
+  }, [drillDown, filtered]);
+
   const exportDrillCsv = () => {
     if (!drillDown) return;
-    downloadCsv(drillRecords, drilldownFilename(range, drillDown.label));
+    if (drillDown.kind === "group") {
+      downloadCsv(drillRecords, drilldownFilename(range, drillDown.label));
+    } else if (!drillDown.month) {
+      downloadCsv(drillRecords, drilldownFilename(range, drillDown.label));
+    } else {
+      downloadCsv(
+        drillRecords,
+        monthGroupFilename(range, drillDown.label, drillDown.month.label),
+      );
+    }
   };
 
   // v3 P9: printable QC report of the CURRENT view — the whole filtered
@@ -733,12 +934,41 @@ const DashboardPanel: React.FC = () => {
         })}
       </nav>
 
-      {drillDown ? (
+      {inMonthHub && drillDown && (
+        <MonthHubView
+          month={drillDown.label}
+          stats={monthGroupStats}
+          summary={{
+            count: drillSelection?.count ?? 0,
+            scoredCount: drillSelection?.scoredCount ?? 0,
+            average: drillSelection?.average ?? null,
+            min: drillSelection?.min ?? null,
+            max: drillSelection?.max ?? null,
+          }}
+          onBack={() => setDrillDown(null)}
+          onSelectGroup={(label) =>
+            setDrillDown((cur) =>
+              cur && cur.kind === "month"
+                ? { ...cur, month: { dimension: cur.dimension, label } }
+                : cur,
+            )
+          }
+          onExport={exportDrillCsv}
+        />
+      )}
+
+      {drillDown && !inMonthHub && (
         <DrillDownView
-          dimension={drillDown.dimension}
-          label={drillDown.label}
+          dimension={monthLeaf ? monthLeaf.dimension : drillDown.dimension}
+          label={monthLeaf ? monthLeaf.label : drillDown.label}
+          monthScope={monthLeaf ? t("dash.drill.monthScope", { month: drillDown.label }) : null}
+          backLabel={
+            monthLeaf
+              ? t("dash.drill.monthBack")
+              : undefined
+          }
           selection={
-            drillSelection ?? {
+            (monthLeaf ? monthLeafSelection : drillSelection) ?? {
               count: 0,
               scoredCount: 0,
               average: null,
@@ -746,12 +976,18 @@ const DashboardPanel: React.FC = () => {
               max: null,
             }
           }
-          records={drillRecords}
-          onBack={() => setDrillDown(null)}
+          records={monthLeaf ? (monthLeafSelection?.records ?? []) : drillRecords}
+          onBack={() =>
+            monthLeaf
+              ? setDrillDown({ kind: "month", dimension: drillDown.dimension, label: drillDown.label })
+              : setDrillDown(null)
+          }
           onExport={exportDrillCsv}
           onExportQc={exportQcReport}
         />
-      ) : (
+      )}
+
+      {!drillDown && (
         <>
           {section === "summary" && (
             <div
@@ -868,6 +1104,13 @@ const DashboardPanel: React.FC = () => {
             </>
           )}
         </>
+      )}
+
+      {/* v3 P10: trend month buttons open the second-level hub now. */}
+      {section === "trend" && !drillDown && (
+        <p className="text-xs text-gray-500 mt-2" data-testid="dash-trend-hint">
+          {t("dash.drill.monthHint")}
+        </p>
       )}
 
       {/* v3 P9: download confirmation — polite live region, auto-dismisses. */}
