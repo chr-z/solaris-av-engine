@@ -39,6 +39,12 @@ import {
   nextDashboardSection,
   prevDashboardSection,
 } from "../../utils/shortcuts";
+import {
+  buildQcBatchReport,
+  withQcPeriod,
+  qcBatchFilename,
+  renderQcBatchHtml,
+} from "../../utils/qcBatch";
 import { useAnalystShortcuts } from "../../hooks/useAnalystShortcuts";
 import ShortcutHelpModal from "../Core/ShortcutHelpModal";
 import { useI18n } from "../../i18n/I18nContext";
@@ -259,7 +265,9 @@ const DrillDownView: React.FC<{
   records: OsRecord[];
   onBack: () => void;
   onExport: () => void;
-}> = ({ dimension, label, selection, records, onBack, onExport }) => {
+  /** v3 P9: printable QC report scoped to this bucket. */
+  onExportQc: () => void;
+}> = ({ dimension, label, selection, records, onBack, onExport, onExportQc }) => {
   const { t } = useI18n();
   const dimensionLabel =
     dimension === "studio"
@@ -299,15 +307,26 @@ const DrillDownView: React.FC<{
             })}
           </p>
         </div>
-        <button
-          type="button"
-          data-testid="dash-drill-export"
-          onClick={onExport}
-          title={t("dash.export.title")}
-          className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
-        >
-          {t("dash.export")}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            data-testid="dash-drill-qc-report"
+            onClick={onExportQc}
+            title={t("dash.qcReport.title")}
+            className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+          >
+            {t("dash.qcReport")}
+          </button>
+          <button
+            type="button"
+            data-testid="dash-drill-export"
+            onClick={onExport}
+            title={t("dash.export.title")}
+            className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+          >
+            {t("dash.export")}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3 mb-4" data-testid="dash-drill-cards">
@@ -384,13 +403,15 @@ const DrillDownView: React.FC<{
  * #/admin/dashboards (RBAC already enforced upstream).
  */
 const DashboardPanel: React.FC = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [section, setSection] = useState<Section>("summary");
   const [drillDown, setDrillDown] = useState<DrillDown | null>(null);
   const [entries, setEntries] = useState<DashboardEntryInput[] | null>(null);
   const [source, setSource] = useState<"live" | "demo" | null>(null);
   const [fromInput, setFromInput] = useState("");
   const [toInput, setToInput] = useState("");
+  // v3 P9: one-shot confirmation after a QC report download.
+  const [qcToastVisible, setQcToastVisible] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -487,6 +508,32 @@ const DashboardPanel: React.FC = () => {
     downloadCsv(drillRecords, drilldownFilename(range, drillDown.label));
   };
 
+  // v3 P9: printable QC report of the CURRENT view — the whole filtered
+  // dataset on the overview, or exactly the open drill-down bucket. Same
+  // records as on screen, period bounds carried into header and filename.
+  const exportQcReport = useCallback(() => {
+    const report = withQcPeriod(
+      buildQcBatchReport(filtered, {
+        kind: drillDown?.kind ?? "overview",
+        dimension: drillDown?.dimension ?? "studio",
+        label: drillDown?.label ?? "",
+      }),
+      range,
+    );
+    const html = renderQcBatchHtml(
+      report,
+      locale === "pt" ? "pt" : "en",
+    );
+    const blob = new Blob(["\ufeff", html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = qcBatchFilename(report);
+    a.click();
+    URL.revokeObjectURL(url);
+    setQcToastVisible(true);
+  }, [filtered, drillDown, range, locale]);
+
   // v3 P8: keyboard shortcuts. Latest handlers live in refs so the global
   // keydown listener (bound once) always dispatches against current state.
   const clearPeriod = useCallback(() => {
@@ -513,6 +560,7 @@ const DashboardPanel: React.FC = () => {
     exportDashCsv: useCallback(() => exportCsvRef.current(), []),
     clearDashPeriod: clearPeriod,
     exitDashDrillDown: exitDrillDown,
+    exportDashQcReport: exportQcReport,
   });
 
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
@@ -643,6 +691,15 @@ const DashboardPanel: React.FC = () => {
         )}
         <button
           type="button"
+          data-testid="dash-export-qc-report"
+          onClick={exportQcReport}
+          title={t("dash.qcReport.title")}
+          className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors"
+        >
+          {t("dash.qcReport")}
+        </button>
+        <button
+          type="button"
           data-testid="dash-export-csv"
           onClick={exportCsv}
           title={t("dash.export.title")}
@@ -692,6 +749,7 @@ const DashboardPanel: React.FC = () => {
           records={drillRecords}
           onBack={() => setDrillDown(null)}
           onExport={exportDrillCsv}
+          onExportQc={exportQcReport}
         />
       ) : (
         <>
@@ -810,6 +868,26 @@ const DashboardPanel: React.FC = () => {
             </>
           )}
         </>
+      )}
+
+      {/* v3 P9: download confirmation — polite live region, auto-dismisses. */}
+      {qcToastVisible && (
+        <div
+          data-testid="dash-qc-toast"
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-4 right-4 z-50 max-w-xs rounded-lg border border-emerald-500/40 bg-gray-900/95 px-4 py-3 text-sm text-emerald-200 shadow-xl"
+        >
+          <p className="mb-2">{t("dash.qcReport.done")}</p>
+          <button
+            type="button"
+            data-testid="dash-qc-toast-close"
+            onClick={() => setQcToastVisible(false)}
+            className="rounded-md border border-gray-600/60 px-2 py-1 text-xs text-gray-300 hover:bg-gray-500/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+          >
+            OK
+          </button>
+        </div>
       )}
 
       <ShortcutHelpModal
