@@ -9,7 +9,7 @@ export const DEMO_HEADERS = [
     "EDITOR", "ANALYST", "AUDIO SCORE", "VIDEO SCORE", "FRAMING SCORE", 
     "LIGHTING SCORE", "SCENERY SCORE", "FINAL SCORE", "OPERATOR COMMENTS", "FOLDER",
     "Audio Clipping (Peaking)", "Low Volume", "Uneven Lighting", "Harsh Shadows",
-    "Focus Hunting", "Chroma Key Failure", "Material Misaligned on Virtual TV"
+    "Focus Hunting", "Chroma Key Failure", "Asset Misaligned on Virtual TV"
 ];
 
 // Helper to create a cell
@@ -93,12 +93,12 @@ export const DEMO_ROWS = [
             c("Op. Rachel"), 
             c("Ed. Marcus"), 
             c("Guest Analyst"), 
-            // ÁUDIO 0.94 − 0.30 (volume-baixo) = 0.64; OUTROS 1.22 − 0.08 (foco) = 1.14
+            // ÁUDIO 0.94 − 0.30 (audio-estourando) = 0.64; OUTROS 1.22 − 0.08 (foco) = 1.14
             c("0.64"), c("1.14"), c("1.27"), c("0.87"), c("0.70"), 
             c("4.62"), 
-            c("Presenter voice too quiet on the lapel mic. Focus hunted during close-ups."),
+            c("Presenter audio clipped during the live Q&A. Focus hunted during close-ups."),
             c("Drive Folder", "https://drive.google.com/drive/folders/demo-folder-4"),
-            b(false), b(true), b(false), b(false),
+            b(true), b(false), b(false), b(false),
             b(true), b(false), b(false)
         ]
     },
