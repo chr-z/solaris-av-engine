@@ -232,6 +232,11 @@ export const en = {
   // v3 P14: Excel twin of the ranking export.
   'dash.exportRanking.xlsx': 'Export Excel',
   'dash.exportRanking.xlsxTitle': 'Downloads the current ranking as an Excel spreadsheet (.xlsx)',
+  // v3 P15: monthly heatmap of markings.
+  'dash.heat.title': 'Markings by month',
+  'dash.heat.hint': 'Darker cells mean more O.S. with that inconformity in the month. Select a cell to inspect the month.',
+  'dash.heat.empty': 'No dated marking in the selected period.',
+  'dash.heat.cellLabel': '{rule}: {count} in {month}',
   'drill.table.date': 'Date',
   'drill.table.wo': 'W.O.',
   'drill.table.event': 'Event',
@@ -468,6 +473,11 @@ export const pt: Record<TranslationKey, string> = {
   // v3 P14: Excel twin of the ranking export.
   'dash.exportRanking.xlsx': 'Exportar Excel',
   'dash.exportRanking.xlsxTitle': 'Baixa o ranking atual como planilha do Excel (.xlsx)',
+  // v3 P15: monthly heatmap of markings.
+  'dash.heat.title': 'Marcações por mês',
+  'dash.heat.hint': 'Células mais escuras indicam mais O.S. com a inconformidade no mês. Selecione uma célula para inspecionar o mês.',
+  'dash.heat.empty': 'Nenhuma marcação com data no período selecionado.',
+  'dash.heat.cellLabel': '{rule}: {count} em {month}',
   'drill.table.date': 'Data',
   'drill.table.wo': 'W.O.',
   'drill.table.event': 'Evento',
