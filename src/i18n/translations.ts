@@ -174,6 +174,13 @@ export const en = {
   'dash.demoSourceTitle': 'Live sheet unavailable — showing bundled demo data.',
   'dash.liveSource': 'live data',
   'dash.empty': 'No records found for this view.',
+  'dash.period.from': 'From',
+  'dash.period.to': 'To',
+  'dash.period.placeholder': 'YYYY-MM or YYYY-MM-DD',
+  'dash.period.title': 'Period filter',
+  'dash.period.clear': 'Clear period',
+  'dash.export': 'Export CSV',
+  'dash.export.title': 'Download the filtered records as CSV',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -348,6 +355,13 @@ export const pt: Record<TranslationKey, string> = {
   'dash.demoSourceTitle': 'Planilha ao vivo indisponível — exibindo dados demo embutidos.',
   'dash.liveSource': 'dados ao vivo',
   'dash.empty': 'Nenhum registro encontrado para esta visão.',
+  'dash.period.from': 'De',
+  'dash.period.to': 'Até',
+  'dash.period.placeholder': 'AAAA-MM ou AAAA-MM-DD',
+  'dash.period.title': 'Filtro de período',
+  'dash.period.clear': 'Limpar período',
+  'dash.export': 'Exportar CSV',
+  'dash.export.title': 'Baixa os registros filtrados em CSV',
 };
 
 export const dictionaries = { en, pt } as const;

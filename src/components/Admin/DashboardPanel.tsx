@@ -11,10 +11,17 @@ import {
   groupAverageBy,
   trendByMonth,
   deltaPercent,
+  type Dataset,
   type GroupDimension,
   type GroupStat,
   type TrendPoint,
 } from '../../utils/dashboard';
+import {
+  filterByPeriod,
+  buildDashboardCsv,
+  csvFilename,
+  hasActiveBounds,
+} from '../../utils/dashboardExport';
 import {
   loadDashboardEntries,
   barHeightRatio,
@@ -135,6 +142,8 @@ const DashboardPanel: React.FC = () => {
   const [section, setSection] = useState<Section>('summary');
   const [entries, setEntries] = useState<DashboardEntryInput[] | null>(null);
   const [source, setSource] = useState<'live' | 'demo' | null>(null);
+  const [fromInput, setFromInput] = useState('');
+  const [toInput, setToInput] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -159,8 +168,16 @@ const DashboardPanel: React.FC = () => {
     [entries],
   );
 
-  const summary = useMemo(() => overallSummary(dataset), [dataset]);
-  const trend = useMemo(() => trendByMonth(dataset), [dataset]);
+  // P6: period filter — garbage input is ignored by the core (normalizeBound),
+  // so the whole dashboard degrades to "no bounds" instead of lying.
+  const filtered: Dataset = useMemo(
+    () => ({ records: filterByPeriod(dataset.records, { from: fromInput, to: toInput }) }),
+    [dataset, fromInput, toInput],
+  );
+  const periodActive = hasActiveBounds({ from: fromInput, to: toInput });
+
+  const summary = useMemo(() => overallSummary(filtered), [filtered]);
+  const trend = useMemo(() => trendByMonth(filtered), [filtered]);
   const lastDelta = useMemo(() => {
     if (trend.length < 2) return null;
     return deltaPercent(trend[trend.length - 2], trend[trend.length - 1]);
@@ -168,9 +185,20 @@ const DashboardPanel: React.FC = () => {
 
   const dimension = DIMENSION_BY_SECTION[section];
   const groupStats = useMemo(
-    () => (dimension ? groupAverageBy(dataset, dimension) : []),
-    [dataset, dimension],
+    () => (dimension ? groupAverageBy(filtered, dimension) : []),
+    [filtered, dimension],
   );
+
+  const exportCsv = () => {
+    const csvText = buildDashboardCsv(filtered.records);
+    const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = csvFilename({ from: fromInput, to: toInput });
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const deltaDisplay =
     lastDelta === null
@@ -206,6 +234,59 @@ const DashboardPanel: React.FC = () => {
             {t('dash.liveSource')}
           </span>
         )}
+      </div>
+
+      <div
+        data-testid="dash-period-bar"
+        className="flex flex-wrap items-center gap-2 mb-5 rounded-lg border border-gray-600/60 bg-gray-800/50 px-3 py-2"
+      >
+        <span className="text-xs uppercase tracking-wide text-gray-400">{t('dash.period.title')}</span>
+        <label className="flex items-center gap-1 text-xs text-gray-300">
+          {t('dash.period.from')}
+          <input
+            type="text"
+            value={fromInput}
+            onChange={(e) => setFromInput(e.target.value)}
+            placeholder={t('dash.period.placeholder')}
+            aria-label={`${t('dash.period.title')}: ${t('dash.period.from')}`}
+            data-testid="dash-period-from"
+            className="w-32 rounded-md border border-gray-600/60 bg-gray-900/70 px-2 py-1 text-sm text-gray-100"
+          />
+        </label>
+        <label className="flex items-center gap-1 text-xs text-gray-300">
+          {t('dash.period.to')}
+          <input
+            type="text"
+            value={toInput}
+            onChange={(e) => setToInput(e.target.value)}
+            placeholder={t('dash.period.placeholder')}
+            aria-label={`${t('dash.period.title')}: ${t('dash.period.to')}`}
+            data-testid="dash-period-to"
+            className="w-32 rounded-md border border-gray-600/60 bg-gray-900/70 px-2 py-1 text-sm text-gray-100"
+          />
+        </label>
+        {periodActive && (
+          <button
+            type="button"
+            data-testid="dash-period-clear"
+            onClick={() => {
+              setFromInput('');
+              setToInput('');
+            }}
+            className="px-2 py-1 rounded-md text-xs border border-gray-600/60 text-gray-300 hover:bg-gray-500/10 transition-colors"
+          >
+            {t('dash.period.clear')}
+          </button>
+        )}
+        <button
+          type="button"
+          data-testid="dash-export-csv"
+          onClick={exportCsv}
+          title={t('dash.export.title')}
+          className="ml-auto px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors"
+        >
+          {t('dash.export')}
+        </button>
       </div>
 
       <nav aria-label={t('dash.title')} className="flex flex-wrap gap-2 mb-5">
