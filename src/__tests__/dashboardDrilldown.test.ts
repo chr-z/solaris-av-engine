@@ -4,6 +4,8 @@ import {
   selectGroup,
   selectMonth,
   sortDrillDownRecords,
+  slugifyLabel,
+  drilldownFilename,
 } from '../utils/dashboardDrilldown';
 import type { OsRecord } from '../utils/dashboard';
 
@@ -112,5 +114,25 @@ describe('P7 dashboard drill-down — month selection', () => {
     expect(selectMonth(DATASET, '2024-3')).toEqual([]);
     expect(selectMonth(DATASET, '')).toEqual([]);
     expect(selectMonth(DATASET, '1999-01')).toEqual([]);
+  });
+});
+
+describe('P7 dashboard drill-down — export naming', () => {
+  it('slugs accented labels into lowercase ASCII for filenames', () => {
+    expect(slugifyLabel('Estúdio Águia')).toBe('estudio-aguia');
+    expect(slugifyLabel('  Jane Doe!  ')).toBe('jane-doe');
+    expect(slugifyLabel(UNGROUPED_LABEL)).toBe('sem-valor');
+  });
+
+  it('falls back to a stable placeholder when the slug would be empty', () => {
+    expect(slugifyLabel('***')).toBe('grupo');
+    expect(slugifyLabel('')).toBe('grupo');
+  });
+
+  it('composes the drill-down filename from the period range and label slug', () => {
+    expect(drilldownFilename({}, 'Studio A')).toBe('solaris-dashboard_studio-a.csv');
+    expect(
+      drilldownFilename({ from: '2024-02', to: '2024-03' }, 'Estúdio Águia'),
+    ).toBe('solaris-dashboard_2024-02_2024-03_estudio-aguia.csv');
   });
 });

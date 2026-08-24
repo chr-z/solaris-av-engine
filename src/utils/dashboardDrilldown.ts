@@ -9,6 +9,7 @@
 // only renders what these functions return.
 
 import type { Dataset, GroupDimension, OsRecord } from './dashboard';
+import { csvFilename } from './dashboardExport';
 
 /** Sentinel label used by groupAverageBy for records missing the dimension. */
 export const UNGROUPED_LABEL = '(sem valor)';
@@ -93,4 +94,29 @@ export function sortDrillDownRecords(records: OsRecord[]): OsRecord[] {
 export function selectMonth(dataset: Dataset, month: string): OsRecord[] {
   if (!/^\d{4}-\d{2}$/.test(month)) return [];
   return sortDrillDownRecords((dataset?.records ?? []).filter((rec) => rec.month === month));
+}
+
+// ---------- Export naming ----------
+
+/** Lowercase ASCII slug for filenames ('Estúdio Águia' → 'estudio-aguia'). */
+export function slugifyLabel(label: string): string {
+  const slug = (label ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'grupo';
+}
+
+/**
+ * Download filename for a drill-down export: the standard dashboard name
+ * (with period range when active) plus the group/month slug, e.g.
+ * 'solaris-dashboard_2024-02_2024-03_estudio-aguia.csv'.
+ */
+export function drilldownFilename(
+  range: { from?: string | null; to?: string | null },
+  label: string,
+): string {
+  return csvFilename(range).replace(/\.csv$/, `_${slugifyLabel(label)}.csv`);
 }
