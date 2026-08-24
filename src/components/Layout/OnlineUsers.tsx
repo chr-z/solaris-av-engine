@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import firebase from 'firebase/compat/app';
-import { database } from '../../config/firebase';
+import { getDb, getFirebaseCompat, type SnapshotLike } from '../../config/firebase';
+type DbSnapshot = SnapshotLike;
 import { UserProfile } from '../../types';
 import UserAvatar from '../Auth/UserAvatar';
 import { useI18n } from '../../i18n/I18nContext';
@@ -10,8 +10,10 @@ const OnlineUsers: React.FC = () => {
     const [onlineUsers, setOnlineUsers] = useState<UserProfile[]>([]);
 
     useEffect(() => {
-        const presenceRef = database.ref('presence');
-        const listener = (snapshot: firebase.database.DataSnapshot) => {
+        // turbo-web: presence subscription waits for the lazy SDK; skipped if unmounted first.
+        let listener: ((snapshot: DbSnapshot) => void) | null = null;
+        let presenceRef: ReturnType<Awaited<ReturnType<typeof getDb>>['ref']> | null = null;
+        listener = (snapshot: DbSnapshot) => {
             // Presence nodes are UserProfile + presence metadata written by App's presence system
             const presences: Record<string, UserProfile & { status?: string }> = snapshot.val() || {};
             const currentOnlineUsers: UserProfile[] = [];
@@ -22,9 +24,17 @@ const OnlineUsers: React.FC = () => {
             });
             setOnlineUsers(currentOnlineUsers);
         };
-        presenceRef.on('value', listener);
+        let disposed = false;
+        getFirebaseCompat().then(() => getDb()).then((db) => {
+            if (disposed) return;
+            presenceRef = db.ref('presence');
+            presenceRef.on('value', listener!);
+        }).catch((err) => console.error('Failed to load presence module:', err));
 
-        return () => presenceRef.off('value', listener);
+        return () => {
+            disposed = true;
+            if (presenceRef && listener) presenceRef.off('value', listener);
+        };
     }, []);
 
     if (onlineUsers.length === 0) return null;

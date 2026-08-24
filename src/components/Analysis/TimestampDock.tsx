@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import firebase from 'firebase/compat/app';
-import { database } from '../../config/firebase';
+import { getDb, getFirebaseCompat, type UnsubscribeFn } from '../../config/firebase';
 import { Timestamp, UserProfile } from '../../types';
 import { XIcon } from '../Core/icons';
 import UserAvatar from '../Auth/UserAvatar';
@@ -30,21 +29,30 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
         if (!selectedOsIndex) return;
 
         setIsLoading(true);
-        const timestampsRef = database.ref(`timestamps/${selectedOsIndex}`);
-        
-        const listener = timestampsRef.orderByChild('time').on('value', snapshot => {
-            const data = snapshot.val();
-            const loadedTimestamps: Timestamp[] = [];
-            if (data) {
-                Object.keys(data).forEach(key => {
-                    loadedTimestamps.push({ id: key, ...data[key] });
-                });
-            }
-            setTimestamps(loadedTimestamps);
-            setIsLoading(false);
-        });
+        // turbo-web: subscribe only after the lazy SDK resolves; skip if unmounted first.
+        let disposed = false;
+        let timestampsRef: ReturnType<Awaited<ReturnType<typeof getDb>>['ref']> | null = null;
+        let unsub: UnsubscribeFn | null = null;
+        getDb().then((db) => {
+            if (disposed) return;
+            timestampsRef = db.ref(`timestamps/${selectedOsIndex}`);
+            unsub = timestampsRef.orderByChild('time').on('value', snapshot => {
+                const data = snapshot.val();
+                const loadedTimestamps: Timestamp[] = [];
+                if (data) {
+                    Object.keys(data).forEach(key => {
+                        loadedTimestamps.push({ id: key, ...data[key] });
+                    });
+                }
+                setTimestamps(loadedTimestamps);
+                setIsLoading(false);
+            });
+        }).catch((err) => console.error('Failed to load database module:', err));
 
-        return () => timestampsRef.off('value', listener);
+        return () => {
+            disposed = true;
+            if (timestampsRef && unsub) timestampsRef.off('value', unsub);
+        };
     }, [selectedOsIndex]);
 
     useEffect(() => {
@@ -77,11 +85,12 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
                 givenName: userProfile.givenName,
                 picture: userProfile.picture,
             },
-            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdAt: (await getFirebaseCompat()).app.database.ServerValue.TIMESTAMP,
         };
         
         try {
-            await database.ref(`timestamps/${selectedOsIndex}`).push(newTimestamp);
+            const db = await getDb();
+            await db.ref(`timestamps/${selectedOsIndex}`).push(newTimestamp);
             handleCancel();
         } catch (error) {
             console.error("Failed to save timestamp:", error);
@@ -98,7 +107,7 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
 
     const handleDelete = (timestampId: string) => {
         if (window.confirm("Delete this timestamp?")) {
-            database.ref(`timestamps/${selectedOsIndex}/${timestampId}`).remove();
+            void getDb().then((db) => db.ref(`timestamps/${selectedOsIndex}/${timestampId}`).remove());
         }
     };
 

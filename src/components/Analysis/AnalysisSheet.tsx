@@ -3,7 +3,8 @@ import { SearchIcon, LinkIcon, ChevronDownIcon, FilterIcon, RefreshIcon, XIcon, 
 import LoadingIndicator from '../Core/LoadingIndicator';
 import Popover from '../Core/Popover';
 import FilterControls, { FilterState } from './FilterControls';
-import { database, auth } from '../../config/firebase';
+import { getDb, getFirebaseCompat, type SnapshotLike } from '../../config/firebase';
+type DbSnapshot = SnapshotLike;
 import { UserProfile } from '../../types';
 import UserAvatar from '../Auth/UserAvatar';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
@@ -47,7 +48,8 @@ interface AnalysisSheetListProps {
 }
 
 export const fetchFullRowData = async (rowIndex: number): Promise<RowData> => {
-    const idToken = await auth.currentUser?.getIdToken();
+    const { fbAuth } = await getFirebaseCompat();
+    const idToken = await fbAuth.currentUser?.getIdToken();
     if (!idToken) {
         throw new Error('Not authenticated. Please sign in again.');
     }
@@ -125,10 +127,12 @@ const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, isSele
     const handleForceUnlock = (e: React.MouseEvent) => {
         e.stopPropagation(); 
         if (lockInfo && window.confirm(`Are you sure you want to unlock ${lockInfo.user.givenName}? This might interrupt active work.`)) {
-            database.ref(`locks/${rowIndex}`).set(null).catch(err => {
-                console.error("Failed to remove lock:", err);
-                alert("Could not remove lock. Try again.");
-            });
+            void getDb()
+                .then((db) => db.ref(`locks/${rowIndex}`).set(null))
+                .catch(err => {
+                    console.error("Failed to remove lock:", err);
+                    alert("Could not remove lock. Try again.");
+                });
         }
     };
     
@@ -216,12 +220,20 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
     const [activeLocks, setActiveLocks] = useState<{[key: number]: LockInfo}>({});
 
     useEffect(() => {
-        const locksRef = database.ref('locks');
-        const listener = (snapshot: any) => {
-          setActiveLocks(snapshot.val() || {});
+        // turbo-web: subscribe only after the lazy SDK resolves; skip if unmounted first.
+        let listener: ((snapshot: DbSnapshot) => void) | null = null;
+        let dbRef: ReturnType<Awaited<ReturnType<typeof getDb>>['ref']> | null = null;
+        let cancelled = false;
+        getDb().then((db) => {
+            if (cancelled) return;
+            dbRef = db.ref('locks');
+            listener = (snapshot) => setActiveLocks(snapshot.val() || {});
+            dbRef.on('value', listener);
+        }).catch((err) => console.error('Failed to load database module:', err));
+        return () => {
+            cancelled = true;
+            if (dbRef && listener) dbRef.off('value', listener);
         };
-        locksRef.on('value', listener);
-        return () => locksRef.off('value', listener);
       }, []);
 
     const fetchData = useCallback(async (currentFilters: FilterState, forceRefresh = false) => {
@@ -236,7 +248,8 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
         setLoadingMessage('Syncing Data...');
         setError(null);
         try {
-            const idToken = await auth.currentUser?.getIdToken();
+            const { fbAuth } = await getFirebaseCompat();
+            const idToken = await fbAuth.currentUser?.getIdToken();
             if (!idToken) {
                 throw new Error('Session expired. Please sign in again.');
             }

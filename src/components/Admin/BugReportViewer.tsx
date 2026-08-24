@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { XIcon } from '../Core/icons';
 import { UserProfile } from '../../types';
-import { database } from '../../config/firebase';
+import { getDb, type SnapshotLike } from '../../config/firebase';
 import { LogEntry } from '../../utils/logCapture';
 import UserAvatar from '../Auth/UserAvatar';
 
@@ -64,6 +64,9 @@ const BugReportViewer: React.FC<BugReportViewerProps> = ({ isOpen, onClose }) =>
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+    // Holds the latest unsubscribe fn; the SDK resolves asynchronously so the
+    // effect cleanup can't close over the listener directly.
+    const cleanupListenerRef = useRef<(() => void) | null>(null);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -71,26 +74,40 @@ const BugReportViewer: React.FC<BugReportViewerProps> = ({ isOpen, onClose }) =>
         // Reset loading state via microtask: keeps the effect body free of
         // synchronous setState (cascading-render rule) while preserving behavior.
         const resetTimer = setTimeout(() => { setIsLoading(true); setError(null); }, 0);
-        const reportsRef = database.ref('bug_reports').orderByChild('timestamp').limitToLast(100);
-
-        const listener = reportsRef.on('value', snapshot => {
-            const data = snapshot.val();
-            const loadedReports: Report[] = [];
-            if (data) {
-                Object.keys(data).forEach(key => {
-                    loadedReports.push({ id: key, ...data[key] });
-                });
-            }
-            setReports(loadedReports.reverse()); // Show newest first
-            setIsLoading(false);
-        }, (err: { message?: string }) => {
-            setError(err.message || "Connection error or insufficient permissions.");
+        // turbo-web: subscribe only after the lazy SDK resolves; skip if closed/unmounted first.
+        let disposed = false;
+        // Structural view of an RTDB Query — enough to attach/detach one listener.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let reportsRef: { on: (...args: any[]) => any; off: (...args: any[]) => void } | null = null;
+        getDb().then((db) => {
+            if (disposed) return;
+            reportsRef = db.ref('bug_reports').orderByChild('timestamp').limitToLast(100);
+            const listener = reportsRef.on('value', (snapshot: SnapshotLike) => {
+                const data = snapshot.val();
+                const loadedReports: Report[] = [];
+                if (data) {
+                    Object.keys(data).forEach(key => {
+                        loadedReports.push({ id: key, ...data[key] });
+                    });
+                }
+                setReports(loadedReports.reverse()); // Show newest first
+                setIsLoading(false);
+            }, (err: { message?: string }) => {
+                setError(err.message || "Connection error or insufficient permissions.");
+                setIsLoading(false);
+            });
+            const activeRef = reportsRef;
+            cleanupListenerRef.current = () => activeRef.off('value', listener);
+        }).catch((err) => {
+            setError(err instanceof Error ? err.message : "Failed to load database module.");
             setIsLoading(false);
         });
 
         return () => {
+            disposed = true;
             clearTimeout(resetTimer);
-            reportsRef.off('value', listener);
+            cleanupListenerRef.current?.();
+            cleanupListenerRef.current = null;
         };
     }, [isOpen]);
 

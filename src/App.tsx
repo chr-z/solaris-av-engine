@@ -6,8 +6,11 @@ import LoginScreen from './components/Auth/LoginScreen';
 import LoadingIndicator from './components/Core/LoadingIndicator';
 import { OverlaySettings, VideoChoice, UserProfile } from './types';
 import { DRIVE_FILE_REGEX, YOUTUBE_REGEX, DRIVE_FOLDER_REGEX } from './utils/regex';
-import { database, auth } from './config/firebase';
-import firebase from 'firebase/compat/app';
+// turbo-web: firebase compat SDK is loaded on demand (lazy chunk); consumers
+// await these getters instead of touching eager singletons.
+import { getDb, getFbAuth, getFirebaseCompat, type FbUserLike, type SnapshotLike } from './config/firebase';
+type FbUser = FbUserLike;
+type DbSnapshot = SnapshotLike;
 import { FilterState } from './components/Analysis/FilterControls';
 import { WaveformCacheProvider } from './contexts/WaveformCacheContext';
 import { logCaptureService } from './utils/logCapture';
@@ -300,27 +303,28 @@ const App: React.FC = () => {
     }
     
     // ADMIN MODE: Real Locking Logic
+    const { app, db } = await getFirebaseCompat();
     if (currentSelected !== null) {
-        const oldLockRef = database.ref(`locks/${currentSelected}`);
+        const oldLockRef = db.ref(`locks/${currentSelected}`);
         const snapshot = await oldLockRef.get();
         if (snapshot.exists() && snapshot.val().user.id === userProfile.id) {
             await oldLockRef.set(null);
         }
     }
 
-    const lockRef = database.ref(`locks/${rowIndex}`);
+    const lockRef = db.ref(`locks/${rowIndex}`);
     let lockAcquired = false;
 
     try {
         const { committed, snapshot } = await lockRef.transaction((currentData) => {
             if (currentData === null) {
-                return { user: userProfile, timestamp: firebase.database.ServerValue.TIMESTAMP };
+                return { user: userProfile, timestamp: app.database.ServerValue.TIMESTAMP };
             }
             const staleTime = 15 * 60 * 1000; 
             const isStale = !currentData.timestamp || (Date.now() - currentData.timestamp > staleTime);
             
-            if (isStale) return { user: userProfile, timestamp: firebase.database.ServerValue.TIMESTAMP };
-            if (currentData.user?.id === userProfile.id) return { ...currentData, timestamp: firebase.database.ServerValue.TIMESTAMP };
+            if (isStale) return { user: userProfile, timestamp: app.database.ServerValue.TIMESTAMP };
+            if (currentData.user?.id === userProfile.id) return { ...currentData, timestamp: app.database.ServerValue.TIMESTAMP };
 
             return; // Abort
         });
@@ -358,7 +362,8 @@ const App: React.FC = () => {
 
     // Fetch Full Row Data (Admin Mode)
     try {
-      const idToken = await auth.currentUser?.getIdToken();
+      const { fbAuth } = await getFirebaseCompat();
+      const idToken = await fbAuth.currentUser?.getIdToken();
       if (!idToken) throw new Error('Session expired. Please sign in again.');
 
       const response = await fetch(`/api/sheet-row?rowIndex=${rowIndex}`, {
@@ -466,11 +471,13 @@ const App: React.FC = () => {
 
   const handleCloseWorkspace = useCallback(() => {
     if (selectedOsIndex !== null && userProfile?.id !== 'guest-reviewer-id') {
-        const lockRef = database.ref(`locks/${selectedOsIndex}`);
-        lockRef.get().then(snapshot => {
-            if (snapshot.exists() && snapshot.val().user.id === userProfile?.id) {
-                lockRef.set(null);
-            }
+        void getDb().then((lockDb) => {
+            const lockRef = lockDb.ref(`locks/${selectedOsIndex}`);
+            return lockRef.get().then(snapshot => {
+                if (snapshot.exists() && snapshot.val().user.id === userProfile?.id) {
+                    lockRef.set(null);
+                }
+            });
         });
     }
     setSelectedOsIndex(null);
@@ -529,34 +536,47 @@ const App: React.FC = () => {
   }, [authStatus, t]);
 
   // Presence System
+  const presenceCleanupRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     if (authStatus !== 'signedIn' || !userProfile || userProfile.id === 'guest-reviewer-id') {
-        if (database) database.goOffline();
+        // turbo-web: only touch the DB when the lazy SDK is actually loaded;
+        // signed-out visitors never pay for it.
+        void getDb().then((db) => db.goOffline()).catch(() => {});
         return;
     }
-    
-    database.goOnline();
-    const userStatusRef = database.ref('presence/' + userProfile.id);
-    const isOfflineForDatabase = { ...userProfile, status: 'offline', last_changed: firebase.database.ServerValue.TIMESTAMP };
-    const isOnlineForDatabase = { ...userProfile, status: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP };
-    const connectedRef = database.ref('.info/connected');
-    
-    const listener = connectedRef.on('value', (snap: firebase.database.DataSnapshot) => {
-        if (snap.val() === true) {
-            userStatusRef.onDisconnect().set(isOfflineForDatabase).then(() => userStatusRef.set(isOnlineForDatabase));
-        }
-    });
+    let disposed = false;
+    void getFirebaseCompat().then(({ app, db }) => {
+        if (disposed) return;
+        db.goOnline();
+        const userStatusRef = db.ref('presence/' + userProfile.id);
+        const isOfflineForDatabase = { ...userProfile, status: 'offline', last_changed: app.database.ServerValue.TIMESTAMP };
+        const isOnlineForDatabase = { ...userProfile, status: 'online', last_changed: app.database.ServerValue.TIMESTAMP };
+        const connectedRef = db.ref('.info/connected');
+
+        const listener = (snap: DbSnapshot) => {
+            if (snap.val() === true) {
+                userStatusRef.onDisconnect().set(isOfflineForDatabase).then(() => userStatusRef.set(isOnlineForDatabase));
+            }
+        };
+        connectedRef.on('value', listener);
+        presenceCleanupRef.current = () => {
+            connectedRef.off('value', listener);
+            userStatusRef.set(isOfflineForDatabase);
+            db.goOffline();
+        };
+    }).catch((err) => console.error('Presence init failed:', err));
 
     return () => {
-        connectedRef.off('value', listener);
-        userStatusRef.set(isOfflineForDatabase);
-        database.goOffline();
+        disposed = true;
+        presenceCleanupRef.current?.();
+        presenceCleanupRef.current = null;
     };
   }, [authStatus, userProfile]);
 
   // Auth & Init Flow
+  const authUnsubRef = useRef<(() => void) | null>(null);
   useEffect(() => {
-    const initializeGapiForUser = async (user: firebase.User) => {
+    const initializeGapiForUser = async (user: FbUser) => {
         try {
             await new Promise<void>((resolve, reject) => gapi.load('client', { callback: resolve, onerror: reject }));
 
@@ -583,15 +603,15 @@ const App: React.FC = () => {
                             throw new Error("Failed to obtain Google access token.");
                         }
                     } catch (err: any) {
-                        console.error("GAPI Init/Token Callback Error:", err);
-                        setAuthError(err.details || err.message || 'Failed to initialize Google session.');
-                        auth.signOut();
-                    }
+                            console.error("GAPI Init/Token Callback Error:", err);
+                            setAuthError(err.details || err.message || 'Failed to initialize Google session.');
+                            void getFbAuth().then((a) => a.signOut());
+                        }
                 },
                 error_callback: (error: any) => {
                     console.error("GSI Error:", error);
                     setAuthError('Google session expired. Please sign in again.');
-                    auth.signOut();
+                    void getFbAuth().then((a) => a.signOut());
                 }
             });
             tokenClient.requestAccessToken({ prompt: '' });
@@ -617,14 +637,21 @@ const App: React.FC = () => {
     const startTime = Date.now();
     const pollForApis = () => {
         if (typeof gapi !== 'undefined' && gapi.load && typeof google !== 'undefined' && google.accounts) {
-            const unsubscribe = auth.onAuthStateChanged(user => {
-                if (user) initializeGapiForUser(user);
-                else {
-                    setUserProfile(null);
-                    initializeGapiForSignedOut();
-                }
+            // turbo-web: auth listener attaches once the lazy SDK resolves.
+            getFbAuth().then((fbAuth) => {
+                authUnsubRef.current = fbAuth.onAuthStateChanged(user => {
+                    if (user) initializeGapiForUser(user);
+                    else {
+                        setUserProfile(null);
+                        initializeGapiForSignedOut();
+                    }
+                });
+            }).catch((err) => {
+                console.error('Failed to load authentication module:', err);
+                setAuthError('Failed to load authentication module.');
+                setAuthStatus('error');
             });
-            return unsubscribe;
+            return;
         } else if (Date.now() - startTime > 10000) {
             setAuthError('Timeout loading Google libraries.');
             setAuthStatus('error');
@@ -633,18 +660,21 @@ const App: React.FC = () => {
         }
     };
 
-    const unsubscribe = pollForApis();
-    return () => { if (unsubscribe) unsubscribe(); };
+    pollForApis();
+    return () => {
+        if (authUnsubRef.current) authUnsubRef.current();
+    };
   }, []);
 
   const handleLogin = useCallback(async () => {
     setIsAuthLoading(true);
     setAuthError(null);
-    const provider = new firebase.auth.GoogleAuthProvider();
-    SCOPES.split(' ').forEach(scope => provider.addScope(scope));
 
     try {
-      await auth.signInWithPopup(provider);
+      const { app, fbAuth } = await getFirebaseCompat();
+      const provider = new app.auth.GoogleAuthProvider();
+      SCOPES.split(' ').forEach(scope => provider.addScope(scope));
+      await fbAuth.signInWithPopup(provider);
     } catch (error: any) {
         console.error("Firebase Auth Error:", error);
         let message = t('auth.loginFailed');
@@ -682,7 +712,8 @@ const App: React.FC = () => {
 
   const handleLogout = useCallback(async () => {
     try {
-        await auth.signOut();
+        const { fbAuth } = await getFirebaseCompat();
+        await fbAuth.signOut();
         setSelectedOsIndex(null);
         setVideoSrc(null);
         clearGuestEmail(); // v3: guest identity must not leak into the next session's admin gate

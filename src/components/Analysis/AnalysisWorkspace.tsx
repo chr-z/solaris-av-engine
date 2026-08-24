@@ -33,8 +33,7 @@ import { OverlaySettings, VideoChoice, UserProfile, Timestamp } from '../../type
 import { useI18n } from '../../i18n/I18nContext';
 import { dropdownFields, inconformityToCategoryMap, resultFields, inconformityScores, categoryMaxScores } from '../../utils/constants';
 import { getCompareGridClass } from '../../utils/compareMode';
-import { database } from '../../config/firebase';
-import firebase from 'firebase/compat/app';
+import { getDb, getFirebaseCompat, type UnsubscribeFn } from '../../config/firebase';
 
 // Solaris v3: scoring + sheet-sync modules
 import { recalculateScoresWithEngine, isScorableHeader, applyScoreUpdates } from '../../config/engineBridge';
@@ -107,21 +106,30 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
         if (!isOpen || !selectedOsIndex || !currentVideoId) return;
 
         queueMicrotask(() => setIsLoading(true));
-        const timestampsRef = database.ref(`timestamps/${selectedOsIndex}/${currentVideoId}`);
-        
-        const listener = timestampsRef.on('value', snapshot => {
-            const data = snapshot.val();
-            const loadedTimestamps: Timestamp[] = [];
-            if (data) {
-                Object.keys(data).forEach(key => {
-                    loadedTimestamps.push({ id: key, ...data[key] });
-                });
-            }
-            setTimestamps(loadedTimestamps);
-            setIsLoading(false);
-        });
+        // turbo-web: subscribe only after the lazy SDK resolves; skip if unmounted first.
+        let disposed = false;
+        let timestampsRef: ReturnType<Awaited<ReturnType<typeof getDb>>['ref']> | null = null;
+        let unsub: UnsubscribeFn | null = null;
+        getDb().then((db) => {
+            if (disposed) return;
+            timestampsRef = db.ref(`timestamps/${selectedOsIndex}/${currentVideoId}`);
+            unsub = timestampsRef.on('value', snapshot => {
+                const data = snapshot.val();
+                const loadedTimestamps: Timestamp[] = [];
+                if (data) {
+                    Object.keys(data).forEach(key => {
+                        loadedTimestamps.push({ id: key, ...data[key] });
+                    });
+                }
+                setTimestamps(loadedTimestamps);
+                setIsLoading(false);
+            });
+        }).catch((err) => console.error('Failed to load database module:', err));
 
-        return () => timestampsRef.off('value', listener);
+        return () => {
+            disposed = true;
+            if (timestampsRef && unsub) timestampsRef.off('value', unsub);
+        };
     }, [isOpen, selectedOsIndex, currentVideoId]);
     
     const sortedTimestamps = useMemo(() => {
@@ -151,13 +159,13 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
             analyst: {
                 id: userProfile.id, name: userProfile.name, givenName: userProfile.givenName, picture: userProfile.picture,
             },
-            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdAt: (await getFirebaseCompat()).app.database.ServerValue.TIMESTAMP,
             fileId: currentVideoId,
             fileName: currentVideoName,
         };
         
         try {
-            await database.ref(`timestamps/${selectedOsIndex}/${currentVideoId}`).push(newTimestamp);
+            await (await getDb()).ref(`timestamps/${selectedOsIndex}/${currentVideoId}`).push(newTimestamp);
             setComment('');
         } catch (error) {
             console.error("Failed to save timestamp:", error);
@@ -174,7 +182,7 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
     
     const handleDelete = (timestampId: string) => {
         if (window.confirm("Are you sure you want to remove this marker?")) {
-            database.ref(`timestamps/${selectedOsIndex}/${currentVideoId}/${timestampId}`).remove();
+            void getDb().then((db) => db.ref(`timestamps/${selectedOsIndex}/${currentVideoId}/${timestampId}`).remove());
         }
     };
 
@@ -191,7 +199,7 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
 
     const handleSaveEdit = () => {
         if (!editingTimestampId || !editingComment.trim()) return;
-        database.ref(`timestamps/${selectedOsIndex}/${currentVideoId}/${editingTimestampId}/comment`).set(editingComment.trim());
+        void getDb().then((db) => db.ref(`timestamps/${selectedOsIndex}/${currentVideoId}/${editingTimestampId}/comment`).set(editingComment.trim()));
         handleCancelEdit();
     };
 
@@ -459,14 +467,16 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   // Fetch stored local file path when OS is selected
   useEffect(() => {
     if (selectedOsIndex) {
-      const pathRef = database.ref(`analysisMetadata/${selectedOsIndex}/localFilePath`);
-      pathRef.get().then(snapshot => {
+      let disposed = false;
+      getDb().then((db) => db.ref(`analysisMetadata/${selectedOsIndex}/localFilePath`).get()).then((snapshot) => {
+        if (disposed) return;
         if (snapshot.exists()) {
           setRetrievedFilePath(snapshot.val());
         } else {
           setRetrievedFilePath(null);
         }
-      });
+      }).catch((err) => console.error('Failed to load local file path:', err));
+      return () => { disposed = true; };
     }
     queueMicrotask(() => setLocalFilePath(''));
   }, [selectedOsIndex]);
@@ -557,7 +567,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
       onSaveSuccess(localRowData);
 
       if (isLocalVideo && localFilePath.trim()) {
-        await database.ref(`analysisMetadata/${selectedOsIndex}/localFilePath`).set(localFilePath.trim());
+        await (await getDb()).ref(`analysisMetadata/${selectedOsIndex}/localFilePath`).set(localFilePath.trim());
       }
 
       setSaveStatus('success');

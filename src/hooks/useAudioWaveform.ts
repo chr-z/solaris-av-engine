@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { database } from '../config/firebase';
+import { getDb } from '../config/firebase';
 
 // Persistent, size-limited cache for waveform data.
 export const CACHE_KEY_PREFIX = 'solaris_waveform_cache_';
@@ -166,7 +166,7 @@ export const useAudioWaveform = (src: string | null, videoId: string | null) => 
 
             // Strategy 2: Firebase Distributed Cache (Shared)
             try {
-                const dbRef = database.ref(`waveforms/${videoId}`);
+                const dbRef = (await getDb()).ref(`waveforms/${videoId}`);
                 const snapshot = await dbRef.get();
                 if (snapshot.exists()) {
                     const firebaseData = snapshot.val();
@@ -221,7 +221,7 @@ export const useAudioWaveform = (src: string | null, videoId: string | null) => 
                 if (!signal.aborted) {
                     waveformCache.set(localCacheKey, finalPeaks);
                     // Async cache write to DB
-                    database.ref(`waveforms/${videoId}`).set(finalPeaks)
+                    void getDb().then((db) => db.ref(`waveforms/${videoId}`).set(finalPeaks))
                         .catch(err => console.error("Firebase cache write failed:", err));
                 }
 
