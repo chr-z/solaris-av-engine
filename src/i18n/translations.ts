@@ -83,6 +83,11 @@ export const en = {
   'shortcuts.mute.description': 'Mute / unmute',
   'shortcuts.markTime.description': 'Open time markers at current time',
   'shortcuts.saveAnalysis.description': 'Save analysis',
+  // v3 P8: dashboards console
+  'shortcuts.dashNextSection.description': 'Dashboards: next section',
+  'shortcuts.dashPrevSection.description': 'Dashboards: previous section',
+  'shortcuts.dashExportCsv.description': 'Dashboards: export current view to CSV',
+  'shortcuts.dashClearPeriod.description': 'Dashboards: clear period filter',
 
   // A/B compare mode (S5.2)
   'compare.title': 'A/B Compare',
@@ -271,6 +276,11 @@ export const pt: Record<TranslationKey, string> = {
   'shortcuts.mute.description': 'Silenciar / reativar',
   'shortcuts.markTime.description': 'Abrir marcadores de tempo no ponto atual',
   'shortcuts.saveAnalysis.description': 'Salvar análise',
+  // v3 P8: console de dashboards
+  'shortcuts.dashNextSection.description': 'Dashboards: próxima seção',
+  'shortcuts.dashPrevSection.description': 'Dashboards: seção anterior',
+  'shortcuts.dashExportCsv.description': 'Dashboards: exportar visão atual em CSV',
+  'shortcuts.dashClearPeriod.description': 'Dashboards: limpar filtro de período',
 
   // Modo comparativo A/B (S5.2)
   'compare.title': 'Comparar A/B',

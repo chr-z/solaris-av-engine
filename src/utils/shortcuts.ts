@@ -10,7 +10,34 @@
  * keypress triggers exactly one action.
  */
 
-export type ShortcutContext = 'global' | 'workspace' | 'player';
+export type ShortcutContext = 'global' | 'workspace' | 'player' | 'dashboard';
+
+/**
+ * Canonical dashboard section order (v3 P5 console). Single source of truth:
+ * DashboardPanel derives its Section type from this list, so the keyboard
+ * navigation cycle can never drift from the rendered tab order.
+ */
+export const DASHBOARD_SECTIONS = ['summary', 'studios', 'instructors', 'analysts', 'trend'] as const;
+
+export type DashboardSectionId = (typeof DASHBOARD_SECTIONS)[number];
+
+function cycleDashboardSection(current: DashboardSectionId, step: 1 | -1): DashboardSectionId {
+  const index = DASHBOARD_SECTIONS.indexOf(current);
+  // Unknown ids degrade to the first section instead of throwing.
+  if (index === -1) return DASHBOARD_SECTIONS[0];
+  const count = DASHBOARD_SECTIONS.length;
+  return DASHBOARD_SECTIONS[(index + step + count) % count];
+}
+
+/** Next dashboard section (N) — wraps around at the end. */
+export function nextDashboardSection(current: DashboardSectionId): DashboardSectionId {
+  return cycleDashboardSection(current, 1);
+}
+
+/** Previous dashboard section (P) — wraps around at the start. */
+export function prevDashboardSection(current: DashboardSectionId): DashboardSectionId {
+  return cycleDashboardSection(current, -1);
+}
 
 export interface ShortcutDef {
   /** Stable id used by tests and the help modal. */
@@ -46,6 +73,11 @@ export const ANALYST_SHORTCUTS: readonly ShortcutDef[] = [
   { id: 'markTime', keys: 't', display: 'T', scope: 'workspace', descriptionKey: 'shortcuts.markTime.description' },
   { id: 'saveAnalysis', keys: 's', display: 'Ctrl+S', scope: 'workspace', descriptionKey: 'shortcuts.saveAnalysis.description' },
   { id: 'toggleCompare', keys: 'v', display: 'V', scope: 'workspace', descriptionKey: 'compare.open' },
+  // v3 P8: dashboards console — matched only while #/admin/dashboards is open.
+  { id: 'dashNextSection', keys: 'n', display: 'N', scope: 'dashboard', descriptionKey: 'shortcuts.dashNextSection.description' },
+  { id: 'dashPrevSection', keys: 'p', display: 'P', scope: 'dashboard', descriptionKey: 'shortcuts.dashPrevSection.description' },
+  { id: 'dashExportCsv', keys: 'e', display: 'E', scope: 'dashboard', descriptionKey: 'shortcuts.dashExportCsv.description' },
+  { id: 'dashClearPeriod', keys: 'c', display: 'C', scope: 'dashboard', descriptionKey: 'shortcuts.dashClearPeriod.description' },
 ];
 
 export const SHORTCUT_HELP_KEY = 'header.shortcutHelp';

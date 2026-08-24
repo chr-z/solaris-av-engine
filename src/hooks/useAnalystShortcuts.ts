@@ -16,6 +16,12 @@ interface AnalystActions {
   saveAnalysis?: () => void;
   /** S5.2: toggle the A/B compare split. */
   toggleCompare?: () => void;
+  /** v3 P8: dashboards console actions (matched only on #/admin/dashboards). */
+  nextDashSection?: () => void;
+  prevDashSection?: () => void;
+  exportDashCsv?: () => void;
+  clearDashPeriod?: () => void;
+  exitDashDrillDown?: () => void;
 }
 
 interface UseAnalystShortcutsOptions extends AnalystActions {
@@ -74,6 +80,17 @@ export function useAnalystShortcuts({
       }
       if (event.ctrlKey || event.metaKey || event.altKey) return;
 
+      // v3 P8: Escape inside the dashboards drill-down goes back one level
+      // (checked before matchShortcut, which never matches Escape anyway).
+      if (
+        event.key === 'Escape' &&
+        scopeRef.current?.dashboard === true &&
+        !isEditableTarget(event.target)
+      ) {
+        actionsRef.current.exitDashDrillDown?.();
+        return;
+      }
+
       const def = matchShortcut(event, {
         isEditableTarget: isEditableTarget(event.target),
         scopeEnabled: scopeRef.current,
@@ -92,6 +109,10 @@ export function useAnalystShortcuts({
         case 'volumeDown': current.changeVolume?.(-0.05); break;
         case 'markTime': current.openTimeMarkers?.(); break;
         case 'toggleCompare': current.toggleCompare?.(); break;
+        case 'dashNextSection': current.nextDashSection?.(); break;
+        case 'dashPrevSection': current.prevDashSection?.(); break;
+        case 'dashExportCsv': current.exportDashCsv?.(); break;
+        case 'dashClearPeriod': current.clearDashPeriod?.(); break;
         default: break;
       }
     };
