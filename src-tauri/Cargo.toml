@@ -1,0 +1,28 @@
+[package]
+name = "solaris-av-engine"
+version = "3.0.0"
+description = "Solaris desktop (on-premise) — QA audiovisual com auto-discovery Alfred e integração Saturno"
+authors = ["chr-z"]
+license = "MIT"
+edition = "2021"
+
+[lib]
+name = "solaris_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+walkdir = "2"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri = { version = "2", features = [] }
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
