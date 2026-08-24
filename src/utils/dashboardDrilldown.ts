@@ -158,3 +158,39 @@ export function selectGroupInMonth(
   const sel = selectGroup({ records: selectMonth(dataset, month) }, dimension, label);
   return { ...sel, dimension, label };
 }
+
+/**
+ * Whole-month bucket (header cards + record list of the first-level month
+ * view) in the shared DrillDownSelection shape. Malformed/unknown months
+ * yield an empty selection — never an error.
+ */
+export function selectMonthSummary(
+  dataset: Dataset,
+  month: string,
+): DrillDownSelection {
+  const members = selectMonth(dataset, month);
+  if (members.length === 0) return EMPTY_SELECTION('studio', month);
+  const scores = members.map((r) => r.finalScore).filter((v): v is number => v !== null);
+  return {
+    dimension: 'studio',
+    label: month,
+    records: members,
+    count: members.length,
+    scoredCount: scores.length,
+    average: scores.length > 0 ? round2(scores.reduce((acc, v) => acc + v, 0) / scores.length) : null,
+    min: scores.length > 0 ? round2(Math.min(...scores)) : null,
+    max: scores.length > 0 ? round2(Math.max(...scores)) : null,
+  };
+}
+
+/** Download filename for the second-level leaf: month + group slugs. */
+export function monthGroupFilename(
+  range: { from?: string | null; to?: string | null },
+  month: string,
+  label: string,
+): string {
+  return csvFilename(range).replace(
+    /\.csv$/,
+    `_${slugifyLabel(month)}_${slugifyLabel(label)}.csv`,
+  );
+}
