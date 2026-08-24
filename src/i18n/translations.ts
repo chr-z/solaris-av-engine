@@ -229,6 +229,9 @@ export const en = {
   'dash.rank.hint': 'Each marking is weighed by its vigência-year penalty from the versioned rules.',
   'dash.exportRanking': 'Export Ranking',
   'dash.exportRanking.title': 'Downloads the current ranking as CSV',
+  // v3 P14: Excel twin of the ranking export.
+  'dash.exportRanking.xlsx': 'Export Excel',
+  'dash.exportRanking.xlsxTitle': 'Downloads the current ranking as an Excel spreadsheet (.xlsx)',
   'drill.table.date': 'Date',
   'drill.table.wo': 'W.O.',
   'drill.table.event': 'Event',
@@ -462,6 +465,9 @@ export const pt: Record<TranslationKey, string> = {
   'dash.rank.hint': 'Cada marcação é ponderada pela penalidade da vigência nas regras versionadas.',
   'dash.exportRanking': 'Exportar Ranking',
   'dash.exportRanking.title': 'Baixa o ranking atual em CSV',
+  // v3 P14: Excel twin of the ranking export.
+  'dash.exportRanking.xlsx': 'Exportar Excel',
+  'dash.exportRanking.xlsxTitle': 'Baixa o ranking atual como planilha do Excel (.xlsx)',
   'drill.table.date': 'Data',
   'drill.table.wo': 'W.O.',
   'drill.table.event': 'Evento',
