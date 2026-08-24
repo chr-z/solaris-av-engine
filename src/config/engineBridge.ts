@@ -11,6 +11,7 @@ import {
 import { SEED_RULES_CONFIG, DEFAULT_SCORING_YEAR } from './scoringRules';
 import { SCORE_COLUMN_TO_CATEGORY, FINAL_SCORE_COLUMN, RULE_ALIASES } from './ruleAliases';
 import { formatScorePtBr } from '../engine/scoring';
+import type { RowData } from '../components/Analysis/AnalysisSheet';
 
 export interface EngineBridgeResult {
   result: OsScoreResult;
@@ -67,9 +68,9 @@ export function recalculateScoresWithEngine(
 
 /** Convenience: apply engine cell updates onto a copy of the row data. */
 export function applyScoreUpdates(
-  rowData: Array<{ value?: string } | undefined>,
+  rowData: RowData,
   cellUpdates: Array<{ colIndex: number; value: string }>,
-): Array<{ value?: string } | undefined> {
+): RowData {
   const next = [...rowData];
   for (const { colIndex, value } of cellUpdates) {
     const existing = next[colIndex];

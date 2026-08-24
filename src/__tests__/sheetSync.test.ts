@@ -68,7 +68,7 @@ describe('sheetSync: fetchRow/fetchQueue', () => {
   });
 
   it('walks rows until the first empty one (queue region end)', async () => {
-    const fetchFn = vi.fn(async (url: string) => {
+    const fetchFn = vi.fn(async (url: string | URL | Request) => {
       const m = String(url).match(/rowIndex=(\d+)/);
       const r = m ? Number(m[1]) : -1;
       if (r === 2) return okJson([{ value: 'OS-2' }, { value: 'A' }]);
@@ -80,8 +80,8 @@ describe('sheetSync: fetchRow/fetchQueue', () => {
   });
 
   it('builds the header map from /api/sheet-headers when available', async () => {
-    const fetchFn = vi.fn(async (url: string) => {
-      if (url.includes('sheet-headers')) {
+    const fetchFn = vi.fn(async (url: string | URL | Request) => {
+      if (String(url).includes('sheet-headers')) {
         return okJson({ headers: ['O.S', 'PROFESSOR(A)', 'FINAL'] });
       }
       return errJson(400, { error: 'end' }); // immediately ends queue walk
@@ -146,8 +146,8 @@ describe('sheetSync: updateSheetRow resilience', () => {
       auditSink: null,
     });
     expect(res.attempts).toBe(3);
-    const keys = fetchFn.mock.calls.map((c) => (c[1] as RequestInit).headers!['X-Idempotency-Key']);
-    expect(new Set(keys).size).toBe(1); // identical key on every retry
+    const keys = fetchFn.mock.calls.map((c) => (c[1] as RequestInit | undefined)?.headers as Record<string, string>);
+    expect(new Set(keys.map((h) => h?.['X-Idempotency-Key'])).size).toBe(1); // identical key on every retry
   });
 
   it('aborts fast on auth failures without burning retries', async () => {

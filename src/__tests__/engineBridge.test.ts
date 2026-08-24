@@ -5,6 +5,7 @@ import {
 } from '../config/engineBridge';
 import { RULE_ALIASES, SCORE_COLUMN_TO_CATEGORY } from '../config/ruleAliases';
 import { SEED_RULES_CONFIG } from '../config/scoringRules';
+import type { RowData } from '../components/Analysis/AnalysisSheet';
 
 // v2-style headers (English), same shape as DEMO_HEADERS + inconformity columns.
 const HEADERS = [
@@ -16,7 +17,7 @@ const HEADERS = [
 
 const idx = (name: string) => HEADERS.indexOf(name);
 
-function emptyRow(): Array<{ value?: string }> {
+function emptyRow(): RowData {
   return HEADERS.map(() => ({ value: '' }));
 }
 
@@ -89,7 +90,7 @@ describe('engineBridge: ScoringEngine ↔ v2 row state', () => {
     const next = applyScoreUpdates(row, [
       { colIndex: idx('FINAL SCORE'), value: '4,85' },
     ]);
-    expect(next[idx('FINAL SCORE')].value).toBe('4,85');
+    expect(next[idx('FINAL SCORE')]?.value).toBe('4,85');
     expect(JSON.stringify(row)).toBe(snapshot);
     expect(next).not.toBe(row);
   });
