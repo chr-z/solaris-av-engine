@@ -95,12 +95,12 @@ export function buildDashboardSheetXml(records: OsRecord[]): string {
   );
 }
 
-/** workbook.xml declaring the single 'Scores' sheet. */
-export function buildWorkbookXml(): string {
+/** workbook.xml declaring a single sheet (default 'Scores'). */
+export function buildWorkbookXml(sheetName: string = 'Scores'): string {
   return (
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
     `<workbook xmlns="${SPREADSHEET_NS}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
-    `<sheets><sheet name="Scores" sheetId="1" r:id="rId1"/></sheets></workbook>`
+    `<sheets><sheet name="${escapeXmlText(sheetName)}" sheetId="1" r:id="rId1"/></sheets></workbook>`
   );
 }
 
@@ -287,6 +287,28 @@ export function buildDashboardXlsx(records: OsRecord[], timestamp: Date = new Da
         name: 'xl/worksheets/sheet1.xml',
         data: encoder.encode(buildDashboardSheetXml(records)),
       },
+    ],
+    timestamp,
+  );
+}
+
+/**
+ * v3 P14 — generic single-sheet packager shared by every export twin
+ * (dashboard scores today, ranking tomorrow). Same five OOXML parts and ZIP
+ * conventions as `buildDashboardXlsx`; deterministic for equal inputs.
+ */
+export function buildSingleSheetXlsx(
+  sheetName: string,
+  sheetXml: string,
+  timestamp: Date = new Date(),
+): Uint8Array {
+  return zipStoreEntries(
+    [
+      { name: '[Content_Types].xml', data: encoder.encode(buildContentTypesXml()) },
+      { name: '_rels/.rels', data: encoder.encode(buildRootRelsXml()) },
+      { name: 'xl/workbook.xml', data: encoder.encode(buildWorkbookXml(sheetName)) },
+      { name: 'xl/_rels/workbook.xml.rels', data: encoder.encode(buildWorkbookRelsXml()) },
+      { name: 'xl/worksheets/sheet1.xml', data: encoder.encode(sheetXml) },
     ],
     timestamp,
   );
