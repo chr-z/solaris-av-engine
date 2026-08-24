@@ -123,7 +123,7 @@ export function isSaveCombo(event: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'meta
 
 /** Groups shortcuts by scope for the help modal columns. Order-stable. */
 export function groupShortcutsByScope(): Record<ShortcutContext, ShortcutDef[]> {
-  const groups: Record<ShortcutContext, ShortcutDef[]> = { global: [], workspace: [], player: [] };
+  const groups: Record<ShortcutContext, ShortcutDef[]> = { global: [], workspace: [], player: [], dashboard: [] };
   for (const def of ANALYST_SHORTCUTS) groups[def.scope].push(def);
   return groups;
 }

@@ -7,6 +7,10 @@ import {
   matchShortcut,
   isSaveCombo,
   groupShortcutsByScope,
+  DASHBOARD_SECTIONS,
+  nextDashboardSection,
+  prevDashboardSection,
+  type DashboardSectionId,
 } from '../utils/shortcuts';
 import { en, pt } from '../i18n/translations';
 
@@ -27,6 +31,11 @@ describe('Analyst shortcuts — S5.1', () => {
       'markTime',
       'saveAnalysis',
       'toggleCompare',
+      // v3 P8: dashboards console
+      'dashNextSection',
+      'dashPrevSection',
+      'dashExportCsv',
+      'dashClearPeriod',
     ]);
     const keys = ANALYST_SHORTCUTS.map(def => def.keys);
     expect(new Set(keys).size).toBe(keys.length); // no key collisions at all
@@ -80,11 +89,21 @@ describe('Analyst shortcuts — S5.1', () => {
 
   it('groups shortcuts by scope in a stable shape for the help modal', () => {
     const groups = groupShortcutsByScope();
-    expect(Object.keys(groups).sort()).toEqual(['global', 'player', 'workspace']);
+    expect(Object.keys(groups).sort()).toEqual(['dashboard', 'global', 'player', 'workspace']);
     expect(groups.player.length).toBeGreaterThan(groups.workspace.length);
     expect(groups.workspace.map(d => d.id)).toEqual(['markTime', 'saveAnalysis', 'toggleCompare']);
+    expect(groups.dashboard.map(d => d.id)).toEqual([
+      'dashNextSection',
+      'dashPrevSection',
+      'dashExportCsv',
+      'dashClearPeriod',
+    ]);
     // Every definition lands in exactly one group.
-    const total = groups.global.length + groups.player.length + groups.workspace.length;
+    const total =
+      groups.global.length +
+      groups.player.length +
+      groups.workspace.length +
+      groups.dashboard.length;
     expect(total).toBe(ANALYST_SHORTCUTS.length);
   });
 
@@ -99,5 +118,63 @@ describe('Analyst shortcuts — S5.1', () => {
       expect(en[def.descriptionKey as keyof typeof en]).toBeTruthy();
       expect(pt[def.descriptionKey as keyof typeof pt]).toBeTruthy();
     }
+  });
+});
+
+describe('Dashboard shortcuts — v3 P8', () => {
+  it('matches dashboard keys only when the dashboard scope is enabled', () => {
+    const on = { scopeEnabled: { dashboard: true } };
+    const off = { scopeEnabled: { dashboard: false } };
+
+    // With the scope ON every dashboard key matches its action…
+    expect(matchShortcut(key('n'), on)?.id).toBe('dashNextSection');
+    expect(matchShortcut(key('p'), on)?.id).toBe('dashPrevSection');
+    expect(matchShortcut(key('e'), on)?.id).toBe('dashExportCsv');
+    expect(matchShortcut(key('c'), on)?.id).toBe('dashClearPeriod');
+
+    // …case-insensitively, like the other scopes.
+    expect(matchShortcut(key('N'), on)?.id).toBe('dashNextSection');
+    expect(matchShortcut(key('E'), on)?.id).toBe('dashExportCsv');
+
+    // With the scope OFF nothing leaks into the analyst layer:
+    expect(matchShortcut(key('n'), off)).toBeNull();
+    expect(matchShortcut(key('p'), off)).toBeNull();
+    expect(matchShortcut(key('e'), off)).toBeNull();
+    expect(matchShortcut(key('c'), off)).toBeNull();
+
+    // Workspace callers opt out explicitly (same semantics as every scope):
+    expect(matchShortcut(key('n'), { scopeEnabled: { dashboard: false, player: true } })).toBeNull();
+  });
+
+  it('dashboard keys stay inert in form fields even inside the scope', () => {
+    const on = { scopeEnabled: { dashboard: true }, isEditableTarget: true };
+    expect(matchShortcut(key('n'), on)).toBeNull();
+    expect(matchShortcut(key('e'), on)).toBeNull();
+  });
+
+  it('cycles sections forward with wrap-around', () => {
+    expect(nextDashboardSection('summary')).toBe('studios');
+    expect(nextDashboardSection('studios')).toBe('instructors');
+    expect(nextDashboardSection('instructors')).toBe('analysts');
+    expect(nextDashboardSection('analysts')).toBe('trend');
+    expect(nextDashboardSection('trend')).toBe('summary');
+  });
+
+  it('cycles sections backward with wrap-around', () => {
+    expect(prevDashboardSection('summary')).toBe('trend');
+    expect(prevDashboardSection('studios')).toBe('summary');
+    expect(prevDashboardSection('instructors')).toBe('studios');
+    expect(prevDashboardSection('analysts')).toBe('instructors');
+    expect(prevDashboardSection('trend')).toBe('analysts');
+  });
+
+  it('degrades an unknown section id to the first section instead of throwing', () => {
+    const bogus = 'nope' as DashboardSectionId;
+    expect(nextDashboardSection(bogus)).toBe('summary');
+    expect(prevDashboardSection(bogus)).toBe('summary');
+  });
+
+  it('DASHBOARD_SECTIONS is the canonical cycle shared with the panel', () => {
+    expect(DASHBOARD_SECTIONS).toEqual(['summary', 'studios', 'instructors', 'analysts', 'trend']);
   });
 });
