@@ -5,6 +5,9 @@ node_modules
 
 # Testing
 coverage
+*.mp4
+*.mov
+*.mkv
 
 # Production Build
 dist
@@ -49,9 +52,4 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Optional: Local Video Files (caso você teste com arquivos na raiz)
-*.mp4
-*.mov
-*.mkv
-# Exception: template without real secrets is versioned
-!.env.example
+# Optionallerna-debug.log*
