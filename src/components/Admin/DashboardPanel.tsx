@@ -62,6 +62,8 @@ import {
   rankingSummary,
   buildRankingCsv,
   rankingFilename,
+  buildRankingXlsx,
+  rankingXlsxFilename,
 } from "../../utils/dashboardInconformities";
 import { useAnalystShortcuts } from "../../hooks/useAnalystShortcuts";
 import {
@@ -834,8 +836,7 @@ const DashboardPanel: React.FC = () => {
 
   // v3 P12: same records/order as the CSV export, packaged as a real Excel
   // spreadsheet (numeric scores) — zero-dependency OOXML writer in utils.
-  const downloadXlsx = (records: OsRecord[], filename: string) => {
-    const bytes = buildDashboardXlsx(records);
+  const saveXlsxBytes = (bytes: Uint8Array, filename: string) => {
     const blob = new Blob([bytes], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
@@ -846,6 +847,8 @@ const DashboardPanel: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
+  const downloadXlsx = (records: OsRecord[], filename: string) =>
+    saveXlsxBytes(buildDashboardXlsx(records), filename);
   const exportXlsx = () =>
     downloadXlsx(filtered.records, xlsxFilename({ from: fromInput, to: toInput }));
 
@@ -1020,6 +1023,24 @@ const DashboardPanel: React.FC = () => {
     exportRankingRef.current = exportRanking;
   });
 
+  // v3 P14: Excel twin of the ranking export — same ranked rows as the CSV
+  // (rule/category/occurrences/rate/impact as numeric cells), 'Ranking' tab.
+  const exportRankingXlsx = () => {
+    if (section !== "inconformities") return;
+    saveXlsxBytes(buildRankingXlsx(ranking), rankingXlsxFilename(range));
+  };
+  const exportRankingXlsxRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    exportRankingXlsxRef.current = exportRankingXlsx;
+  });
+
+  // v3 P14: the X shortcut follows the visible section — scores workbook on
+  // every dashboard view, ranking workbook inside Recurring Issues.
+  const dispatchXlsxExport = useCallback(() => {
+    if (section === "inconformities") exportRankingXlsxRef.current();
+    else exportXlsxRef.current();
+  }, [section]);
+
   // v3 P11: pinning from a table row opens the bar and fills the first
   // free slot of the SAME dimension; a dimension switch restarts the pair,
   // and a click with both slots filled replaces B (last click wins).
@@ -1057,7 +1078,7 @@ const DashboardPanel: React.FC = () => {
     exitDashDrillDown: exitDrillDown,
     exportDashQcReport: exportQcReport,
     dashToggleCompare: toggleCompareBar,
-    exportDashXlsx: useCallback(() => exportXlsxRef.current(), []),
+    exportDashXlsx: dispatchXlsxExport,
     exportDashInconformities: useCallback(() => exportRankingRef.current(), []),
   });
 
@@ -1494,6 +1515,15 @@ const DashboardPanel: React.FC = () => {
                   className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
                 >
                   {t("dash.exportRanking")}
+                </button>
+                <button
+                  type="button"
+                  data-testid="dash-export-ranking-xlsx"
+                  onClick={exportRankingXlsx}
+                  title={t("dash.exportRanking.xlsxTitle")}
+                  className="px-3 py-1.5 rounded-md text-sm font-medium border border-solar-accent text-solar-accent hover:bg-solar-accent/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+                >
+                  {t("dash.exportRanking.xlsx")}
                 </button>
               </div>
 
