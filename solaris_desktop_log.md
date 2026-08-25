@@ -191,3 +191,23 @@ Commit desta entrada em origin/turbo/web-opt.
   fim dos PIDs hardcoded. Protocolo de prova anti-auto-deteccao mantido:
   processos da propria checagem se listam (bash/powershell criados no mesmo
   segundo) — filtrar por CreationDate antes de concluir "restou algo".
+
+---
+
+## turbo-web (tick #7) — re-auditoria pos-P16/P17 + divida do tooling — 25/08/2026 ~10h20
+
+- Fila 1-6 segue DONE. Mudanca de estado desde o tick #5: main avancou com
+  P16 (heatmap/XLSX twin) e P17 (category filter chips). rev-list provou
+  turbo/web-opt = origin/main +15 commits proprios, 0 atras — NADA a
+  sincronizar; as features novas ja nascem dentro da lane turbo.
+- Re-auditoria fresca na HEAD nova (25b66d3):
+  | gate | resultado |
+  |---|---|
+  | build vite | deterministica; initial gz 86,7KB (index 33,63 + react-vendor 45,44 + css 7,60); alvo <500KB: 5,8x folga |
+  | chunks lazy | firebase 472,58 raw/97,35 gz (on-demand), AdminGate 74,11, AnalysisWorkspace 67,70, sheetSync 33,53, ComparePane/BugReport* ~1-2 gz cada |
+  | vazamento de deps pesadas no cliente (googleapis/firebase-admin/ffmpeg/xlsx/lodash/moment) | ZERO imports em src/ |
+  | vitest / tsc / e2e | 31 arq · 342/342 · limpo · 21/21 |
+- Unica divida achada pelo tooling: caniuse-lite com 8 meses. Fixada neste
+  tick (commit 25b66d3): build byte-identica apos update, warning fora,
+  gates re-provados na arvore final.
+- Sem Telegram, sem toque em src-tauri (lane desktop intacta).
