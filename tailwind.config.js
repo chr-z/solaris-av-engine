@@ -20,9 +20,11 @@ export default {
     extend: {
       colors: {
         // --- superfícies/texto v3 (canônicas) ---
-        bg: 'var(--color-bg)',
+        // Tokens com gêmeo _rgb consumidos via <alpha-value>: habilita
+        // variantes /NN (Tailwind 3 não gera alpha sobre cor var() hex).
+        bg: 'rgb(var(--color-bg-rgb) / <alpha-value>)',
         surface: {
-          DEFAULT: 'var(--color-surface)',
+          DEFAULT: 'rgb(var(--color-surface-rgb) / <alpha-value>)',
           raised: 'var(--color-surface-raised)',
         },
         ink: {
@@ -30,24 +32,24 @@ export default {
           secondary: 'var(--color-text-secondary)',
         },
         accent: {
-          DEFAULT: 'var(--color-accent)',
+          DEFAULT: 'rgb(var(--color-accent-rgb) / <alpha-value>)',
           from: 'var(--color-accent-from)',
           to: 'var(--color-accent-to)',
         },
-        ok: 'var(--color-ok)',
-        warn: 'var(--color-warn)',
-        fail: 'var(--color-fail)',
-        info: 'var(--color-info)',
+        ok: 'rgb(var(--color-ok-rgb) / <alpha-value>)',
+        warn: 'rgb(var(--color-warn-rgb) / <alpha-value>)',
+        fail: 'rgb(var(--color-fail-rgb) / <alpha-value>)',
+        info: 'rgb(var(--color-info-rgb) / <alpha-value>)',
         hairline: 'var(--color-border)',
 
         // --- aliases do MVP → paleta v3 (mesma classe, cara nova) ---
-        'solar-dark-bg': 'var(--color-bg)',
-        'solar-dark-content': 'var(--color-surface)',
+        'solar-dark-bg': 'rgb(var(--color-bg-rgb) / <alpha-value>)',
+        'solar-dark-content': 'rgb(var(--color-surface-rgb) / <alpha-value>)',
         'solar-dark-border': 'rgba(255,255,255,0.12)',
         'solar-light-bg': '#f6f7fb',
         'solar-light-content': '#ffffff',
         'solar-light-border': 'rgba(16,20,30,0.16)',
-        'solar-accent': 'var(--color-accent)',
+        'solar-accent': 'rgb(var(--color-accent-rgb) / <alpha-value>)',
         'solar-accent-hover': 'var(--color-accent-from)',
       },
       fontFamily: {

@@ -12,10 +12,10 @@ interface DockProps {
 const Dock: React.FC<DockProps> = ({ children, className = '', title, onZoom }) => {
   const { t } = useI18n();
   return (
-    <div className={`bg-solar-light-content/80 dark:bg-solar-dark-content/80 backdrop-blur-md rounded-lg shadow-sm flex flex-col border border-solar-light-border dark:border-solar-dark-border h-full ${className}`}>
+    <div className={`bg-surface/90 backdrop-blur-md rounded-lg shadow-sm flex flex-col border border-hairline h-full ${className}`}>
       {(title || onZoom) && (
         <header className="flex-shrink-0 flex justify-between items-center p-2 border-b border-solar-dark-border/50 h-9">
-          <h3 className="font-bold text-xs uppercase text-gray-400">{title}</h3>
+          <h3 className="font-bold text-xs uppercase text-ink-secondary">{title}</h3>
           {onZoom && (
             <button
               onClick={onZoom}

@@ -49,6 +49,19 @@
   --color-fail: #f87171;
   --color-info: #60a5fa;
 
+  /* Gêmeos em triplet p/ utilitários Tailwind com modificador de alpha
+     (bg-accent/20 etc.). Tailwind 3 NÃO gera variante alpha sobre cor var()
+     hex — a classe simplesmente não sai no build (bug dos docks claros).
+     <alpha-value> no config consome estes triplets; base sólida continua
+     vindo do token hex acima. Manter os dois em sincronia. */
+  --color-accent-rgb: 165 131 232;
+  --color-surface-rgb: 17 21 28;
+  --color-bg-rgb: 11 14 20;
+  --color-ok-rgb: 52 211 153;
+  --color-warn-rgb: 251 191 36;
+  --color-fail-rgb: 248 113 113;
+  --color-info-rgb: 96 165 250;
+
   /* Bordas hairline (nada de cinza duro do MVP) */
   --color-border: rgba(255, 255, 255, 0.06);
   --color-border-strong: rgba(255, 255, 255, 0.12);
