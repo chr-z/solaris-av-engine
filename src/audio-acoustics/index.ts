@@ -41,8 +41,11 @@ export * from './fixtures';
 export {
   analyzeAudioPcm,
   analyzeAudio,
+  AnalysisCancelledError,
   type AcousticReport,
   type AcousticOptions,
+  type AcousticProgress,
+  type AcousticStage,
   type AxisResult,
   type TimelineMark,
   type Severity,

@@ -32,6 +32,37 @@ export interface AcousticOptions {
   baseline?: StudioBaseline;
   /** Analisa eco apenas nestas janelas (padrão: até 10 janelas de 15s espalhadas). */
   echoWindowsSec?: number;
+  /**
+   * Progresso granular (0-100). Chamado nos limites de estágio e a cada 32
+   * frames da STFT — custo desprezível, nunca altera o resultado.
+   */
+  onProgress?: (p: AcousticProgress) => void;
+  /**
+   * Token cooperativo de cancelamento: passe um objeto mutável e marque
+   * `{ aborted: true }` para abortar. Checado nos mesmos pontos do progresso;
+   * a análise interrompida lança AnalysisCancelledError.
+   */
+  signal?: { aborted: boolean };
+}
+
+/** Estágios de análise, na ordem em que ocorrem. */
+export type AcousticStage = 'frames' | 'peak' | 'reverb' | 'echo' | 'finalize';
+
+export interface AcousticProgress {
+  /** 0-100, monótono não-decrescente dentro de uma mesma análise. */
+  pct: number;
+  stage: AcousticStage;
+  /** Só no estágio 'frames': posição da varredura espectral. */
+  framesDone?: number;
+  framesTotal?: number;
+}
+
+/** Erro lançado quando opts.signal.aborted vira true durante a análise. */
+export class AnalysisCancelledError extends Error {
+  constructor() {
+    super('Análise acústica cancelada.');
+    this.name = 'AnalysisCancelledError';
+  }
 }
 
 export type Severity = 'ok' | 'warn' | 'critical';
@@ -115,6 +146,18 @@ export function analyzeAudioPcm(
   const samples = samplesIn instanceof Float64Array ? samplesIn : new Float64Array(samplesIn);
   const durationSec = samples.length / sampleRate;
 
+  // Progresso + cancelamento cooperativos. `pct` é mantido monótono.
+  let pctFloor = 0;
+  const report_ = (p: number, stage: AcousticStage, framesDone?: number): void => {
+    if (p < pctFloor) p = pctFloor;
+    pctFloor = p;
+    opts?.signal?.aborted ? throwCancelled() : undefined;
+    opts?.onProgress?.({ pct: Math.min(100, p), stage, ...(framesDone !== undefined ? { framesDone } : {}) });
+  };
+  function throwCancelled(): never {
+    throw new AnalysisCancelledError();
+  }
+
   // ---------- Frames STFT ----------
   const fft = new FFT(fftSize);
   const win = hannWindow(fftSize);
@@ -135,6 +178,7 @@ export function analyzeAudioPcm(
 
   const numFrames = Math.max(0, Math.floor((samples.length - fftSize) / hop) + 1);
   for (let f = 0; f < numFrames; f++) {
+    if ((f & 0x1f) === 0) report_(Math.min(70, (f / Math.max(numFrames, 1)) * 70), 'frames', f);
     const off = f * hop;
     const mags = fft.magnitudeSpectrum(samples.subarray(off, off + fftSize) as Float64Array, win);
 
@@ -163,6 +207,7 @@ export function analyzeAudioPcm(
   }
 
   // Pico global.
+  report_(72, 'peak');
   for (let i = 0; i < samples.length; i++) {
     const a = Math.abs(samples[i]);
     if (a > globalPeakDb) globalPeakDb = a; // reuse como pico linear temporariamente
@@ -176,6 +221,7 @@ export function analyzeAudioPcm(
 
   // ---------- Eixos ----------
   // Reverb (prioridade máxima).
+  report_(76, 'reverb');
   const reverb = analyzeReverb(samples, sampleRate);
   const rt60Target = opts?.baseline?.rt60Target ?? 0.4;
   const reverbScore = clamp01_100(piecewise(
@@ -240,6 +286,7 @@ export function analyzeAudioPcm(
   const noiseSev = sevFromScore(noiseScoreFinal, 75, 50);
 
   // Eco.
+  report_(88, 'echo');
   const echoWinSec = opts?.echoWindowsSec ?? 15;
   const echo = detectEchoWindows(samples, sampleRate, echoWinSec);
   const echoScore = !echo.hasEcho
@@ -253,6 +300,7 @@ export function analyzeAudioPcm(
   const sibilanceSev = sevFromScore(sibilanceScore, 70, 45);
 
   // Mudança acústica mid-video: compara ruído/centroide entre quartis.
+  report_(94, 'finalize');
   const acousticShift = detectAcousticShift(frameRmsDb, hop, sampleRate, fftSize);
 
   // ---------- Timeline ----------
