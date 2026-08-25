@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-25T11:14:05.766Z",
-  "build": "http://localhost:4359/ (vite preview, production dist)",
+  "generatedAt": "2026-08-25T16:41:47.897Z",
+  "build": "http://localhost:4428/ (vite preview, production dist)",
   "engine": "axe-core@4.13.0",
   "phases": {
     "login": [],
