@@ -75,3 +75,40 @@ sabor standalone 243KB inicial sem SDK de nuvem).
 - WIP untracked fora da branch (`src/audio-acoustics/`, scripts smoke-p1x.mjs):
   NÃO commitado aqui; suíte dele tem 6 falhas próprias (fixtures sintéticas),
   fora do escopo desktop.
+
+---
+
+## Tick 25/08 ~01:20 — P3 refinamento: zero affordances de nuvem no standalone
+
+**Contexto:** P1/P2 já entregues (exe rodando, boot 198ms). Este tick fechou a
+pendência [UI] da auditoria de 24/08: affordance de link Drive/YouTube nas
+linhas quando standalone.
+
+### Mudanças
+- `AnalysisForm.tsx`: gate `isStandalone()` em 3 pontos — `<a>` do label
+  (todos os tipos de campo), `<a>` dentro dos checkboxes e o botão
+  "Open Google Drive Picker" do campo FOLDER (em standalone cai no input de
+  texto genérico, sem botão/ícone de nuvem).
+- `vitest.config.ts`: removido @vitejs/plugin-react do ambiente de teste
+  (v3 injeta `@react-refresh` de forma incompatível com o pipeline .tsx do
+  Vitest 4); JSX dos testes coberto pelo transform nativo do esbuild
+  (tsconfig jsx=react-jsx).
+- Novo teste `src/components/Analysis/__tests__/analysisFormStandalone.test.tsx`
+  (4 casos): cloud mantém links/botão; standalone remove todos; FOLDER com
+  link Drive vira texto sem botão; override localStorage respeitado entre
+  montagens. Sem @testing-library: createRoot + act direto;
+  vi.mock de constants inclui FOLDER na aba p/ exercitar o botão.
+
+### Métricas
+- Bundle standalone (npm run build:desktop): index 103,0KB + react-vendor
+  141,9KB (JS inicial ~77KB gzip) + CSS 37,4KB (gz 7,1KB) — estável vs 24/08.
+- Binário: D:/cargo-target/release/solaris-av-engine.exe = 6.525.952 B
+  (6,22MB; +183KB vs tick P2 — rebuild com dist novo embutido).
+- Smoke: SMOKE_OK pid=8748 vivo após 5s mem=23,8MB, kill limpo.
+
+### Verificação
+- Suíte commitada 233/233 verde (`vitest run --exclude src/audio-acoustics/**`;
+  WIP untracked de outra frente permanece fora de escopo, com 5 falhas próprias).
+- Build Tauri release: OK em 2m34s (`cargo tauri build --no-bundle`,
+  toolchain gnu + winlibs_full/mingw64/bin no PATH p/ windres).
+- Push: 75eb38c..966180b desktop -> origin/desktop.
