@@ -58,7 +58,7 @@ const SourceSelector: React.FC<SourceSelectorProps> = ({ onSourceSelected, onClo
             aria-label={t(placeholderKey)}
             className="flex-grow bg-solar-light-bg dark:bg-solar-dark-bg border border-solar-light-border dark:border-solar-dark-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200 dark:placeholder-gray-500"
         />
-        <button type="submit" className="px-4 py-2 bg-solar-accent text-white rounded-md hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-light-content dark:focus:ring-offset-solar-dark-content focus:ring-solar-accent">
+        <button type="submit" className="px-4 py-2 bg-solar-accent text-solar-dark-bg rounded-md hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-light-content dark:focus:ring-offset-solar-dark-content focus:ring-solar-accent">
             {t('source.load')}
         </button>
     </form>
@@ -107,7 +107,7 @@ const SourceSelector: React.FC<SourceSelectorProps> = ({ onSourceSelected, onClo
               className="hidden"
               ref={fileInputRef}
             />
-            <button onClick={handleButtonClick} className="px-4 py-2 bg-solar-accent text-white rounded-md hover:bg-solar-accent-hover transition-colors flex items-center gap-2">
+            <button onClick={handleButtonClick} className="px-4 py-2 bg-solar-accent text-solar-dark-bg rounded-md hover:bg-solar-accent-hover transition-colors flex items-center gap-2">
                 <UploadIcon className="w-5 h-5" />
                 <span>{t('source.selectLocalFile')}</span>
             </button>

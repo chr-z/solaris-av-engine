@@ -156,7 +156,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
           </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={startCreate} className="px-3 py-1.5 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover text-sm">
+          <button onClick={startCreate} className="px-3 py-1.5 rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover text-sm">
             Nova regra
           </button>
           <button onClick={exportJson} className="px-3 py-1.5 rounded-md border border-solar-accent/60 text-solar-accent hover:bg-solar-accent/10 text-sm">
@@ -259,7 +259,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
           </fieldset>
 
           <div className="flex gap-2 pt-2">
-            <button onClick={saveDraft} className="px-4 py-1.5 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover text-sm">
+            <button onClick={saveDraft} className="px-4 py-1.5 rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover text-sm">
               Salvar
             </button>
             <button onClick={() => setEditingId(null)} className="px-4 py-1.5 rounded-md border border-gray-500 text-gray-300 text-sm">
@@ -321,7 +321,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
           rows={5}
           className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1 font-mono text-xs"
         />
-        <button onClick={importJson} disabled={!importText.trim()} className="mt-2 px-4 py-1.5 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover text-sm disabled:opacity-50">
+        <button onClick={importJson} disabled={!importText.trim()} className="mt-2 px-4 py-1.5 rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover text-sm disabled:opacity-50">
           Validar e importar
         </button>
       </section>

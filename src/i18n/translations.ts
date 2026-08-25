@@ -10,6 +10,7 @@ export const en = {
   'login.signInGoogle': 'Sign in with Google',
   'login.connecting': 'Connecting...',
   'login.continueAsGuest': 'Continue as Guest (Demo Mode)',
+  'login.demoNotice': 'Demo mode: local build without cloud services.',
   'login.authError': 'Authentication Error',
 
   // Header
@@ -262,6 +263,7 @@ export const pt: Record<TranslationKey, string> = {
   'login.signInGoogle': 'Entrar com Google',
   'login.connecting': 'Conectando...',
   'login.continueAsGuest': 'Continuar como Visitante (Modo Demo)',
+  'login.demoNotice': 'Modo demo: build local sem serviços em nuvem.',
   'login.authError': 'Erro de Autenticação',
 
   // Header

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ClipboardCheckIcon, UploadIcon } from '../Core/icons';
+import { ClipboardCheckIcon } from '../Core/icons';
 import SourceSelector from './SourceSelector';
 
 interface LocalFileHelperProps {
@@ -36,7 +36,7 @@ const LocalFileHelper: React.FC<LocalFileHelperProps> = ({ filePath, onLoadMedia
                     />
                     <button 
                         onClick={handleCopy}
-                        className="flex-shrink-0 px-3 py-1.5 rounded-md bg-solar-accent text-white text-sm hover:bg-solar-accent-hover transition-colors flex items-center gap-2"
+                        className="flex-shrink-0 px-3 py-1.5 rounded-md bg-solar-accent text-solar-dark-bg text-sm hover:bg-solar-accent-hover transition-colors flex items-center gap-2"
                     >
                         {copied ? (
                            <>

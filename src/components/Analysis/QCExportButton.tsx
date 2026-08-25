@@ -42,7 +42,7 @@ export const QCExportButton: React.FC<{ className?: string }> = ({ className = '
     return (
       <button
         onClick={handleDownload}
-        className={`flex items-center gap-2 px-3 py-2 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent ${className}`}
+        className={`flex items-center gap-2 px-3 py-2 rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent ${className}`}
         aria-label="Export QC Report"
         title="Export QC Report"
       >
@@ -87,7 +87,7 @@ export const QCExportButton: React.FC<{ className?: string }> = ({ className = '
           <button
             onClick={() => lastDataURI && triggerDownload(lastDataURI)}
             disabled={!lastDataURI}
-            className="px-4 py-2 bg-solar-accent text-white rounded-md hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-solar-accent disabled:opacity-50"
+            className="px-4 py-2 bg-solar-accent text-solar-dark-bg rounded-md hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-solar-accent disabled:opacity-50"
           >
             Download again
           </button>

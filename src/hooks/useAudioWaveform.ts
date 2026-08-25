@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { database } from '../config/firebase';
+import { getDb } from '../config/firebase';
 
 // Persistent, size-limited cache for waveform data.
 export const CACHE_KEY_PREFIX = 'solaris_waveform_cache_';
@@ -77,7 +77,7 @@ let audioContext: AudioContext | null = null;
 const getAudioContext = (): AudioContext | null => {
     if (!audioContext) {
         try {
-            audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
         } catch (e) {
             console.error("Web Audio API not supported.", e);
         }
@@ -143,20 +143,19 @@ export const useAudioWaveform = (src: string | null, videoId: string | null) => 
         abortControllerRef.current = new AbortController();
         const signal = abortControllerRef.current.signal;
 
+        // turbo-web: reset/resolve paths defer setState to a microtask —
+        // synchronous setState in the effect body causes cascading renders
+        // (react-hooks/set-state-in-effect). Async paths below are unaffected.
         if (!src || !videoId) {
-            setWaveform([]);
-            setIsLoading(false);
-            setError(null);
+            queueMicrotask(() => { setWaveform([]); setIsLoading(false); setError(null); });
             return;
         }
-        
+
         // Strategy 1: Local Browser Cache (Fastest)
         const localCacheKey = videoId;
         const cachedWaveform = waveformCache.get(localCacheKey);
         if (cachedWaveform) {
-            setWaveform(cachedWaveform);
-            setIsLoading(false);
-            setError(null);
+            queueMicrotask(() => { setWaveform(cachedWaveform); setIsLoading(false); setError(null); });
             return;
         }
 
@@ -166,7 +165,7 @@ export const useAudioWaveform = (src: string | null, videoId: string | null) => 
 
             // Strategy 2: Firebase Distributed Cache (Shared)
             try {
-                const dbRef = database.ref(`waveforms/${videoId}`);
+                const dbRef = (await getDb()).ref(`waveforms/${videoId}`);
                 const snapshot = await dbRef.get();
                 if (snapshot.exists()) {
                     const firebaseData = snapshot.val();
@@ -197,7 +196,7 @@ export const useAudioWaveform = (src: string | null, videoId: string | null) => 
                     try {
                         const errorJson = await response.json();
                         errorMessage = errorJson.error || errorMessage;
-                    } catch {}
+                    } catch { /* non-JSON error body: keep HTTP status message */ }
                     throw new Error(errorMessage);
                 }
                 
@@ -221,14 +220,15 @@ export const useAudioWaveform = (src: string | null, videoId: string | null) => 
                 if (!signal.aborted) {
                     waveformCache.set(localCacheKey, finalPeaks);
                     // Async cache write to DB
-                    database.ref(`waveforms/${videoId}`).set(finalPeaks)
+                    void getDb().then((db) => db.ref(`waveforms/${videoId}`).set(finalPeaks))
                         .catch(err => console.error("Firebase cache write failed:", err));
                 }
 
-            } catch (err: any) {
-                if (err.name !== 'AbortError') {
+            } catch (err: unknown) {
+                const errName = err instanceof Error ? err.name : '';
+                if (errName !== 'AbortError') {
                     console.error("Waveform generation failed:", err);
-                    setError(err.message || "Could not process audio source.");
+                    setError((err instanceof Error ? err.message : '') || "Could not process audio source.");
                     setIsLoading(false);
                 }
             }
