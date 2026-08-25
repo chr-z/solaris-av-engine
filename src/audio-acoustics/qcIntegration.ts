@@ -142,3 +142,25 @@ export function renderAcousticQCSectionHtml(section: AcousticQCSection): string 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
 }
+
+// ---------- Registro da última seção QC (ponte engine → relatório exportável) ----------
+
+let latestQCSection: AcousticQCSection | null = null;
+
+/**
+ * Publishes the acoustic section of a completed analysis so the QC report
+ * exporter can embed it (spec §Saída: "Relatório QC inclui os scores").
+ * Fire-and-forget by design — publishing must never throw into analysis flows.
+ */
+export function publishAcousticQCSection(section: AcousticQCSection): void {
+  try {
+    latestQCSection = { ...section, axes: section.axes.map((a) => ({ ...a })) };
+  } catch {
+    /* never break the caller */
+  }
+}
+
+/** Last published section, or null when no acoustics ran yet this session. */
+export function getLatestAcousticQCSection(): AcousticQCSection | null {
+  return latestQCSection;
+}
