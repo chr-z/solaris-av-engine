@@ -174,3 +174,25 @@
 - Testes: scoreFormat 388/388 (+3 novos: tiers, vírgula decimal, garbage nao inventa cor). tsc 0. build verde. CSS 10.18KB gz (<30KB).
 - Prova browser (verify_t12_badge.cjs, protocolo anti-órfão: preview próprio + hash servido==dist + chrome --disable-gpu + cleanup): badges 5/5, classe badge-ok, cor rgb(52,211,153), .tnum font-family mono + font-variant tabular-nums; workspace abre; ScoreRing prova tier ao vivo via stroke. Shots: redesign_shots/t12_fila_badges.png, t12_fila_badges_marked.png.
 - Restriçoes respeitadas: mesma anatomia de tela (player+timeline+painel), mesmos nomes/atalhos, nenhum src-tauri/audio/pitch alterado. Labels flutuantes: mantidos permanentes (filosofia inegociavel > detalhe estético — pendência do dono registrada).
+
+## redesign (tick 13) — resgate da divida t12 + re-prova de qualidade pos-t11/t12 — 25/08/2026 ~14h
+- DÍVIDA DESTRavada: o pacote t12 (a9f5c10) tinha ficado parado SEM PUSH e o
+  registro sem commit — ambos subiram (log resgatado em 2f1a628; push
+  origin/redesign-premium verificado por ls-remote @ 2f1a628).
+- Esclarecimento honesto sobre as shots t12_fila_badges{,_marked}.png serem
+  byte-idênticas: comportamento ESPERADO e documentado no próprio script —
+  modo demo não propaga marcação pra lista (escrita vai por sheetSync/nuvem),
+  então a prova C cai no caminho da NOTA (tier warn coberto por testes
+  unitários + prova A do CSS). Não é captura fabricada nem prova perdida.
+- RE-AUDITORIA axe-core nas 4 telas sobre o estado final (t11 remapeou 214 usos
+  de cor; t12 adicionou badges semânticos — nenhum dos dois tinha passado por
+  axe depois): fila e análise ZERO; login mantém só o residual conhecido
+  (region x3, moderado, decisão documentada no tick 6). NOVO achado e cura:
+  heading-order moderado no diálogo QC (h3 sem h2 anterior) -> h3 virou h2
+  (classes idênticas, visual byte-equal); re-scan: diálogo QC com ZERO
+  violações de qualquer impacto. Prova: scripts/verify_r4.cjs x2 (antes/depois).
+- Gates finais: vitest 388/388, tsc limpo, build verde, CSS 10.18KB gz (<30KB
+  spec), index inicial 37.08KB gz (+react-vendor 45.44 = ~82.5KB gz initial).
+- Shots regeneradas pós-t12 pro aceite do dono: r4_{login,fila,analysis,
+  qc_dialog,qc_report}.png em saas_factory/redesign_shots/.
+- src-tauri/audio-acoustics/pitch intocados (worktree dedicado solaris-redesign).

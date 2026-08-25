@@ -98,7 +98,7 @@ export const QCExportButton: React.FC<{ className?: string }> = ({ className = '
             <path d="M17 24.5l4.5 4.5L31 20" stroke="var(--color-ok)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <h3 className="font-bold text-lg mb-1">Report exported</h3>
+        <h2 className="font-bold text-lg mb-1">Report exported</h2>
         <p className="text-sm text-ink-secondary mb-4">
           {summary.title} — <AnimatedStat value={summary.totalRows} format={(n) => `${Math.round(n)} rows`} /> · avg{' '}
           <AnimatedStat value={summary.avgAnalysisTime} format={(n) => n.toFixed(1)} />s ·{' '}
