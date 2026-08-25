@@ -8,6 +8,7 @@ export type UndoableActionKind =
   | 'assign-os'      // atribuiu OS a si/alguém
   | 'return-os'      // devolveu OS pra fila
   | 'prioritize-os'  // mudou prioridade
+  | 'import-queue'   // importou lote de OSs na fila (undo = remover linhas novas)
   | 'edit-cell';     // editou célula da análise
 
 /** Um evento do log. `payload` carrega o bastante p/ inverter a ação. */
