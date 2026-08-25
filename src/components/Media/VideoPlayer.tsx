@@ -6,6 +6,7 @@ import { useAudioWaveform } from '../../hooks/useAudioWaveform';
 import WaveformTimeline from '../Monitors/WaveformTimeline';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
 import { useI18n } from '../../i18n/I18nContext';
+import { pulseShuttle, formatRate, SHUTTLE_RATES, INITIAL_SHUTTLE_STATE } from '../../features/qol/shuttle';
 
 // Import SVGs as URLs
 import tetoPresencialUrl from '../svg/homestudio.svg';
@@ -58,6 +59,8 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const [isMuted, setIsMuted] = useState(false);
     const [isControlsVisible, setIsControlsVisible] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    // A2 QoL: shuttle adaptativo (cada pulso mesma direção sobe/desce degrau).
+    const [shuttleState, setShuttleState] = useState(INITIAL_SHUTTLE_STATE);
 
     const { waveform, isLoading: isWaveformLoading } = useAudioWaveform(src, videoId);
     // Waveform cache bookkeeping: when the waveform just finished loading
@@ -159,6 +162,14 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         };
     }, [showControlsAndStartTimer]);
 
+
+    // A2 shuttle: aplica velocidade adaptativa ao vídeo real.
+    useEffect(() => {
+        const video = internalVideoRef.current;
+        if (!video) return;
+        const rate = SHUTTLE_RATES[shuttleState.index] ?? 1;
+        if (video.playbackRate !== rate) video.playbackRate = rate;
+    }, [shuttleState]);
 
     useEffect(() => {
         const video = internalVideoRef.current;
@@ -473,7 +484,25 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
                             className="w-0 sm:w-24 h-1 accent-white cursor-pointer opacity-0 group-hover/volume:opacity-100 group-hover/volume:w-24 transition-all duration-300"
                          />
                     </div>
-                    <span className="font-mono text-sm">{formatTime(currentTime)} / {formatTime(duration)}</span>
+                    <div className="flex flex-shrink-0 flex items-center gap-1.5 text-[11px] mx-1 bg-black/40 rounded-full px-2 py-0.5 select-none ring-1 ring-white/10">
+                <span className="opacity-70">S</span>
+                <button
+                  onClick={() => setShuttleState(s => pulseShuttle(s, 'down'))}
+                  title="S < — diminui ritmo (A2 shuttle)"
+                  aria-label="A2: diminuir ritmo do shuttle"
+                  className="hover:text-amber-300 focus-visible:ring-1 focus-visible:ring-amber-300 px-0.5 transition-colors font-bold text-xs leading-none"
+                >−</button>
+                <button
+                  onClick={() => setShuttleState(s => pulseShuttle(s, 'up'))}
+                  title="S > — acelera ritmo (A2 shuttle)"
+                  aria-label="A2: aumentar ritmo do shuttle"
+                  className="hover:text-amber-300 focus-visible:ring-1 focus-visible:ring-amber-300 px-0.5 transition-colors font-bold text-xs leading-none"
+                >+</button>
+                <span className="font-mono text-xs tabular-nums min-w-[1.75rem] text-center text-white" aria-live="polite">
+                  {formatRate(SHUTTLE_RATES[shuttleState.index] || 1)}
+                </span>
+              </div>
+              <span className="font-mono text-sm">{formatTime(currentTime)} / {formatTime(duration)}</span>
                 </div>
                 <button onClick={toggleFullscreen} title="Fullscreen (f)" className="p-1 rounded-full hover:bg-white/10 transition-colors">
                     {isFullscreen ? <ExitFullscreenIcon className="w-7 h-7" /> : <FullscreenIcon className="w-7 h-7" />}

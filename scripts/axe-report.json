@@ -1,0 +1,94 @@
+{
+  "generatedAt": "2026-08-25T13:16:21.986Z",
+  "build": "http://localhost:4448/ (vite preview, production dist)",
+  "engine": "axe-core@4.13.0",
+  "phases": {
+    "login": [
+      {
+        "id": "region",
+        "impact": "moderate",
+        "help": "All page content should be contained by landmarks",
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/region?application=axeAPI",
+        "nodes": 3,
+        "sampleTargets": [
+          ".top-4",
+          "h1",
+          "p"
+        ],
+        "detail": [
+          {
+            "target": ".top-4",
+            "html": "<div class=\"absolute top-4 right-4 z-20 bg-solar-dark-bg/60 rounded-md backdrop-blur-sm\">",
+            "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+          },
+          {
+            "target": "h1",
+            "html": "<h1 class=\"text-5xl font-bold text-white tracking-tight\">Solaris</h1>",
+            "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+          },
+          {
+            "target": "p",
+            "html": "<p class=\"mt-2 text-lg text-gray-400\">Audiovisual Analysis Platform</p>",
+            "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+          }
+        ]
+      }
+    ],
+    "mainApp": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=axeAPI",
+        "nodes": 7,
+        "sampleTargets": [
+          ".focus\\:ring-offset-solar-light-content > span",
+          ".focus\\:ring-offset-solar-dark-content > span",
+          "li:nth-child(1) > .items-start.justify-between.flex > .text-right.ml-2.items-end > .text-gray-500"
+        ],
+        "detail": [
+          {
+            "target": ".focus\\:ring-offset-solar-light-content > span",
+            "html": "<span>Load Media</span>",
+            "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.64 (foreground color: #ffffff, background color: #0a84ff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+          },
+          {
+            "target": ".focus\\:ring-offset-solar-dark-content > span",
+            "html": "<span>QC Report</span>",
+            "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.64 (foreground color: #ffffff, background color: #0a84ff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+          },
+          {
+            "target": "li:nth-child(1) > .items-start.justify-between.flex > .text-right.ml-2.items-end > .text-gray-500",
+            "html": "<p class=\"text-xs text-gray-500 truncate\">Studio A • 2024-03-10</p>",
+            "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.95 (foreground color: #6b7280, background color: #2a2a2e, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+          },
+          {
+            "target": "li:nth-child(2) > .items-start.justify-between.flex > .text-right.ml-2.items-end > .text-gray-500",
+            "html": "<p class=\"text-xs text-gray-500 truncate\">Home Studio 1 • 2024-03-11</p>",
+            "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.95 (foreground color: #6b7280, background color: #2a2a2e, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+          },
+          {
+            "target": "li:nth-child(3) > .items-start.justify-between.flex > .text-right.ml-2.items-end > .text-gray-500",
+            "html": "<p class=\"text-xs text-gray-500 truncate\">Studio B • 2024-03-12</p>",
+            "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.95 (foreground color: #6b7280, background color: #2a2a2e, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+          },
+          {
+            "target": "li:nth-child(4) > .items-start.justify-between.flex > .text-right.ml-2.items-end > .text-gray-500",
+            "html": "<p class=\"text-xs text-gray-500 truncate\">Studio C • 2024-03-13</p>",
+            "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.95 (foreground color: #6b7280, background color: #2a2a2e, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+          },
+          {
+            "target": "li:nth-child(5) > .items-start.justify-between.flex > .text-right.ml-2.items-end > .text-gray-500",
+            "html": "<p class=\"text-xs text-gray-500 truncate\">Studio A • 2024-03-14</p>",
+            "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.95 (foreground color: #6b7280, background color: #2a2a2e, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+          }
+        ]
+      }
+    ]
+  },
+  "totals": {
+    "loginRules": 1,
+    "mainAppRules": 1,
+    "criticalOrSeriousMainApp": 1
+  }
+}

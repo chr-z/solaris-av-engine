@@ -114,3 +114,9 @@
   - `podium.ts`: ranking semana/mês/ano; empate em XP desempata por MENOR retrabalho, depois alfabético (determinístico); rank denso com marcação de empate (1,1,3); separação por senioridade (C4); `frozenPodiumRows` gera linhas prontas pra `podium_history`.
 - Testes: `src/__tests__/gamification.test.ts`, 34 asserts cobrindo bordas (reset dom 23:59:59 vs seg 00:00:00 no fuso SP, streak quebrado, caps, limiares exatos de nível, empates, janelas meio-abertas). Suíte completa 423/423 verde; tsc limpo; eslint limpo.
 - WIP pré-existente no worktree (App/AnalysisWorkspace/translations — integração de UI do QoL) ficou INTACTO, fora deste commit.
+=== TICK F2 (features-worker) — 2026-08-25 13:04 ===
+- F6 #4/troca Player (Video.js/hls.js) REJEITADA com prova: YouTube já entra via /api/youtube-proxy → mesmo <video> custom (512l, telemetria onTransport, waveform, shortcuts nativos); não há IFrame legado a trocar. #6 Zustand v5 AVALIADA: estado App=31 useState, zero prop-drilling dolorido → não migra por moda.
+- A2 shuttle (velocidade adaptativa, spec A2) ENTREGUE: src/features/qol/shuttle.ts + integração VideoPlayer.tsx (botão S ± + display 0.5×-4× + playbackRate) — cada pulso mesma direção sobe/desce degrau; troca de direção reseta ao 1x; NÃO alimenta XP (C4).
+- A1 scratchpad (notas rápidas/OS) ENTREGUE: src/features/qol/scratchpad.ts (ScratchpadController, loadScratch, clampScratchText, validade 30d, limite 20k) — best-effort localStorage, não vai pra planilha; paridade com AutosaveController (debounce 200ms).
+- Testes: src/__tests__/shuttleScratchpad.test.ts 7/7 OK; total 527→534; bundle ~102KB gz intacto (lazy, sem chunk novo). Troca #4/#6 documentadas, não alteradas.
+- Sem Telegram; src-tauri, audio-acoustics, redesign (tokens.css) intactos. ( ° ʖ °)
