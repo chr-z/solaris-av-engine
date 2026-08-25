@@ -205,7 +205,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                         <button
                                             onClick={() => folderId && onOpenPicker(folderId)}
                                             disabled={!folderId}
-                                            className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-solar-accent disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                                            className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-solar-accent disabled:text-gray-500 disabled:cursor-not-allowed transition-colors"
                                             title="Open Drive Folder"
                                             aria-label="Open Google Drive Picker"
                                         >

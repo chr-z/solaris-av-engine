@@ -42,6 +42,23 @@ export default {
         info: 'rgb(var(--color-info-rgb) / <alpha-value>)',
         hairline: 'var(--color-border)',
 
+        // Escala gray REMAPEADA pra rampa neutra v3 (tokens.css): os usos
+        // legados do MVP herdam o acabamento novo sem trocar uma classe.
+        // 600+ é decorativo (borda/wash/fundo); texto vivo vive em <=500.
+        gray: {
+          50: 'rgb(var(--color-neutral-50-rgb) / <alpha-value>)',
+          100: 'rgb(var(--color-neutral-100-rgb) / <alpha-value>)',
+          200: 'rgb(var(--color-neutral-200-rgb) / <alpha-value>)',
+          300: 'rgb(var(--color-neutral-300-rgb) / <alpha-value>)',
+          400: 'rgb(var(--color-neutral-400-rgb) / <alpha-value>)',
+          500: 'rgb(var(--color-neutral-500-rgb) / <alpha-value>)',
+          600: 'rgb(var(--color-neutral-600-rgb) / <alpha-value>)',
+          700: 'rgb(var(--color-neutral-700-rgb) / <alpha-value>)',
+          800: 'rgb(var(--color-neutral-800-rgb) / <alpha-value>)',
+          900: 'rgb(var(--color-neutral-900-rgb) / <alpha-value>)',
+          950: 'rgb(var(--color-neutral-950-rgb) / <alpha-value>)',
+        },
+
         // --- aliases do MVP → paleta v3 (mesma classe, cara nova) ---
         'solar-dark-bg': 'rgb(var(--color-bg-rgb) / <alpha-value>)',
         'solar-dark-content': 'rgb(var(--color-surface-rgb) / <alpha-value>)',

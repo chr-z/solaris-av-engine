@@ -68,7 +68,7 @@ const PresetSelector: React.FC<PresetSelectorProps> = ({ settings, setSettings }
         <div
           aria-hidden="true"
           className={`flex items-center justify-center p-1.5 rounded-md text-[10px] uppercase tracking-wide ${
-            activePreset ? 'text-gray-600' : 'bg-solar-accent/20 text-solar-accent'
+            activePreset ? 'text-gray-500' : 'bg-solar-accent/20 text-solar-accent'
           }`}
         >
           {t('preset.custom')}
