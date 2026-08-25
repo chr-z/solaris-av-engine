@@ -112,7 +112,7 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
         let timestampsRef: ReturnType<Awaited<ReturnType<typeof getDb>>['ref']> | null = null;
         let unsub: UnsubscribeFn | null = null;
         // turbo-web: offline/demo builds have no Firebase config — stay silent.
-        if (!isFirebaseConfigured()) { setIsLoading(false); return; }
+        if (!isFirebaseConfigured()) { queueMicrotask(() => setIsLoading(false)); return; }
         getDb().then((db) => {
             if (disposed) return;
             timestampsRef = db.ref(`timestamps/${selectedOsIndex}/${currentVideoId}`);

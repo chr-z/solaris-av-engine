@@ -29,6 +29,7 @@ export type FirebaseCompatApp = typeof firebaseTopLevel;
  * callbacks with these instead of reaching into `firebase.*` namespaces.
  */
 export interface SnapshotLike {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors the compat SDK's untyped snapshot surface; consumers cast downstream
     val(): any;
     exists(): boolean;
 }

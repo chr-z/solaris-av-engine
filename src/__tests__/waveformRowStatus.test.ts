@@ -52,7 +52,7 @@ describe('findCachedWaveformForRow', () => {
   it('handles short rows (missing columns) without throwing', () => {
     expect(findCachedWaveformForRow([], idx, cache)).toBe(false);
     const tiny = [{ value: 'x' }];
-    expect(() => findCachedWaveformForRow(tiny as any, idx, cache)).not.toThrow();
-    expect(findCachedWaveformForRow(tiny as any, idx, cache)).toBe(false);
+    expect(() => findCachedWaveformForRow(tiny as unknown as Parameters<typeof findCachedWaveformForRow>[0], idx, cache)).not.toThrow();
+    expect(findCachedWaveformForRow(tiny as unknown as Parameters<typeof findCachedWaveformForRow>[0], idx, cache)).toBe(false);
   });
 });

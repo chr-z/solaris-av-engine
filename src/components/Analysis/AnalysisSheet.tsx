@@ -3,13 +3,14 @@ import { SearchIcon, LinkIcon, ChevronDownIcon, FilterIcon, RefreshIcon, XIcon, 
 import LoadingIndicator from '../Core/LoadingIndicator';
 import Popover from '../Core/Popover';
 import FilterControls, { FilterState } from './FilterControls';
-import { getDb, getFirebaseCompat, isFirebaseConfigured, type FbUserLike, type SnapshotLike } from '../../config/firebase';
+import { getDb, getFirebaseCompat, isFirebaseConfigured, type SnapshotLike } from '../../config/firebase';
 type DbSnapshot = SnapshotLike;
 import { UserProfile } from '../../types';
 import UserAvatar from '../Auth/UserAvatar';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
 import { findCachedWaveformForRow, getHeaderIndexMap, ListHeaderKey } from '../../utils/waveformRowStatus';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- structural stand-in for the untyped compat SDK surface
 declare const gapi: any;
 
 type CellData = {
@@ -63,7 +64,7 @@ export const fetchFullRowData = async (rowIndex: number): Promise<RowData> => {
     return response.json();
 };
 
-export const updateSheetRow = async (rowIndex: number, rowData: RowData): Promise<any> => {
+export const updateSheetRow = async (rowIndex: number, rowData: RowData): Promise<unknown> => {
     const token = gapi.client.getToken()?.access_token;
     if (!token) {
       throw new Error("User not authenticated. Please sign in again.");
@@ -87,7 +88,6 @@ type RowWithIndex = RowWithSheetIndex;
 
 // --- ListItem Component (Memoized) ---
 interface ListItemProps extends RowWithIndex {
-    headers: string[];
     headerIdx: Record<ListHeaderKey, number>;
     isSelected: boolean;
     onClick: (index: number, row: RowData) => void;
@@ -95,7 +95,7 @@ interface ListItemProps extends RowWithIndex {
     isLockedByCurrentUser: boolean;
 }
 
-const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, headerIdx, isSelected, onClick, lockInfo, isLockedByCurrentUser }) => {
+const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headerIdx, isSelected, onClick, lockInfo, isLockedByCurrentUser }) => {
     const { cachedVideoIds } = useWaveformCache();
 
     // turbo-web perf: all derived values computed synchronously during render.
@@ -271,15 +271,17 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
             onDataLoaded(data.headers, data.rows);
             setLoadingMessage('Ready');
 
-        } catch (err: any) {
-            setError(`Sync Error: ${err.message}`);
+        } catch (err: unknown) {
+            setError(`Sync Error: ${err instanceof Error ? err.message : String(err)}`);
         } finally {
             setIsLoading(false);
         }
     }, [onDataLoaded, userProfile]);
 
     useEffect(() => {
-        fetchData(filters);
+        // turbo-web: setState deferred to a microtask — synchronous setState in
+        // the effect body causes cascading renders (react-hooks/set-state-in-effect).
+        queueMicrotask(() => fetchData(filters));
     }, [filters, fetchData]);
     
     const activeFilterCount = (filters.startDate && filters.endDate ? 1 : 0) + filters.inconformities.length + (filters.studio ? 1 : 0);
@@ -293,7 +295,6 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
                     <ListItem 
                         key={item.rowIndex} 
                         {...item}
-                        headers={headers} 
                         headerIdx={headerIdx} 
                         isSelected={selectedOsIndex === item.rowIndex} 
                         onClick={onRowSelected} 

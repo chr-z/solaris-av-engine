@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getDb, getFirebaseCompat, isFirebaseConfigured, type UnsubscribeFn, type SnapshotLike } from '../../config/firebase';
+import { getDb, getFirebaseCompat, isFirebaseConfigured, type UnsubscribeFn } from '../../config/firebase';
 import { Timestamp, UserProfile } from '../../types';
 import { XIcon } from '../Core/icons';
 import UserAvatar from '../Auth/UserAvatar';
@@ -9,6 +9,8 @@ interface TimestampDockProps {
     videoRef: React.RefObject<HTMLVideoElement>;
     selectedOsIndex: number;
     userProfile: UserProfile | null;
+    /** Reactive "media loaded" signal from the parent (e.g. !!videoSrc). */
+    hasMedia?: boolean;
 }
 
 const formatTime = (totalSeconds: number): string => {
@@ -18,23 +20,30 @@ const formatTime = (totalSeconds: number): string => {
     return `${minutes}:${seconds}`;
 };
 
-const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex, userProfile }) => {
+const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex, userProfile, hasMedia = false }) => {
     const [timestamps, setTimestamps] = useState<Timestamp[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [comment, setComment] = useState('');
+    // turbo-web: videoRef.current must NEVER be read during render (react-hooks/
+    // refs) — it is null on first paint and reading it makes render output depend
+    // on a mutable ref. The current time and media presence are captured into
+    // state at the moment "Add" opens, so renders stay pure.
+    const [markerTime, setMarkerTime] = useState(0);
     const listRef = useRef<HTMLUListElement>(null);
 
     useEffect(() => {
         if (!selectedOsIndex) return;
 
-        setIsLoading(true);
-        // turbo-web: subscribe only after the lazy SDK resolves; skip if unmounted first.
+        // turbo-web: setState deferred to a microtask — synchronous setState
+        // inside the effect body triggers cascading renders (react-hooks/
+        // set-state-in-effect) and double-renders the dock on every W.O. switch.
+        queueMicrotask(() => setIsLoading(true));
         let disposed = false;
         let timestampsRef: ReturnType<Awaited<ReturnType<typeof getDb>>['ref']> | null = null;
         let unsub: UnsubscribeFn | null = null;
         // turbo-web: offline/demo builds have no Firebase config — stay silent.
-        if (!isFirebaseConfigured()) { setIsLoading(false); return; }
+        if (!isFirebaseConfigured()) { queueMicrotask(() => setIsLoading(false)); return; }
         getDb().then((db) => {
             if (disposed) return;
             timestampsRef = db.ref(`timestamps/${selectedOsIndex}`);
@@ -66,6 +75,7 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
     const handleAddClick = () => {
         if (videoRef.current) {
             videoRef.current.pause();
+            setMarkerTime(videoRef.current.currentTime);
         }
         setIsAdding(true);
     };
@@ -159,7 +169,7 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
                         <textarea
                             value={comment}
                             onChange={e => setComment(e.target.value)}
-                            placeholder={`Comment at ${formatTime(videoRef.current?.currentTime || 0)}...`}
+                            placeholder={`Comment at ${formatTime(markerTime)}...`}
                             rows={2}
                             className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent"
                             autoFocus
@@ -170,9 +180,9 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
                         </div>
                     </div>
                 ) : (
-                    <button 
+                    <button
                         onClick={handleAddClick}
-                        disabled={!userProfile || !videoRef.current?.src}
+                        disabled={!userProfile || !hasMedia}
                         className="w-full px-4 py-2 bg-solar-accent/10 border border-solar-accent/30 text-solar-accent rounded-md hover:bg-solar-accent/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Add Marker
