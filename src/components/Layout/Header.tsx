@@ -12,6 +12,7 @@ import { QCExportButton } from '../Analysis/QCExportButton';
 import ProUpgradeModal from '../Admin/ProUpgradeModal';
 import { useLicense } from '../../licensing/LicenseContext';
 import { describeFeature } from '../../licensing/core';
+import { isStandalone } from '../../config/runtimeMode';
 
 // Code splitting (S3.1): admin/report modals ship in separate chunks and are
 // fetched only on first open. `isOpen && ...` keeps them out of the tree while
@@ -40,6 +41,10 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const { t } = useI18n();
   const { isPro } = useLicense();
+  // P3 standalone: um único gate esconde TODAS as affordances de nuvem do
+  // cabeçalho (presença RTDB + upsell Pro). Fontes remotas já são gateadas
+  // dentro do SourceSelector.
+  const standalone = isStandalone();
   const [isBugReportModalOpen, setIsBugReportModalOpen] = useState(false);
   const [isBugReportViewerOpen, setIsBugReportViewerOpen] = useState(false);
   const [isSourcesAdminOpen, setIsSourcesAdminOpen] = useState(false);
@@ -91,8 +96,10 @@ const Header: React.FC<HeaderProps> = ({
           
           <OfflineIndicator />
 
-          {/* S6.1: edition badge + upgrade entry point (free tier only). */}
-          {isPro ? (
+          {/* S6.1: edition badge + upgrade entry point (free tier only).
+              P3 standalone: licenciamento é local-first, mas o upsell de
+              upgrade não faz sentido num build on-premise sem nuvem. */}
+          {standalone ? null : isPro ? (
             <span
               title={t('solaris.pro.activeTitle')}
               className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-solar-accent/20 text-solar-accent border border-solar-accent/40 select-none"
@@ -125,7 +132,7 @@ const Header: React.FC<HeaderProps> = ({
           {/* S4.1: printable QC report download (dataset summary). */}
           <QCExportButton className="!px-2" />
 
-          <OnlineUsers />
+          {!standalone && <OnlineUsers />}
 
           <LanguageSwitcher />
 

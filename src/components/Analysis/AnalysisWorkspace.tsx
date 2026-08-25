@@ -36,7 +36,7 @@ import { dropdownFields, inconformityToCategoryMap, resultFields, inconformitySc
 import { getCompareGridClass } from '../../utils/compareMode';
 import { database } from '../../config/firebase';
 import firebase from 'firebase/compat/app';
-
+import { isStandalone } from '../../config/runtimeMode';
 // Solaris v3: scoring + sheet-sync modules
 import { recalculateScoresWithEngine, isScorableHeader, applyScoreUpdates } from '../../config/engineBridge';
 import { updateSheetRow as syncUpdateSheetRow } from '../../services/sheetSync';
@@ -782,7 +782,9 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                             <div className="w-96">
                                 <SourceSelector onSourceSelected={onLoadMedia} />
                             </div>
-                            <p className="text-sm mt-4">Or click the <GoogleDriveIcon className="inline-block w-4 h-4 align-text-bottom" /> button next to the "FOLDER" field.</p>
+                            {!isStandalone() && (
+                                <p className="text-sm mt-4">Or click the <GoogleDriveIcon className="inline-block w-4 h-4 align-text-bottom" /> button next to the "FOLDER" field.</p>
+                            )}
                         </div>
                     )}
                 </VideoPlayer>
@@ -831,7 +833,9 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                         <div className="w-96">
                             <SourceSelector onSourceSelected={onLoadMedia} />
                         </div>
-                        <p className="text-sm mt-4">Or click the <GoogleDriveIcon className="inline-block w-4 h-4 align-text-bottom" /> button next to the "FOLDER" field.</p>
+                        {!isStandalone() && (
+                            <p className="text-sm mt-4">Or click the <GoogleDriveIcon className="inline-block w-4 h-4 align-text-bottom" /> button next to the "FOLDER" field.</p>
+                        )}
                     </div>
                 )}
             </VideoPlayer>
