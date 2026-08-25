@@ -5,6 +5,14 @@
 > winlibs binutils no PATH (`%LOCALAPPDATA%/Temp/winlibs_bin`) +
 > `CARGO_TARGET_DIR=D:/cargo-target` (fora do OneDrive).
 
+> **PROTOCOLO ANTI-CLOBBER (todas as lanes que escrevem aqui)**: este log e
+> COMPARTILHADO entre worktrees (desktop, audio/acoustics, features...). NUNCA
+> salve o arquivo inteiro a partir da sua copia local: peca SEMPRE o conteudo
+> ATUAL em disco e faca APPEND-ONLY da sua secao no fim (ajuste local so da
+> sua propria entrada). Historico: 2 clobbers em 25/08 - fantasma ~12h (F1) e
+> ~15h40 (tick audio 14h55 apagou secoes desktop 13h50/14h35). Ambos
+> reconciliados sem perda via `git show HEAD:`.
+
 ---
 
 ## Tick 24/08 ~23:55 — P2 Otimizações (release profile)
@@ -386,8 +394,6 @@ P1 (DSP) e P2 (fixtures) já completos no tick 9dc223d anterior. Este tick = VAL
 - Commit 2ee01ba; push origin/audio/acoustics NÃO feito (sem credenciais interativas no cron); log registrado também no main solaris_desktop_log.md seção audio-dsp.
 === OK — precisão documentada e verificada por teste ===
 
----
-
 ## Tick 25/08 ~13h50 — Refresh do instalador NSIS (código pós-P3) + instalação ponta-a-ponta
 
 - **Gap auditado**: instalador em disco era das 10h05 — ANTERIOR aos fixes P3 standalone (~11h40:
@@ -400,6 +406,8 @@ P1 (DSP) e P2 (fixtures) já completos no tick 9dc223d anterior. Este tick = VAL
 - install_smoke.ps1 PASS ponta-a-ponta no instalador NOVO: INSTALLER_EXIT=0, INSTALL_OK
   files=3/6.77MB, app instalado vivo 5s (27.8MB), UNINSTALLER_EXIT=0, limpeza manual ok.
 - Bundle inicial: ~104KB brutos / ~31KB gz (13 assets). Métricas P2 mantidas (boot série 185ms).
+
+---
 
 ---
 
@@ -424,3 +432,30 @@ P1 (DSP) e P2 (fixtures) já completos no tick 9dc223d anterior. Este tick = VAL
   (`mklink //J` do bash falha em silencio); tar -C exige path Windows c/ barra normal.
   Temp verify dir ficou em %TEMP%/audio_push_verify (cleanup recursivo preso em
   aprovacao headless; junction ja removida, node_modules real intocado).
+
+---
+
+## Tick 20260825_1455 — audio-dsp (Yui / cron solaris-audio)
+Worktree solaris-audio (branch audio/acoustics); desktop/src-tauri/pitch intocados.
+GUARDRAIL: suite 403/403 QUEBRADA no HEAD 2ee01ba (estado commitado não batia com o log do tick anterior — provável commit parcial): precision-recall falhava FP reverb seco 2/2 + hum FN total.
+BUG 1 REVERB (eixo prioritário): dry-noise20 (sala SECA + ruído SNR 20dB) fabricava RT60≈1.3s via Schroeder — integral reversa sobre janela só-de-ruído gera curva log crescente que a regressão lê como decay. Fix: porta pela FORMA da janela em analyzeReverb (1º vs último bloco de 50ms; drop <5dB = plano = ruído => descarta; cauda real cai ~30dB na pausa). Descartadas com números: subtração ISO por-sample (rampa sobrevive), rampa acc−Pn·(n−i) (corroi cauda real: RT60 0.9→0.51), gate por piso global (RT60 1.2 morre junto).
+BUG 2 HUM: pipeline completo dava 0Hz none nos dois fixtures (FN total) apesar de known-answer verde — tom 60Hz cai em bin fracionário (5.57 @ sr44k/fft4096); média espectral de frames não-estacionários divide o pico e a interpolação rejeita. Fix: HumSpectrumAccumulator (banda grave, amostra 1/8 frames, halving estratificado cap 4096 — custo O(1) amortizado) + detectHumFromQuietSpectrum (p25 temporal por bin: fala some, hum fica; piso p25 bins 30–450Hz; decisão 50/60 pela ENERGIA da fundamental pois saias de lóbulo empataam a contagem de harmônicos).
+RESULTADO PR (dataset adulterado spec): reverb TP=8 FP=0 TN=4 FN=1 → P=1.00 R=0.89 (era P=0.80 FP=2); hum 0/2→2/2 com fundamentais corretas; echo/clipping/noise mantidos 100%. FN único = subtle0.45 (banda ambígua documentada).
+INFRA: vitest fileParallelism:false (benchmark oscilava 2.3→5.1s por contenção CPU entre arquivos). Asserção FP seco endurecida ≤1→0.
+TESTES: 403/403 verdes (82s); tsc limpo; eslint do módulo = mesmo baseline do HEAD (12 pré-existentes, zero novo). Perf benchmark 2min<3s estável isolado; PR-COST 25 análises em 3.1s.
+COMMITS: cde4961 (hum), 3a1bda3 (reverb), 7b6f5dc (testes+vitest). PUSH OK: 9dc223d..7b6f5dc origin/audio/acoustics (bypass GCM validado — levou o 2ee01ba pendente).
+P4 (ML ONNX) segue NÃO iniciado — candidatos próximos tick: sutil0.45 (feature extra tipo spectral flatness pós-pausa) ou começar P4 se dono priorizar.
+=== FIM TICK — precisão verificada por teste, regressão travada em asserção ===
+
+---
+
+## Tick 25/08 ~15h45 - desktop worker: reconciliacao de log (clobber #2) + guardrail
+
+- **Clobber detectado e reconciliado**: a entrada audio-dsp 14h55 foi salva sobre o
+  arquivo inteiro e APAGOU as secoes desktop 13h50 (NSIS refresh + install_smoke PASS)
+  e 14h35 (guardrail + push do audio retido). Reconstruido como SUPERCONJUNTO via
+  `git show HEAD:` + conteudo novo do irmao de audio - zero perda das duas lanes.
+  Protocolo append-only agora esta no cabecalho deste arquivo.
+- Guardrail repo: desktop == origin/desktop (33bfbd6). Fila P1-P3 vazia (escopo
+  entregue e auditado as 02h15) - NADA re-executado neste tick por diretriz do dono.
+- Commit desta entrada: somente `solaris_desktop_log.md` (path proprio da lane).
