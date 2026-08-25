@@ -8,7 +8,14 @@
  */
 
 import type { AcousticReport, Severity } from './audioAcoustics';
-import { AXIS_LABEL_PT, AXIS_LABEL_EN, type AcousticAxisKey } from './qcIntegration';
+import {
+  AXIS_LABEL_PT,
+  AXIS_LABEL_EN,
+  type AcousticAxisKey,
+} from './qcIntegration';
+
+export { AXIS_LABEL_PT, AXIS_LABEL_EN };
+export type { AcousticAxisKey };
 
 export interface PanelAxisRow {
   key: AcousticAxisKey;
@@ -39,7 +46,6 @@ export const SEVERITY_BAR_CLASS: Record<Severity, string> = {
 };
 
 export const SEVERITY_DOT_CLASS: Record<PanelTimelineMark['severity'], string> = {
-  ok: 'bg-emerald-400',
   warn: 'bg-amber-400',
   critical: 'bg-red-400',
   hum: 'bg-fuchsia-400',
@@ -51,7 +57,6 @@ const AXIS_VALUE_UNIT: Record<AcousticAxisKey, (v: number) => string> = {
   distortion: (v) => `${round(v * 100, 1)}%`,
   noise: (v) => `${round(v, 0)} dBFS`,
   echo: (v) => `${round(v, 0)} ms`,
-  sibilance: (v) => `${round(v, 1)} dB`,
 };
 
 function round(v: number, digits: number): number {
@@ -91,15 +96,14 @@ export function buildTimelineMarks(
   durationSec: number
 ): PanelTimelineMark[] {
   const dur = durationSec > 0 ? durationSec : Math.max(report.durationSec, 1);
-  return report.timelineMarks
-    .map((m) => ({
-      tSec: m.tSec,
-      posPct: Math.max(0, Math.min(100, (m.tSec / dur) * 100)),
-      severity: m.axis === 'hum' ? 'hum' : m.severity,
-      axis: m.axis,
-      note: m.note,
-    }))
-    .sort((a, b) => a.tSec - b.tSec || a.posPct - b.posPct);
+  const marks: PanelTimelineMark[] = report.timelineMarks.map((m) => ({
+    tSec: m.tSec,
+    posPct: Math.max(0, Math.min(100, (m.tSec / dur) * 100)),
+    severity: (m.axis === 'hum' ? 'hum' : m.severity) as PanelTimelineMark['severity'],
+    axis: m.axis,
+    note: m.note,
+  }));
+  return marks.sort((a, b) => a.tSec - b.tSec || a.posPct - b.posPct);
 }
 
 /** Overall score verdict line shown next to the big number. */
