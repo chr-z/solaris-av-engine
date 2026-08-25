@@ -656,8 +656,11 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   };
 
   // v3: sync button + inline status, rendered next to the legacy Save button.
-  const renderSyncButton = () => (
-    <div className="flex items-center gap-2">
+  // P3 standalone: escrita remota via token Google não existe sem nuvem —
+  // o botão nem renderiza (evita affordance morta que só geraria erro).
+  const renderSyncButton = () =>
+    isStandalone() ? null : (
+      <div className="flex items-center gap-2">
       {syncStatus === 'success' && (
         <div className="flex items-center gap-1.5 text-green-400 text-sm">
           <ClipboardCheckIcon className="w-4 h-4" />
