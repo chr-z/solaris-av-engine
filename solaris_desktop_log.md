@@ -73,3 +73,43 @@ app principal 0 violacoes (fallback do Suspense passa em contraste).
 Suite: vitest 29 arquivos / 332 passed, tsc --noEmit limpo, build ok.
 Fila do turbo-web: itens 1-6 todos executados (1/3/4 em ticks 24-25/08,
 2 e 6 neste tick).
+
+### 2026-08-25 (noite) — tick turbo-web #2: modo offline/demo + Lighthouse 95/100/96 -> 100/100/100
+
+Fila 1-6 já estava completa; este tick atacou os pontos perdidos que
+restavam nos audits (unminified/unused JS + errors-in-console).
+
+Causa raiz: builds sem env Firebase (demo/local) bootavam o compat SDK
+igualmente -> `FIREBASE FATAL ERROR` no console de TODO visitante demo;
+e a index.html puxava gapi + GSI (~100 KB, 80 KiB apontados como unused
+pelo LH) mesmo sem uso.
+
+Mudanças:
+- `config/firebase.ts`: gate `isFirebaseConfigured()` (projectId &&
+  databaseURL); `loadFirebase()` rejeita rápido SEM baixar o SDK.
+- `index.html`: scripts do Google removidos do HTML estático; agora são
+  injetados on-demand em `pollForApis()` só quando há config.
+- Assinantes DB silenciados sem config: locks (AnalysisSheet),
+  timestamps (Workspace + TimestampDock), presence (OnlineUsers +
+  App), bugReports (Viewer), adminRole (`useAdminRole.resolve()` —
+  era o fire-and-forget sem catch que estourava exceção não capturada).
+- LoginScreen: aviso i18n "Modo demo: build local sem serviços em nuvem".
+- Logout guest-safe sem config.
+
+| Lighthouse | antes | depois |
+|---|---|---|
+| Performance | 95 | **100** |
+| Accessibility | 100 | 100 |
+| Best Practices | 96 | **100** |
+| FCP / LCP | 1,7 s / 2,9 s | **1,4 s / 1,5 s** |
+| TBT / CLS | 0 ms / 0 | 0 ms / 0 |
+| Console errors (LH) | 2 | **0** |
+
+Bundle initial inalterado (~86 KB gz; firebase chunk continua lazy e fora
+do caminho crítico). Axe-core re-validado na build nova: 0 violações
+(scanner adaptado para build demo, que não tem login screen).
+Console-probe CDP próprio: 0 eventos de erro/warning/exceção.
+
+Suite: vitest 30 arquivos / 335 passed (+3 firebaseConfig), tsc limpo,
+test:e2e 21/21. Commits 9b274e2 + 56df76c na turbo/web-opt.
+Nota: redeploy Vercel da web herda os ganhos no próximo push para main.
