@@ -206,6 +206,16 @@ export const en = {
   'dash.live.priorityLabel': 'Priority',
   'dash.live.undo': 'Undo',
   'dash.live.undoHint': 'Reverts your last queue action (24h window)',
+  // F2: bulk actions da fila (seleção múltipla no painel ao vivo)
+  'dash.live.bulkTitle': 'Bulk selection',
+  'dash.live.bulkSelectTop': 'Top 3 urgent',
+  'dash.live.bulkClear': 'Clear',
+  'dash.live.bulkSelected': '{n} selected',
+  'dash.live.bulkApplicable': '{n} applicable',
+  'dash.live.bulkSkipped': '{n} skipped',
+  'dash.live.bulkAssignMe': 'Assign selected to me',
+  'dash.live.bulkReturn': 'Return selected',
+  'dash.live.bulkPriority': 'Set priority',
   // F5: alternância Planilhas / Ao vivo no gate de admin
   'admin.viewToggleLabel': 'Admin view',
   'admin.viewSheets': 'Spreadsheets',
@@ -538,6 +548,16 @@ export const pt: Record<TranslationKey, string> = {
   'dash.live.priorityLabel': 'Prioridade',
   'dash.live.undo': 'Desfazer',
   'dash.live.undoHint': 'Reverte sua última ação na fila (janela de 24h)',
+  // F2: bulk actions da fila (seleção múltipla no painel ao vivo)
+  'dash.live.bulkTitle': 'Seleção em lote',
+  'dash.live.bulkSelectTop': '3 urgentes',
+  'dash.live.bulkClear': 'Limpar',
+  'dash.live.bulkSelected': '{n} selecionadas',
+  'dash.live.bulkApplicable': '{n} aplicáveis',
+  'dash.live.bulkSkipped': '{n} ignoradas',
+  'dash.live.bulkAssignMe': 'Atribuir selecionadas a mim',
+  'dash.live.bulkReturn': 'Devolver selecionadas',
+  'dash.live.bulkPriority': 'Definir prioridade',
   // F5: alternância Planilhas / Ao vivo no gate de admin
   'admin.viewToggleLabel': 'Visão de admin',
   'admin.viewSheets': 'Planilhas',
