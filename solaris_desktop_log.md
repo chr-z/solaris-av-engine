@@ -211,3 +211,6 @@ Commit desta entrada em origin/turbo/web-opt.
   tick (commit 25b66d3): build byte-identica apos update, warning fora,
   gates re-provados na arvore final.
 - Sem Telegram, sem toque em src-tauri (lane desktop intacta).
+
+### 2026-08-25 (madrugada) — tick turbo-web pós-merge #8 (worktree no main)
+Lane turbo-web absorvida pelo main @ 30b4b7b (merge ticks #1-#7). Worktree solaris-web-turbo movido para main, pull ff-only ok, árvore limpa. Gates reprovados na árvore final mesclada: build determinística, initial gz 86,7 KB (index 33,67 + react-vendor 45,44 + css 7,60) <500KB alvo; chunks lazy idem (firebase 97,35, AdminGate 18,93, AnalysisWorkspace 19,68 gz); vitest/tsc limpar; E2E 21/21; axe 0; Lighthouse 100/100/100 (FCP 1,4/LCP 1,5/TBT 0/CLS 0). src-tauri intocado. Sem Telegram.
