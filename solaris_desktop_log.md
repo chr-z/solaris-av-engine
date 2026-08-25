@@ -314,3 +314,39 @@ Nada a avançar sem diretiva nova; este tick rodou verificação de ponta a pont
   pre-bundle e pid=24524 POS-repatch do bundler; BOOT_WINDOW_OK ms=180 WS
   19,6MB (sem regressao vs 170-198ms); instalador NSIS fresco 08:23
   D:/cargo-target/release/bundle/nsis/Solaris_3.0.0_x64-setup.exe 2.451.573B.
+
+---
+
+## desktop (tick turbo) — bug de boot standalone caçado por E2E dentro do exe + cura — 25/08/2026 ~09h30
+
+- **Novo padrão de prova**: `scripts/desktop_e2e_probe.mjs` (one-off, untracked
+  by policy) sobe o exe canônico com WebView2 remote debugging (env vars,
+  zero mudança de código), conecta via CDP e prova: render real, botões
+  hidratados, ZERO resource remoto (só tauri://, data:, blob:), ZERO endpoint
+  nuvem no DOM vivo, console sem erros. Bem mais forte que o smoke de processo.
+- **Bug real achado na primeira rodada**: probe PASS técnico mas o body dump
+  mostrava "Load Failed — Sync Error: Session expired. Please sign in again."
+  no boot do desktop standalone (app SEM login nem nuvem). Causa raiz:
+  `AnalysisSheet.fetchData` só gateava guest (`guest-reviewer-id`); o usuário
+  standalone (`local-reviewer`) caía no fluxo ADMIN → `/api/get-sheets-data`
+  com idToken null. Mesma lacuna em `App.handleOsSelect` (lock RTDB +
+  `/api/sheet-row`) e `fetchFullRowData`.
+- **Cura (4fff1a6)**: gates `isStandalone()` nos três pontos; seleção de W.O.
+  resolve a linha completa LOCALMENTE (paridade com o caminho nuvem: 1 vídeo →
+  carrega, >1 → chooser, 0 → "No video found"); novo `StandaloneRowError`
+  como mecanismo de fluxo; catch defensivo com mensagem humana.
+- Testes: +4 novos cobrindo os DOIS modos (cloud mantém fluxo real de sync e
+  reflete falha como Sync Error — comportamento pré-existente travado por
+  teste; standalone boot/click/fetchFullRowData nunca chamam fetch). Suíte
+  237/237 (--exclude src/audio-acoustics/**); cargo test 12+12 verde.
+- tsc --noEmit: 144 erros pré-existentes em __tests__ de outras lanes, ZERO
+  atribuíveis às mudanças deste tick (prova: stash → mesmo count).
+- Rebuild: vite standalone 2m33s (dist-desktop/, inicial ~246KB brutos/~77KB gz);
+  cargo tauri build --no-bundle 2m04s; exe canônico fresco
+  D:/cargo-target/release/solaris-av-engine.exe 6.529.536B (+512B vs anterior),
+  hash do chunk novo `index-D3rpp4Ow` provado DENTRO do binário.
+- **Re-prova E2E POS-fix**: DESKTOP_E2E_PASS, bootMs=859, body agora abre
+  direto no workspace com as 3 W.O. demo renderizadas (WO-2024-001/042/088),
+  PENDING(3)/COMPLETED(0)/SPECIAL(0), PT/EN presente, zero rede remota, zero
+  console error, zero exceção. BOOT_WINDOW_OK ms=185 WS=19.6MB (sem regressão
+  vs série 170-198ms).
