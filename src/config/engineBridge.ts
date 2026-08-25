@@ -65,15 +65,17 @@ export function recalculateScoresWithEngine(
   return { result, cellUpdates };
 }
 
-/** Convenience: apply engine cell updates onto a copy of the row data. */
-export function applyScoreUpdates(
-  rowData: Array<{ value?: string } | undefined>,
+/** Convenience: apply engine cell updates onto a copy of the row data.
+ *  Genérico: preserva o tipo de célula do chamador (ex.: RowData/CellData),
+ *  sem degradar para elemento possivelmente undefined. */
+export function applyScoreUpdates<T extends { value?: string; link?: string }>(
+  rowData: T[],
   cellUpdates: Array<{ colIndex: number; value: string }>,
-): Array<{ value?: string } | undefined> {
+): T[] {
   const next = [...rowData];
   for (const { colIndex, value } of cellUpdates) {
-    const existing = next[colIndex];
-    next[colIndex] = { ...(existing ?? {}), value };
+    const existing = next[colIndex] ?? ({} as T);
+    next[colIndex] = { ...existing, value };
   }
   return next;
 }

@@ -11,12 +11,12 @@ const TAURI_KEY = '__TAURI_INTERNALS__';
 describe('runtimeMode — dois modos de build', () => {
   beforeEach(() => {
     setRuntimeModeOverride(null);
-    delete (window as Record<string, unknown>)[TAURI_KEY];
+    delete (window as unknown as Record<string, unknown>)[TAURI_KEY];
   });
 
   afterEach(() => {
     setRuntimeModeOverride(null);
-    delete (window as Record<string, unknown>)[TAURI_KEY];
+    delete (window as unknown as Record<string, unknown>)[TAURI_KEY];
   });
 
   it('default é cloud quando não há override, build flag ou runtime Tauri', () => {
@@ -35,7 +35,7 @@ describe('runtimeMode — dois modos de build', () => {
   });
 
   it('override tem precedência sobre o runtime Tauri', () => {
-    (window as Record<string, unknown>)[TAURI_KEY] = {};
+    (window as unknown as Record<string, unknown>)[TAURI_KEY] = {};
     setRuntimeModeOverride('cloud');
     // Mesmo dentro de um webview Tauri, o override explícito vence.
     expect(getRuntimeMode()).toBe('cloud');
@@ -43,7 +43,7 @@ describe('runtimeMode — dois modos de build', () => {
   });
 
   it('runtime Tauri (__TAURI_INTERNALS__) implica standalone e bridge presente', () => {
-    (window as Record<string, unknown>)[TAURI_KEY] = {};
+    (window as unknown as Record<string, unknown>)[TAURI_KEY] = {};
     expect(hasDesktopBridge()).toBe(true);
     expect(isStandalone()).toBe(true);
   });

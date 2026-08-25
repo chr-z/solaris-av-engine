@@ -89,7 +89,7 @@ describe('engineBridge: ScoringEngine ↔ v2 row state', () => {
     const next = applyScoreUpdates(row, [
       { colIndex: idx('FINAL SCORE'), value: '4,85' },
     ]);
-    expect(next[idx('FINAL SCORE')].value).toBe('4,85');
+    expect(next[idx('FINAL SCORE')]?.value).toBe('4,85');
     expect(JSON.stringify(row)).toBe(snapshot);
     expect(next).not.toBe(row);
   });
