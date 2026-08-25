@@ -663,7 +663,13 @@ const App: React.FC = () => {
             id: 'guest-reviewer-id',
             name: 'Guest Reviewer',
             givenName: 'Guest',
-            picture: 'https://ui-avatars.com/api/?name=Guest+Reviewer&background=0D8ABC&color=fff', // Added better avatar
+            // Avatar local (data URI): desktop standalone roda com CSP sem
+            // nenhuma origem remota — nada de rede para renderizar o Guest.
+            picture:
+                'data:image/svg+xml,' +
+                encodeURIComponent(
+                    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="32" fill="#0D8ABC"/><text x="32" y="41" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#fff" text-anchor="middle">GR</text></svg>',
+                ),
             email: 'guest@solaris.demo'
         });
         
