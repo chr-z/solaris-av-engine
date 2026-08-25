@@ -27,8 +27,10 @@ pub struct ScanResponse {
 
 /// Comando Tauri: escaneia a RAIZ_ALFRED e devolve OSs + órfãos + candidatos
 /// de janela temporal pro front resolver as camadas de confiança.
+/// `async` roda na thread-pool do runtime — a janela não congela durante
+/// varreduras grandes de rede (UNC).
 #[tauri::command]
-fn scan_alfred_command(req: ScanRequest) -> Result<ScanResponse, String> {
+async fn scan_alfred_command(req: ScanRequest) -> Result<ScanResponse, String> {
     let root = std::path::PathBuf::from(&req.root);
     if !root.is_dir() {
         return Err(format!("RAIZ_ALFRED não existe ou não é pasta: {}", req.root));
@@ -42,9 +44,48 @@ fn scan_alfred_command(req: ScanRequest) -> Result<ScanResponse, String> {
     })
 }
 
+/// Resposta do seletor nativo de pastas. `path = None` ⇒ usuário cancelou.
+#[derive(Debug, Serialize)]
+pub struct FolderPickResponse {
+    pub path: Option<String>,
+}
+
+/// Comando Tauri: diálogo nativo de seleção de pasta (Admin → Fontes).
+/// Começa em `start_path` quando existe (senão no pai existente mais próximo).
+#[tauri::command]
+async fn pick_folder_command(
+    title: Option<String>,
+    start_path: Option<String>,
+) -> Result<FolderPickResponse, String> {
+    let mut dialog = rfd::AsyncFileDialog::new();
+    if let Some(t) = title.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        dialog = dialog.set_title(t.to_string());
+    }
+    if let Some(start) = start_path.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        let p = std::path::PathBuf::from(start);
+        // Caminhos UNC/raízes podem não existir ainda — cai pro pai existente.
+        let dir = if p.is_dir() {
+            Some(p)
+        } else {
+            p.parent().filter(|parent| parent.is_dir()).map(Into::into)
+        };
+        if let Some(d) = dir {
+            dialog = dialog.set_directory(d);
+        }
+    }
+    let picked = dialog
+        .pick_folder()
+        .await
+        .map(|handle| handle.path().to_string_lossy().into_owned());
+    Ok(FolderPickResponse { path: picked })
+}
+
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![scan_alfred_command])
+        .invoke_handler(tauri::generate_handler![
+            scan_alfred_command,
+            pick_folder_command
+        ])
         .run(tauri::generate_context!())
-        .expect("erro ao iniciar o Solaris desktop");
+        .expect("erro ao iniciar o Solaris desktop")
 }
