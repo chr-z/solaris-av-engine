@@ -176,3 +176,56 @@ Nada a avançar sem diretiva nova; este tick rodou verificação de ponta a pont
 - Suites: vitest 233/233 (--exclude src/audio-acoustics/**, WIP de outra frente);
   cargo test stable-gnu verde. Push desktop -> origin/desktop verificado por
   ls-remote.
+## redesign (tick 5) — R3 tela de análise — 25/08/2026 03:05
+- Commits 182f464 + 22c003b + c07ef36 @ redesign-premium, pushados (ls-remote ok).
+- **Timeline redesenhada** (WaveformTimeline v3): pins de marcadores EMPILHÁVEIS
+  (3 lanes, greedy por gap mínimo — algoritmo puro testado em
+  utils/timelineLayout.ts), tooltip rico (hora mono + comentário + analista),
+  régua com passo adaptativo (1/2/5/10/15/30/60/120/300/600s conforme duração,
+  labels só a partir de 15s), waveform com gradiente accent e opacidade pela
+  amplitude (semântica mantida: vermelho=clip, amarelo=quente), playhead knob
+  c/ glow accent, véu escuro na parte não reproduzida, hover mostra dB+tempo.
+- Pins ligados ao VideoPlayer via props novas (markers/onMarkerSelect) e ao
+  workspace por listener leve no MESMO path do TimestampModal
+  (timestamps/<os>/<videoId>) — adicionar/remover continua pelo modal; clique no
+  pin busca o vídeo pro tempo. Offline/demo = sem pins, sem erro.
+- **ScoreRing** (Core/ScoreRing.tsx): anel SVG animado (dashoffset 600ms +
+  contagem rAF ease-out ~700ms), cor semântica verde≥4/amarelo≥3/vermelho,
+  número tabular vírgula; reduced-motion pula direto pro estado final. No
+  cabeçalho do painel Analysis Sheet, lê FINAL SCORE da linha (parseScore memo).
+- **Empty state ilustrado** (wow #4) nos 2 blocos do player: player desenhado
+  em SVG com gradiente Solaris + check verde, dica "Paste a YouTube link...".
+- **Erros humanos**: utils/humanErrors.ts (humanizeError/humanizeSaveError,
+  nunca devolve msg crua; fallback sempre título+dica). Player mostra ilustração
+  de falha + frase humana + botão Retry btn-primary; erro de save no header do
+  painel vira título+dica (role=alert). 23 testes novos (timeline/score/errors).
+- i18n EN/PT paritário ('workspace.finalScore').
+- Validação: tsc limpo; vitest 355/355; build verde; CSS gz 9.35KB (meta <30KB);
+  verify_r3.cjs no browser real 7/7 (ScoreRing svg+label+número, timeline track,
+  empty/player, bg #0b0e14, sem "Media Error" cru); screenshots
+  redesign_shots/r3_{login,workspace,analysis}.png (preview exclusivo porta alta
+  + strictPort, hash do entry conferida contra dist local).
+- Próximo tick R3: fila (AnalysisSheet premium: zebra sutil, hover de linha,
+  badges pill de status) → relatório QC → login já parcialmente pronto no R2.
+
+---
+
+## desktop (tick turbo) — consolidação + re-verificação ponta a ponta — 25/08/2026 ~04h
+
+- Fila P1-P3 permanece DONE (nada novo a construir sem diretiva); este tick
+  consolidou a árvore e re-provou os entregáveis de ponta a ponta.
+- Drift resolvido SEM misturar lanes: eco do log do redesign tick 5 que outra
+  worker escreveu neste arquivo compartilhado (precedente: entradas de ticks
+  anteriores dela já vivem aqui) estava uncommitted na desktop — commitado
+  aqui como docs; conteúdo idêntico ao já pushado em
+  origin/redesign-premium (880f4a0). Ruído de CRLF em src-tauri/Cargo.toml
+  normalizado (zero diff de conteúdo).
+- Re-verificação anti-false-done: vitest 233/233 (--exclude
+  src/audio-acoustics/**, WIP de outra frente fora de escopo); cargo test
+  stable-gnu 12+12 verde; smoke_desktop.ps1 -Exe <canonico> => SMOKE_OK
+  pid=31240 vivo após 5s mem=23,6MB, kill limpo.
+- Artefatos provados no disco (ambos 03:05): exe canônico
+  D:/cargo-target/release/solaris-av-engine.exe 6.525.952 B
+  (prova de conteúdo grep pick_folder = 2) e instalador
+  bundle/nsis/Solaris_3.0.0_x64-setup.exe 2.448.333 B.
+- Push desktop -> origin/desktop verificado por ls-remote.
