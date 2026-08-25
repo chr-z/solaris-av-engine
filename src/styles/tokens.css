@@ -97,6 +97,10 @@
   --color-border-strong: rgba(255, 255, 255, 0.12);
   --color-border-focus: var(--color-accent-glow);
 
+  /* Wash de hover p/ itens interativos (icon-btn/menu-item/chip).
+     Mesma família das bordas hairline; o tema claro escurece. */
+  --color-hover-wash: rgba(255, 255, 255, 0.06);
+
   /* ---------- 3. ESPAÇAMENTO — grid de 4px ---------- */
   --space-1: 4px;
   --space-2: 8px;
@@ -142,6 +146,7 @@ html.light {
   --color-text-secondary: #5b6474;
   --color-border: rgba(16, 20, 30, 0.08);
   --color-border-strong: rgba(16, 20, 30, 0.16);
+  --color-hover-wash: rgba(16, 20, 30, 0.05);
 }
 
 /* ---------- 7. FOCO VISÍVEL (teclado) ---------- */

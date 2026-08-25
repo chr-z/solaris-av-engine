@@ -15,6 +15,7 @@ export default {
     'badge-pill', 'badge-ok', 'badge-warn', 'badge-fail', 'badge-info',
     'badge-sparkline', 'skeleton-line', 'skeleton-title', 'skeleton-block',
     'tooltip-rich', 'checkbox-custom', 'btn-primary', 'btn-ghost',
+    'icon-btn', 'icon-btn-danger', 'menu-item', 'menu-item-danger', 'chip-sort', 'is-active',
   ],
   theme: {
     extend: {

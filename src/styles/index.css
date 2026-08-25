@@ -370,4 +370,70 @@
   .solaris-logo-intro {
     animation: logo-intro 600ms ease-out both;
   }
+
+  /* ---------- Estados de interação v3 (t16) ----------
+     Substituem os hovers crus gray-500/20 + text-white do MVP nos
+     botões-ícone, itens de menu e chips. Mesma anatomia de classe no
+     DOM (mesmos elementos, mesmos aria-labels), acabamento dos tokens. */
+  /* Botão-ícone: o gesto mais comum do app (fechar, editar, controles). */
+  .icon-btn {
+    color: var(--color-text-secondary);
+    transition: background-color 140ms ease-out, color 140ms ease-out;
+  }
+  .icon-btn:hover:not(:disabled) {
+    background-color: var(--color-hover-wash);
+    color: var(--color-text);
+  }
+  /* Variante destrutiva (remover marcador etc.) — semântica fail mantida. */
+  .icon-btn-danger {
+    color: var(--color-fail);
+  }
+  .icon-btn-danger:hover:not(:disabled) {
+    background-color: rgb(var(--color-fail-rgb) / 0.12);
+    color: var(--color-fail);
+  }
+  /* Item de menu/dropdown (popover do usuário, listas de opções). */
+  .menu-item {
+    width: 100%;
+    text-align: left;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    transition: background-color 140ms ease-out;
+  }
+  .menu-item:hover:not(:disabled) {
+    background-color: var(--color-hover-wash);
+  }
+  /* Item de ação destrutiva (Sign out). */
+  .menu-item-danger {
+    color: var(--color-fail);
+  }
+  .menu-item-danger:hover:not(:disabled) {
+    background-color: rgb(var(--color-fail-rgb) / 0.12);
+  }
+  /* Chip de alternância (Sort by: Time|Comment) — hover só quando inativo;
+     ativo recebe o wash accent (equivalente ao bg-solar-accent/20 legado). */
+  .chip-sort {
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-md);
+    color: inherit;
+    transition: background-color 140ms ease-out, color 140ms ease-out;
+  }
+  .chip-sort:hover:not(.is-active):not(:disabled) {
+    background-color: var(--color-hover-wash);
+  }
+  .chip-sort.is-active {
+    background-color: rgb(var(--color-accent-rgb) / 0.2);
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+  /* Hover neutro avulso p/ chips com borda (toolbar A/B) que mantêm suas
+     utilidades próprias — só troca o fundo no hover pelo token. */
+  .wash-hover {
+    transition: background-color 140ms ease-out;
+  }
+  .wash-hover:hover:not(:disabled) {
+    background-color: var(--color-hover-wash);
+  }
 }
