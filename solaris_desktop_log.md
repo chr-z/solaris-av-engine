@@ -616,3 +616,14 @@ CI remoto nenhum** (workflow só disparava em main/v2-upgrade).
 - Nota p/ lanes irmãs: src/audio-acoustics/ untracked NO DIR PRINCIPAL está
   inconsistente com o worktree delas (quebra tsc/vitest se commitado assim) —
   intocado por mim, sinalizado aqui.
+--- tick audio-dsp 25/08 ~20:30 ---
+P1-P3: DONE (e8e28e2 / 80cd516 / 1492a4d); reverb P/R 1.00/0.89, hum 2/2, echo 2/2, clipping 2/2, noise 1/1, sweep 27/27, suite 404/404.
+P4 (ML ONNX): DEFERRED — P3 ainda tinha costura aberta.
+Commit A (0ffe34f): sheetSync acústico — buildAcousticCellUpdates/applyCellUpdates/mergeAcousticScoresIntoRow; 9 testes novos, 26 verdes, tsc limpo; aliases canônicos + curtos; NÃO tocado src-tauri.
+Commit B (591e6b0): relatório QC embute seção acústica + registry publish/getLatest; sem análise prévia = omissão (preserva anterior); tsc limpo.
+Push origin/audio/acoustics: BLOQUEADO pelo GCM interativo sob cron (git ls-remote confirma HEAD 2 ahead de e8e28e2). Corrigir: git -c cred.helper= -c cred.helper="\!gh auth git-credential" push origin audio/acoustics (regra documentada em MEMORY + SKILL saas-factory-ops).
+Nota: aviso "subagent 12880344... modified qcIntegration.ts" era falso positivo (worktree idêntico ao HEAD exceto meus 2 commits; processos vivos todos do mesmo snap desta sessão — anti-self-detection confirmado). Nenhuma colisão real. P4 ONNX só depois que P3 barrado for resolvido (provavelmente próximo tick).
+Branch: audio/acoustics; digest HEAD 591e6b0; guardrail 410/410 verde (avulso 2m20s); 0 violações axe, 87,25KB gz estável.
+
+- DESFECHO: run 32910279730 = success (~2min) — primeiro CI remoto verde da
+  branch desktop, na estreia do trigger.
