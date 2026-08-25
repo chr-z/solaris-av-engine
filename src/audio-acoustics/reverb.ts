@@ -245,12 +245,33 @@ export function analyzeReverb(
     floorDbBelowPeak: opts?.vadFloorDb ?? -35,
     minSilenceMs,
   });
+  // Escada 1 — pisos mais profundos: salas MUITO reverberantes não têm
+  // silêncio entre palavras (a cauda fica acima do piso padrão) e o VAD vê
+  // fala contínua. Pisos que cortam através da cauda recuperam as pausas.
   if (speech.length < 2) {
-    for (const altFloor of [-28, -24, -20, -16]) {
+    for (const altFloor of [-28, -24, -20, -16, -12]) {
       const alt = detectVoiceActivity(env, sr, { floorDbBelowPeak: altFloor, minSilenceMs });
       if (alt.length > speech.length) speech = alt;
       if (speech.length >= 2) break;
     }
+  }
+  // Escada 2 — silêncios mínimos curtos: fala RÁPIDA (pausas <180ms) mesmo
+  // com cauda de reverb tem vãos sub-limiar, mas curtos — o requisito de
+  // 180ms de silêncio funde tudo num segmento único [0,dur] e o motor cai
+  // no fallback C50 que lê a sala como seca (FN total medido: RT60 0.9,
+  // ritmo 0.3s/0.3s => 0 janelas, "dry"). Avalia TODAS as combinações e
+  // fica com a de MAIS segmentos (mais janelas de decay => melhor estatística;
+  // parar no primeiro degrau com ≥2 captura janelas curtas e viesadas —
+  // medido: -20/120 lia 0.49-0.59 p/ RT60 0.9, -12/90 lia 0.64-0.90).
+  if (speech.length < 2) {
+    let best: Segment[] | null = null;
+    for (const ms of [120, 90]) {
+      for (const altFloor of [-20, -16, -12]) {
+        const alt = detectVoiceActivity(env, sr, { floorDbBelowPeak: altFloor, minSilenceMs: ms });
+        if (alt.length >= 2 && (!best || alt.length > best.length)) best = alt;
+      }
+    }
+    if (best) speech = best;
   }
 
   const minSpanDb = opts?.minSpanDb ?? 12;
@@ -298,12 +319,17 @@ export function analyzeReverb(
   }
 
   if (estimates.length > 0) {
-    // Quartil superior (p75): o viés de truncamento de janela é sistemático
-    // PRA BAIXO (cotovelo de borda acelera o slope); superestimação é rara.
-    // p75 corrige o viés mantendo robustez (distribuições bimodais por
-    // qualidade de janela: rt=1.2 mediana 0.87 → p75 0.93, verdadeiro 1.2).
+    // Agregação ROBUSTA: janelas curtas/truncadas geram superleituras
+    // impossíveis por física (truncamento só subestima decay — medido:
+    // 1.23/1.32/1.48 p/ RT60 verdadeiro 0.55). Mediana como âncora; só
+    // entram na estatística final estimativas dentro de ±35% dela (banda
+    // de concordância); p75 corrige o viés sistemático pra baixo do
+    // truncamento de janela DENTRO da banda limpa.
     const sorted = estimates.map(e => e.rt60).sort((a, b) => a - b);
-    const p75 = sorted[Math.min(sorted.length - 1, Math.floor(0.75 * sorted.length))];
+    const anchor = sorted[Math.floor(sorted.length / 2)];
+    const inBand = estimates.filter(e => Math.abs(e.rt60 - anchor) <= 0.35 * anchor);
+    const pool = (inBand.length >= 3 ? inBand : estimates).map(e => e.rt60).sort((a, b) => a - b);
+    const p75 = pool[Math.min(pool.length - 1, Math.floor(0.75 * pool.length))];
     return {
       rt60: Math.max(p75, 0),
       rt60Method: 'schroeder',

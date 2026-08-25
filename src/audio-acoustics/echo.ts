@@ -115,6 +115,30 @@ export function detectEcho(
     return { delayMs: 0, delaySamples: 0, confidence: bestVal, isReal: false, hasEcho: false };
   }
 
+  // Gate de SIGNIFICÂNCIA ESTATÍSTICA: r(d) tem desvio-padrão nulo
+  // ≈ 1/√N_eff, onde N_eff é o tamanho amostral efetivo ponderado pelo
+  // peso local |env[i]·env[i+d]| (blocos silenciosos não contam — envelope
+  // esparso engana o N nominal). Limiar z ≥ 2 calibrado em sintéticos 6s
+  // (pior FP conhecido: cadência lenta seca z=1.88 em 4 seeds; eco mais
+  // fraco do dataset -10dB: z=2.08; ecos -6dB: z≥3.3; known-answer 12s:
+  // z=4.4). Sinais verdadeiros escalam com √duração (áudio real de minutos
+  // fica folgado); ruído de prosódia não replica. Threshold absoluto 0.07
+  // continua como piso secundário E conjuntivo (defesa em profundidade).
+  {
+    let sw = 0, sw2 = 0;
+    const d = lags[bestIdx];
+    const m = nBlocks - d;
+    for (let i = 0; i < m; i++) {
+      const w = Math.abs(env[i] * env[i + d]);
+      sw += w; sw2 += w * w;
+    }
+    const nEff = sw2 > 0 ? (sw * sw) / sw2 : 0;
+    const nullSigma = 1 / Math.sqrt(Math.max(nEff, 1));
+    if (bestVal / nullSigma < 2 || bestVal < threshold * 1.15) {
+      return { delayMs: 0, delaySamples: 0, confidence: bestVal, isReal: false, hasEcho: false };
+    }
+  }
+
   const prom = medianAround(values, bestIdx, Math.round(40 / msPerBlock)); // ±40ms
   const w = Math.round(8 / msPerBlock); // borda de nitidez ±(3..11)ms
   let borderMax = 0;
