@@ -3,6 +3,7 @@ import { LinkIcon, GoogleDriveIcon, VideoIcon, InfoIcon } from '../Core/icons';
 import { RowData } from '../../types';
 import { formSections, allBooleanFields, dropdownFields, resultFields, simNaoFields } from '../../utils/constants';
 import { DRIVE_FOLDER_REGEX } from '../../utils/regex';
+import { isStandalone } from '../../config/runtimeMode';
 import Tooltip from '../Core/Tooltip';
 import { inconformityDetailsMap } from '../../utils/inconformityDetails';
 
@@ -26,6 +27,8 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
     onLocalFilePathChange
 }) => {
     const [activeTab, setActiveTab] = useState(Object.keys(formSections)[0]);
+    // P3 standalone: nenhuma affordance de nuvem (link de planilha, botão Drive).
+    const standalone = isStandalone();
 
     if (!selectedRow) {
         return (
@@ -93,7 +96,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
 
                         const label = (
                             <label htmlFor={fieldName} className="block text-xs font-medium text-gray-400 mb-1">
-                                {cellData?.link ? (
+                                {cellData?.link && !standalone ? (
                                     <a 
                                         href={cellData.link} 
                                         target="_blank" 
@@ -151,7 +154,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                         className="h-4 w-4 rounded border-gray-500 text-solar-accent focus:ring-solar-accent bg-transparent"
                                     />
                                     <span className="text-sm select-none flex items-center gap-1.5">
-                                        {cellData?.link ? (
+                                        {cellData?.link && !standalone ? (
                                             <a 
                                                 href={cellData.link} 
                                                 target="_blank" 
@@ -187,7 +190,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                         // 3. Other Fields (Dropdowns & Text)
                         
                         // Special 'FOLDER' field with Drive Button
-                        if (fieldName === 'FOLDER') {
+                        if (fieldName === 'FOLDER' && !standalone) {
                             const link = cellData?.link;
                             const match = link ? link.match(DRIVE_FOLDER_REGEX) : null;
                             const folderId = match ? match[1] : null;
