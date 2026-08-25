@@ -27,6 +27,9 @@ export { recalculateScoresWithEngine, applyScoreUpdates } from './src/config/eng
 export { DEMO_HEADERS, DEMO_ROWS } from './src/utils/demoData';
 export { suggestNext } from './src/features/qol/queue';
 export { makeAssign, makeReturn, makePrioritize, applyInverse } from './src/features/qol/queueActions';
+export { parseCsv, parseQueueImport, applyImportInverse, buildQueueCsv } from './src/features/qol/queueImport';
+export { readXlsxFirstSheetGrid } from './src/features/qol/queueImportXlsx';
+export { buildSingleSheetXlsx } from './src/utils/dashboardXlsx';
 `;
 
 const outDir = mkdtempSync(path.join(tmpdir(), 'solaris-e2e-'));
@@ -167,6 +170,57 @@ check('iniciada sai da sugestao; nova P1 assume', s3.osId === 'OS-NOVA' && s3.re
 
 const undone = app.applyInverse([started], assigned.event);
 check('undo devolve o dono anterior (status intacto)', undone.changed === true && undone.rows[0].assignee === null && undone.rows[0].status === 'in_analysis');
+
+// [6/6] A3 — importar lote da fila, exportar XLSX e reimportar (ida-e-volta)
+function rowXmlOf(idx, values) {
+  const esc = (v) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const cell = (ref, v) => {
+    if (v === null || v === '') return '';
+    if (/^-?\d+(\.\d+)?$/.test(v)) return `<c r="${ref}"><v>${v}</v></c>`;
+    return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
+  };
+  const cells = values.map((v, c) => cell(String.fromCharCode(65 + c) + idx, v)).join('');
+  return `<row r="${idx}">${cells}</row>`;
+}
+
+const csvLote = [
+  'os_id,title,status,priority,deadline',
+  'OS-L1,Aula importada,FILA,ALTA,2026-08-30',
+  'OS-L2,Aula dois,,2',
+  'OS-NOVA,duplicada da fila viva,,', // duplicata contra a fila viva
+  'OS-L3,Status ruim,quase-done,', // status invalido explicito
+].join('\r\n');
+const gradeCsv = app.parseCsv(csvLote);
+check('parser CSV produz 5 linhas', gradeCsv.length === 5);
+const imp1 = app.parseQueueImport(gradeCsv, { nowMs: NOW, existingIds: new Set(queueRows.map((r) => r.os_id)) });
+check('importacao aceita 2, pula duplicata e status invalido',
+  imp1.rows.length === 2 &&
+  JSON.stringify(imp1.errors.map((e) => e.reason).sort()) === JSON.stringify(['bad-status', 'duplicate']));
+check('sinonimos PT viram enum canonico (FILA->queued, ALTA->P1)',
+  imp1.rows[0].status === 'queued' && imp1.rows[0].priority === 1);
+
+// Undo snapshot: inverso remove exatamente o lote.
+const filaPosImp = [...queueRows, ...imp1.rows];
+const inv = app.applyImportInverse(filaPosImp, { rows: imp1.rows });
+check('undo da importacao restaura a fila anterior',
+  inv.changed === true && inv.rows.length === queueRows.length && inv.rows[0].os_id === 'OS-ATRASADA');
+
+// Exportacao XLSX da fila (writer do repo) -> leitor zero-dep le de volta.
+const sheetXmlQ =
+  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>' +
+  rowXmlOf(1, ['os_id', 'title', 'status', 'assignee', 'claimed_by', 'priority', 'deadline', 'created_at']) +
+  filaPosImp.map((r, i) => rowXmlOf(i + 2, [r.os_id, r.title ?? null, r.status, r.assignee ?? null, r.claimed_by ?? null, String(r.priority), r.deadline ?? null, r.created_at])).join('') +
+  '</sheetData></worksheet>';
+const xlsxBytes = app.buildSingleSheetXlsx('Fila', sheetXmlQ);
+check('xlsx exportado tem assinatura ZIP valida', xlsxBytes[0] === 0x50 && xlsxBytes[1] === 0x4b);
+const gridBack = await app.readXlsxFirstSheetGrid(xlsxBytes);
+check('leitor xlsx devolve header + todas as linhas', gridBack.length === filaPosImp.length + 1 && gridBack[0][0] === 'os_id');
+const imp2 = app.parseQueueImport(gridBack, { nowMs: NOW }); // grade INTEIRA: linha 1 é o cabeçalho
+check('reimportacao do que foi exportado: 4 OSs aceitas sem erro',
+  imp2.rows.length === 4 && imp2.errors.length === 0);
+check('round-trip preserva os_id/prioridade/status',
+  imp2.rows.every((r, i) => r.os_id === filaPosImp[i].os_id && r.priority === filaPosImp[i].priority && r.status === filaPosImp[i].status));
 
 console.log(`\n=== E2E_FLOW ${fail === 0 ? 'OK' : 'FAILED'} — ${pass} asserts ok, ${fail} falhas ===`);
 process.exit(fail === 0 ? 0 : 1);

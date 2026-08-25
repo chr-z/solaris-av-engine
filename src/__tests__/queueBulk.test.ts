@@ -5,7 +5,7 @@
 // integração com undoStorage existente.
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { applyBulk, planBulk, type BulkAction, type BulkSkipReason } from '../features/qol/queueBulk';
-import type { QueueRowLike } from './queue';
+import type { QueueRowLike } from '../features/qol/queue';
 
 const NOW = Date.UTC(2026, 7, 25, 15, 0, 0);
 
