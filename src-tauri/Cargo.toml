@@ -25,6 +25,10 @@ rfd = "0.15"
 tauri = { version = "2", features = [] }
 
 [profile.release]
+# P2 (otimizacao desktop): LTO fat + 1 codegen unit + strip + panic=abort
+# (sem tabelas de unwinding -> binario menor; panics derrubam o processo,
+# aceitavel no app desktop — erros trataveis usam Result).
 strip = true
 lto = true
 codegen-units = 1
+panic = "abort"
