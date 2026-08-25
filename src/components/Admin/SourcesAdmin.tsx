@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '../../i18n/I18nContext';
 import {
   SaturnoResponseMode,
@@ -15,6 +15,8 @@ import {
   isDesktopBridgeAvailable,
   pickDesktopFolder,
   scanAlfredDesktop,
+  saveLastReportDesktop,
+  loadLastReportDesktop,
 } from '../../services/desktopBridge';
 
 interface SourcesAdminProps {
@@ -46,8 +48,28 @@ const SourcesAdmin: React.FC<SourcesAdminProps> = ({ isOpen, onClose }) => {
   const [apiKeyDraft, setApiKeyDraft] = useState('');
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [scan, setScan] = useState<ScanState>({ status: 'idle' });
+  /** Timestamp (UTC) do último scan PERSISTIDO — exibido como "restaurado". */
+  const [restoredAt, setRestoredAt] = useState<string | null>(null);
 
   const desktopBridge = isDesktopBridgeAvailable();
+
+  // Reabriu o painel: restaura o ÚLTIMO scan persistido no SQLite do exe
+  // (efeito único por abertura, igual aos initializers acima). Na web ou sem
+  // cache isso resolve vazio e o painel segue em idle.
+  useEffect(() => {
+    if (!isOpen || !desktopBridge) return;
+    let cancelled = false;
+    loadLastReportDesktop().then((last) => {
+      if (cancelled || !last?.report || last.report.root !== cfg.alfred.root)
+        return;
+      setRestoredAt(last.scannedAt);
+      setScan({ status: 'done', report: last.report });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, desktopBridge]);
 
   const problems = useMemo(() => validateSourcesConfig(cfg), [cfg]);
   const canSave = problems.length === 0;
@@ -98,6 +120,10 @@ const SourcesAdmin: React.FC<SourcesAdminProps> = ({ isOpen, onClose }) => {
       return;
     }
     setScan({ status: 'done', report });
+    setRestoredAt(null);
+    // Cache local: o último scan sobrevive ao fechamento do app (fire-and-
+    // forget — falha de persistência nunca vira erro de UI).
+    void saveLastReportDesktop(report);
   };
 
   const scanSummary = useMemo(() => {
@@ -333,6 +359,16 @@ const SourcesAdmin: React.FC<SourcesAdminProps> = ({ isOpen, onClose }) => {
                   {scan.status === 'scanning' && (
                     <span className="text-sm text-gray-400">
                       {t('admin.sources.scan.running')}
+                    </span>
+                  )}
+                  {scan.status === 'done' && restoredAt && (
+                    <span
+                      className="text-xs text-gray-400"
+                      title={restoredAt}
+                    >
+                      {t('admin.sources.scan.restored', {
+                        time: restoredAt.replace('T', ' ').slice(0, 16),
+                      })}
                     </span>
                   )}
                 </div>

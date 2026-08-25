@@ -10,6 +10,8 @@ import {
   isDesktopBridgeAvailable,
   pickDesktopFolder,
   scanAlfredDesktop,
+  saveLastReportDesktop,
+  loadLastReportDesktop,
 } from '../services/desktopBridge';
 
 type InvokeImpl = (cmd: string, args?: unknown) => Promise<unknown>;
@@ -79,5 +81,64 @@ describe('desktopBridge', () => {
     await expect(scanAlfredDesktop('d:\\a')).resolves.toBe(null);
     await expect(pickDesktopFolder()).resolves.toBe(null);
     expect(isDesktopBridgeAvailable()).toBe(true);
+  });
+
+  it('saveLastReportDesktop empacota req.report e resolve false sem ponte', async () => {
+    // Sem ponte: false, sem estourar.
+    await expect(
+      saveLastReportDesktop({
+        root: 'X',
+        scanned_dirs: 1,
+        skipped_permission_errors: 0,
+        oss: [],
+        orphan_groups: [],
+        window_matches: [],
+      }),
+    ).resolves.toBe(false);
+
+    const report = {
+      root: 'X',
+      scanned_dirs: 7,
+      skipped_permission_errors: 0,
+      oss: [],
+      orphan_groups: [],
+      window_matches: [],
+    };
+    const bridge = installBridge(() => Promise.resolve({}));
+    await expect(saveLastReportDesktop(report)).resolves.toBe(true);
+    expect(bridge.lastCall().cmd).toBe('save_last_report_command');
+    expect(bridge.lastCall().args).toEqual({ req: { report } });
+  });
+
+  it('loadLastReportDesktop devolve {report, scannedAt} e null em falha', async () => {
+    // Sem ponte ⇒ null.
+    await expect(loadLastReportDesktop()).resolves.toBe(null);
+
+    const saved = {
+      root: 'X',
+      scanned_dirs: 3,
+      skipped_permission_errors: 1,
+      oss: [],
+      orphan_groups: [],
+      window_matches: [],
+    };
+    installBridge(() =>
+      Promise.resolve({ report: saved, scannedAt: '2026-08-24 23:10:00' }),
+    );
+    await expect(loadLastReportDesktop()).resolves.toEqual({
+      report: saved,
+      scannedAt: '2026-08-24 23:10:00',
+    });
+
+    // IPC rejeita ⇒ null (nunca estoura).
+    installBridge(() => Promise.reject(new Error('boom')));
+    await expect(loadLastReportDesktop()).resolves.toBe(null);
+
+    // Banco ainda vazio ⇒ relatório null.
+    installBridge(() => Promise.resolve({ report: null, scannedAt: null }));
+    await expect(loadLastReportDesktop()).resolves.toEqual({
+      report: null,
+      scannedAt: null,
+    });
   });
 });

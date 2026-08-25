@@ -124,3 +124,43 @@ export async function scanAlfredDesktop(
     return null;
   }
 }
+
+/**
+ * Persiste o relatório do último scan no SQLite local do exe
+ * (%APPDATA%/dev.chr-z.solaris). Fire-and-forget amigável: resolve `false`
+ * fora da ponte ou em qualquer falha — persistir cache NUNCA derruba a UI.
+ */
+export async function saveLastReportDesktop(
+  report: DesktopBridgeReport,
+): Promise<boolean> {
+  const invoke = getInvoke();
+  if (!invoke) return false;
+  try {
+    await invoke('save_last_report_command', { req: { report } });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export interface LastReportResult {
+  /** `null` ⇒ nenhum scan salvo neste computador ainda. */
+  report: DesktopBridgeReport | null;
+  /** Momento da gravação (UTC, datetime do SQLite). */
+  scannedAt: string | null;
+}
+
+/** Recupera o último scan salvo — usado pra restaurar o estado ao reabrir. */
+export async function loadLastReportDesktop(): Promise<LastReportResult | null> {
+  const invoke = getInvoke();
+  if (!invoke) return null;
+  try {
+    const res = (await invoke('load_last_report_command')) as {
+      report?: DesktopBridgeReport | null;
+      scannedAt?: string | null;
+    };
+    return { report: res?.report ?? null, scannedAt: res?.scannedAt ?? null };
+  } catch {
+    return null;
+  }
+}
