@@ -59,6 +59,20 @@ export {
   type StudioAcousticBaseline,
 } from './baselineStore';
 export {
+  createAnalysisCache,
+  makeMediaFingerprint,
+  type AnalysisCache,
+  type AnalysisCacheOptions,
+  type CacheStorageLike,
+} from './analysisCache';
+export {
+  runAnalysis,
+  runSync,
+  setWorkerFactory,
+  type AnalysisRun,
+  type AnalysisOutcome,
+} from './worker/analysisRunner';
+export {
   buildAcousticQCSection,
   acousticSheetColumns,
   renderAcousticQCSectionHtml,
