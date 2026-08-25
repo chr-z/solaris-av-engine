@@ -166,3 +166,11 @@
   (filosofia inegociável > detalhe estético). Se o dono quiser, vira tick próprio
   com aceite visual.
 - src-tauri/audio-acoustics/pitch intocados (worktree dedicado solaris-redesign).
+
+## redesign (tick 12) — badges de score com tier semantico (R3 lista) — 25/08/2026
+- Residual: spec pede "Badges de score: pill com número tabular + micro-sparkline da tendência"; o badge existia apenas no ScoreRing, nao na lista.
+- Não invente a tendencia temporal (não existe série; mesma decisao do tick 9 — sparkline = perfil categoria do ScoringEngine). Aqui: o número vira pill colorido pelo tier (verde >=4 / amarelo >=3 / vermelho <3), mesmo vocabulário do MVP (verde=ok, amarelo=atencao, vermelho=inconformidade).
+- Implementacao: scoreFormat.ts + scoreBandClass(); AnalysisSheet.tsx lista com .badge-pill.badge-score; CSS .badge-score (tamanho maior); zebra/hover na lista (even:bg-surface + hover:bg-surface/50). Zero mudanca funcional — mesmos dados do demo.
+- Testes: scoreFormat 388/388 (+3 novos: tiers, vírgula decimal, garbage nao inventa cor). tsc 0. build verde. CSS 10.18KB gz (<30KB).
+- Prova browser (verify_t12_badge.cjs, protocolo anti-órfão: preview próprio + hash servido==dist + chrome --disable-gpu + cleanup): badges 5/5, classe badge-ok, cor rgb(52,211,153), .tnum font-family mono + font-variant tabular-nums; workspace abre; ScoreRing prova tier ao vivo via stroke. Shots: redesign_shots/t12_fila_badges.png, t12_fila_badges_marked.png.
+- Restriçoes respeitadas: mesma anatomia de tela (player+timeline+painel), mesmos nomes/atalhos, nenhum src-tauri/audio/pitch alterado. Labels flutuantes: mantidos permanentes (filosofia inegociavel > detalhe estético — pendência do dono registrada).
