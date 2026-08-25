@@ -256,3 +256,24 @@ Nada a avançar sem diretiva nova; este tick rodou verificação de ponta a pont
   — prova anti-bin-stale); SMOKE_OK pid=40520 vivo após 5s mem=23,7MB;
   BOOT_WINDOW_OK ms=170 WS 19,6MB (sem regressão).
 - Push origin/desktop verificado por ls-remote (f1bf877..2fafb29).
+
+---
+
+## turbo-web (tick #3) — perf runtime: lista de W.O. renderiza 1x — 25/08/2026 ~05h20
+
+- Fila do turbo-web (bundle/split/e2e/a11y/lighthouse) já DONE nos ticks #1-#2;
+  este tick fechou o item 3 (runtime) que faltava, na branch turbo/web-opt.
+- Diagnóstico: ListItem usava useEffect+setState pra derivar badge "cached
+  waveform" → render duplo de toda linha visível no mount E a cada mutação de
+  cache; mais 6-8 headers.indexOf() por linha por render.
+- Fix: lógica extraída pro helper puro findCachedWaveformForRow +
+  getHeaderIndexMap (src/utils/waveformRowStatus.ts), computada síncrona no
+  render; índices de coluna memoizados no pai (uma vez por identidade de
+  headers). +7 testes novos.
+- Verificação: vitest 342/342 (+7), tsc clean, e2e fluxo real 21/21; build
+  servido com prova de hash (index-D8slfMBh.js), axe 0/0 violações, console
+  probe 0 erros/warnings/exceções, Lighthouse 100/100/100 (FCP 1.36s, LCP
+  1.51s, TBT 0ms) — sem regressão vs baseline dos ticks anteriores.
+- Bundle inalterado: initial ~87KB gz (index 33.63 + react-vendor 45.44 + css
+  7.60), firebase chunk continua lazy (97KB gz fora do caminho crítico).
+- Commit 5f1b0a5 pushado em origin/turbo/web-opt (verificado ls-remote).
