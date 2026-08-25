@@ -4,6 +4,7 @@
 //   2. análise (mock de marcações) → recalculateScoresWithEngine + applyScoreUpdates
 //   3. fila/classificação/filtros  → computeFilteredRows
 //   4. export relatório QC         → generateQCReport + exportQCReportBlob
+//   5. fila inteligente c/ undo   → suggestNext + queueActions (features F2)
 // Os módulos TS são empacotados com esbuild (mesma versão do lockfile) num bundle
 // ESM temporário — zero dependência nova.
 import { execFileSync } from 'node:child_process';
@@ -24,6 +25,8 @@ export { computeFilteredRows } from './src/utils/rowFiltering';
 export { generateQCReport, exportQCReportBlob } from './src/utils/qcReport';
 export { recalculateScoresWithEngine, applyScoreUpdates } from './src/config/engineBridge';
 export { DEMO_HEADERS, DEMO_ROWS } from './src/utils/demoData';
+export { suggestNext } from './src/features/qol/queue';
+export { makeAssign, makeReturn, makePrioritize, applyInverse } from './src/features/qol/queueActions';
 `;
 
 const outDir = mkdtempSync(path.join(tmpdir(), 'solaris-e2e-'));
@@ -136,6 +139,34 @@ const html = await blob.text();
 check('blob HTML não-vazio p/ download',
   blob instanceof Blob && blob.size > 0 &&
   html.includes(report.title) && html.includes('<h2>Metrics</h2>'));
+
+console.log('\n[5/5] Fila inteligente — sugestão, ação e undo (features F2)');
+const HOUR = 3600_000;
+const NOW = Date.UTC(2026, 7, 25, 15, 0, 0);
+const queueRows = [
+  { os_id: 'OS-ATRASADA', status: 'queued', priority: 2,
+    deadline: new Date(NOW - 5 * HOUR).toISOString(),
+    created_at: new Date(NOW - 72 * HOUR).toISOString() },
+  { os_id: 'OS-NOVA', status: 'queued', priority: 1,
+    created_at: new Date(NOW - 2 * HOUR).toISOString() },
+];
+const s1 = app.suggestNext(queueRows, { now: NOW });
+check('atrasada vence a fila', s1.osId === 'OS-ATRASADA' && s1.reason === 'overdue' && s1.overdueHours === 5);
+
+const assigned = app.makeAssign(s1.row, 'ana-uid', { now: () => NOW });
+check('atribuir produz linha + evento com snapshot', assigned.ok === true && assigned.row.assignee === 'ana-uid' && assigned.event.kind === 'assign-os');
+
+// Atribuida continua queued+overdue: segue no topo (card de admin mostra a
+// mais urgente, agora com botao Devolver) ate alguem INICIAR a analise.
+const s2 = app.suggestNext([queueRows[1], assigned.row], { now: NOW });
+check('atribuida segue no topo enquanto overdue nao iniciada', s2.osId === 'OS-ATRASADA' && s2.row.assignee === 'ana-uid');
+
+const started = Object.assign({}, assigned.row, { status: 'in_analysis' });
+const s3 = app.suggestNext([queueRows[1], started], { now: NOW });
+check('iniciada sai da sugestao; nova P1 assume', s3.osId === 'OS-NOVA' && s3.reason === 'priority-flagged');
+
+const undone = app.applyInverse([started], assigned.event);
+check('undo devolve o dono anterior (status intacto)', undone.changed === true && undone.rows[0].assignee === null && undone.rows[0].status === 'in_analysis');
 
 console.log(`\n=== E2E_FLOW ${fail === 0 ? 'OK' : 'FAILED'} — ${pass} asserts ok, ${fail} falhas ===`);
 process.exit(fail === 0 ? 0 : 1);

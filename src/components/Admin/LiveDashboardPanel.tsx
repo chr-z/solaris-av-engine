@@ -23,7 +23,18 @@ import {
   type LiveKpis,
 } from '../../utils/liveDashboard';
 import { SAO_PAULO_CLOCK, localDayKey } from '../../features/gamification/periods';
-import { canReadIndividualMetrics, type UserContext } from '../../features/db/roles';
+import { canManageQueue, canReadIndividualMetrics, type UserContext } from '../../features/db/roles';
+import { suggestNext, type QueueRowLike } from '../../features/qol/queue';
+import {
+  makeAssign,
+  makeReturn,
+  makePrioritize,
+  applyInverse,
+  QUEUE_PRIORITIES,
+} from '../../features/qol/queueActions';
+import { getUndoLog } from '../../features/qol/undoStore';
+import { registerUndoApplier, applyUndo } from '../../features/qol/undoApply';
+import type { UndoEvent } from '../../features/qol/undo';
 import type { Dataset } from '../../utils/dashboard';
 import { buildDashboardDataset } from '../../utils/dashboard';
 import {
@@ -31,6 +42,7 @@ import {
   type DashboardEntryInput,
 } from '../../utils/dashboardData';
 import { useI18n } from '../../i18n/I18nContext';
+import type { TranslationKey } from '../../i18n/translations';
 
 const REFRESH_MS = 5_000;
 
@@ -54,6 +66,10 @@ export interface LiveDashboardPanelProps {
     assignee?: string | null;
     startedAtMs?: number | null;
   }>;
+  /** Fila completa p/ o card de sugestão + ações com undo (spec A1/A3). */
+  queueRows?: QueueRowLike[];
+  /** Callback de mudança na fila (atribuir/devolver/priorizar/desfazer). */
+  onQueueChange?: (rows: QueueRowLike[]) => void;
   /** Fonte de atividades por analista (futura: xp_events/os_queue reais). */
   activities?: AnalystActivity[];
   /** Injetável p/ testes e p/ futuras fontes de eventos. */
@@ -67,6 +83,32 @@ const PRESENCE_DOT: Record<string, string> = {
   idle: '🟡',
   offline: '⚪',
 };
+
+type TranslateFn = (
+  key: TranslationKey,
+  params?: Record<string, string | number>,
+) => string;
+
+/** "Por quê esta?" — rótulo legível do motivo da sugestão (spec A1). */
+function queueReasonLabel(
+  suggestion: ReturnType<typeof suggestNext>,
+  t: TranslateFn,
+): string {
+  switch (suggestion.reason) {
+    case 'overdue':
+      return t('dash.live.reasonOverdue', { h: String(suggestion.overdueHours ?? 0) });
+    case 'priority-flagged':
+      return t('dash.live.reasonPriority');
+    case 'newest':
+      return t('dash.live.reasonNewest');
+    case 'oldest-queued':
+      return t('dash.live.reasonOldest');
+    case 'already-in-progress':
+      return t('dash.live.reasonInProgress');
+    case 'empty':
+      return t('dash.live.queueEmpty');
+  }
+}
 
 function fmtClock(ts: number): string {
   const d = new Date(ts);
@@ -110,6 +152,8 @@ export default function LiveDashboardPanel({
   viewer,
   role = 'admin',
   queue,
+  queueRows = [],
+  onQueueChange,
   activities,
   fetchEvents,
   nowMs,
@@ -154,6 +198,26 @@ export default function LiveDashboardPanel({
     [viewer?.id, role],
   );
 
+  // ── F2: fila inteligente com ações + undo global (spec A1/A3) ─────────
+  // queueRows default [] cria array NOVO por render — sincronizar por
+  // CONTEÚDO. Ajuste na FASE DE RENDER (padrão oficial p/ estado derivado
+  // de props): sem effect ⇒ sem cascata e sem setState-in-effect.
+  const [queueState, setQueueState] = useState<QueueRowLike[]>(queueRows);
+  const [queueKey, setQueueKey] = useState(() => JSON.stringify(queueRows));
+  const nextQueueKey = JSON.stringify(queueRows);
+  if (nextQueueKey !== queueKey) {
+    setQueueKey(nextQueueKey);
+    setQueueState(JSON.parse(nextQueueKey) as QueueRowLike[]);
+  }
+
+  const commitQueue = useCallback(
+    (rows: QueueRowLike[]) => {
+      setQueueState(rows);
+      onQueueChange?.(rows);
+    },
+    [onQueueChange],
+  );
+
   const dataset: Dataset = useMemo(
     () => buildDashboardDataset(ownEntries),
     [ownEntries],
@@ -169,6 +233,80 @@ export default function LiveDashboardPanel({
     const id = window.setInterval(() => setTickNow(Date.now()), REFRESH_MS);
     return () => window.clearInterval(id);
   }, [nowMs]);
+
+  // Undo das ações de fila: registra o applier dos 3 kinds enquanto o
+  // painel vive; Ctrl+Z global (App) resolve via applyUndo → este applier.
+  // Re-registra a cada mutação da fila (closure sempre fresca).
+  const queueApplier = useCallback(
+    (event: UndoEvent): boolean => {
+      if (
+        event.kind !== 'assign-os' &&
+        event.kind !== 'return-os' &&
+        event.kind !== 'prioritize-os'
+      ) {
+        return false;
+      }
+      if (!('prev' in event.payload)) return false;
+      const { rows, changed } = applyInverse(
+        queueState,
+        event as unknown as Parameters<typeof applyInverse>[1],
+      );
+      if (changed) commitQueue(rows);
+      return changed;
+    },
+    [queueState, commitQueue],
+  );
+  useEffect(() => {
+    const unregisters = (['assign-os', 'return-os', 'prioritize-os'] as const).map((kind) =>
+      registerUndoApplier(kind, queueApplier),
+    );
+    return () => unregisters.forEach((un) => un());
+  }, [queueApplier]);
+
+  /** Botão "Desfazer": topo da pilha se for ação DE fila deste painel. */
+  const lastQueueEventId = useMemo(() => {
+    const log = getUndoLog();
+    for (let i = log.undoable.length - 1; i >= 0; i--) {
+      const e = log.undoable[i];
+      if (
+        (e.kind === 'assign-os' || e.kind === 'return-os' || e.kind === 'prioritize-os') &&
+        typeof e.payload.osId === 'string' &&
+        queueState.some((r) => r.os_id === e.payload.osId)
+      ) {
+        return e.id;
+      }
+    }
+    return null;
+    // Recalcula a cada mutação da fila (log é externo ao estado do React).
+  }, [queueState]);
+
+  const suggestion = useMemo(() => suggestNext(queueState, { now: tickNow }), [queueState, tickNow]);
+  const canManage = useMemo(() => canManageQueue(viewerCtx), [viewerCtx]);
+
+  /** Executa uma ação do núcleo puro: aplica a linha nova e grava o undo. */
+  const runAction = useCallback(
+    (
+      make: (
+        row: QueueRowLike,
+      ) =>
+        | { ok: true; row: QueueRowLike; event: UndoEvent }
+        | { ok: false; reason: string },
+      osId: string,
+    ): void => {
+      const target = queueState.find((r) => r.os_id === osId);
+      if (!target || !canManage) return;
+      const res = make(target);
+      if (!res.ok) return;
+      commitQueue(queueState.map((r) => (r.os_id === osId ? res.row : r)));
+      getUndoLog().record(res.event.kind, res.event.label, res.event.payload);
+    },
+    [queueState, canManage, commitQueue],
+  );
+
+  /** Botão Desfazer: reverte o evento de fila no topo (se houver). */
+  const handleUndoClick = useCallback(() => {
+    applyUndo(getUndoLog());
+  }, []);
 
   const todayKey = useMemo(
     () => localDayKey(tickNow, SAO_PAULO_CLOCK),
@@ -423,6 +561,104 @@ export default function LiveDashboardPanel({
           testId="live-kpi-avg"
         />
       </div>
+
+      {/* F2 — fila inteligente: próxima OS sugerida + ações com undo */}
+      {queueState.length > 0 && (
+        <div
+          data-testid="live-queue-suggestion"
+          className="rounded-lg border border-gray-600/60 bg-gray-800/40 p-3"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-medium text-gray-200">
+              {t('dash.live.queueNext')}
+            </h3>
+            <span className="rounded-full bg-gray-600/30 px-2 py-0.5 text-xs text-gray-400">
+              {t('dash.live.queueDepth', { n: String(suggestion.queueDepth) })}
+            </span>
+            {suggestion.row && canManage && (
+              <button
+                type="button"
+                data-testid="queue-undo-btn"
+                disabled={lastQueueEventId == null}
+                onClick={handleUndoClick}
+                title={lastQueueEventId ? t('dash.live.undoHint') : undefined}
+                className={`ml-auto rounded-md px-2.5 py-1.5 text-xs transition-colors ${
+                  lastQueueEventId != null
+                    ? 'text-solar-accent hover:bg-solar-accent/10'
+                    : 'cursor-not-allowed text-gray-600'
+                }`}
+              >
+                ↩ {t('dash.live.undo')}
+              </button>
+            )}
+          </div>
+          {suggestion.row ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span
+                data-testid="queue-suggestion-os"
+                className="font-mono text-sm font-semibold text-gray-100"
+              >
+                {suggestion.row.os_id}
+              </span>
+              <span className="text-xs text-gray-500">·</span>
+              <span data-testid="queue-suggestion-reason" className="text-xs text-gray-400">
+                {queueReasonLabel(suggestion, t)}
+              </span>
+              {suggestion.row.title && (
+                <span className="max-w-[16rem] truncate text-xs text-gray-400">
+                  {suggestion.row.title}
+                </span>
+              )}
+              {canManage && (
+                <>
+                  <span className="mx-1 h-4 w-px bg-gray-600/60" aria-hidden="true" />
+                  <button
+                    type="button"
+                    data-testid="queue-assign-btn"
+                    onClick={() =>
+                      viewer &&
+                      runAction((row) => makeAssign(row, viewer.id), suggestion.row!.os_id)
+                    }
+                    className="rounded-md px-2.5 py-1.5 text-xs text-green-300 transition-colors hover:bg-green-500/10"
+                  >
+                    {t('dash.live.assignMe', { who: viewer?.name ?? viewer?.id ?? '' })}
+                  </button>
+                  {(suggestion.row.claimed_by ?? suggestion.row.assignee) && (
+                    <button
+                      type="button"
+                      data-testid="queue-return-btn"
+                      onClick={() => runAction(makeReturn, suggestion.row!.os_id)}
+                      className="rounded-md px-2.5 py-1.5 text-xs text-yellow-300 transition-colors hover:bg-yellow-500/10"
+                    >
+                      {t('dash.live.returnToQueue')}
+                    </button>
+                  )}
+                  <select
+                    aria-label={t('dash.live.priorityLabel')}
+                    data-testid="queue-priority-select"
+                    value={suggestion.row.priority}
+                    onChange={(e) =>
+                      runAction(
+                        (row) => makePrioritize(row, Number(e.target.value)),
+                        suggestion.row!.os_id,
+                      )
+                    }
+                    className="rounded-md border border-gray-600/60 bg-transparent px-1.5 py-1 text-xs text-gray-300"
+                  >
+                    {QUEUE_PRIORITIES.map((p) => (
+                      <option key={p} value={p}>
+                        P{p}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-gray-500">{t('dash.live.queueEmpty')}</p>
+          )}
+        </div>
+      )}
 
       {/* Gráficos lazy: montam só quando a aba Ao vivo está ativa (este painel) */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
