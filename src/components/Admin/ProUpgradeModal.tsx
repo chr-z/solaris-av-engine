@@ -54,15 +54,15 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
       aria-label={t('solaris.pro.modalTitle')}
     >
       <div
-        className="bg-solar-dark-content text-white w-full max-w-md rounded-lg shadow-xl"
+        className="bg-surface text-white w-full max-w-md rounded-lg shadow-pop border border-hairline"
         onClick={e => e.stopPropagation()}
       >
-        <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-solar-dark-border">
+        <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-hairline">
           <h2 className="font-bold">{t('solaris.pro.modalTitle')}</h2>
           <button
             ref={closeRef}
             onClick={onClose}
-            className="p-2 rounded-full text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
+            className="p-2 rounded-full icon-btn focus-visible:ring-2 focus-visible:ring-solar-accent"
             aria-label={t('solaris.pro.close')}
           >
             <XIcon className="w-5 h-5" />
@@ -105,7 +105,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
                 placeholder={t('solaris.pro.keyPlaceholder')}
                 spellCheck={false}
                 autoComplete="off"
-                className="w-full px-3 py-2 rounded-md bg-solar-dark-bg border border-solar-dark-border text-sm font-mono focus:outline-none focus:ring-2 focus:ring-solar-accent"
+                className="w-full px-3 py-2 rounded-md bg-surface-raised border border-hairline text-sm font-mono focus:outline-none focus:ring-2 focus:ring-solar-accent"
                 aria-describedby="solaris-license-error"
               />
               {!!lastError && (

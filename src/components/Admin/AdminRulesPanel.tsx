@@ -161,7 +161,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
           <button onClick={exportJson} className="px-3 py-1.5 rounded-md border border-solar-accent/60 text-solar-accent hover:bg-solar-accent/10 text-sm">
             Exportar JSON
           </button>
-          <button onClick={resetSeed} className="px-3 py-1.5 rounded-md border border-gray-500 text-gray-300 hover:bg-gray-500/10 text-sm">
+          <button onClick={resetSeed} className="px-3 py-1.5 rounded-md border border-hairline text-gray-300 wash-hover text-sm">
             Restaurar seed
           </button>
         </div>
@@ -180,7 +180,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
 
       {/* Draft editor */}
       {editingId !== null && (
-        <section aria-label="Editor de regra" className="mb-6 p-4 rounded-lg bg-solar-dark-content/70 border border-hairline space-y-3">
+        <section aria-label="Editor de regra" className="mb-6 p-4 rounded-lg bg-surface/70 border border-hairline space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm">
               Nome (coluna na planilha)
@@ -260,7 +260,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
           <div className="flex gap-2 pt-2">
             <button onClick={saveDraft} className="px-4 py-1.5 rounded-md bg-solar-accent text-bg hover:bg-solar-accent-hover text-sm">              Salvar
             </button>
-            <button onClick={() => setEditingId(null)} className="px-4 py-1.5 rounded-md border border-gray-500 text-gray-300 text-sm">
+            <button onClick={() => setEditingId(null)} className="px-4 py-1.5 rounded-md border border-hairline text-gray-300 text-sm wash-hover">
               Cancelar
             </button>
             {editingId !== '__new__' && (
@@ -299,7 +299,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
                   <button onClick={() => startEdit(rule)} className="px-2 py-1 rounded border border-solar-accent/60 text-solar-accent hover:bg-solar-accent/10 text-xs">
                     Editar
                   </button>
-                  <button onClick={() => toggleActive(rule.id)} className="px-2 py-1 rounded border border-gray-500 text-gray-300 hover:bg-gray-500/10 text-xs">
+                  <button onClick={() => toggleActive(rule.id)} className="px-2 py-1 rounded border border-hairline text-gray-300 wash-hover text-xs">
                     {rule.active ? 'Desativar' : 'Reativar'}
                   </button>
                 </td>
@@ -310,7 +310,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
       </section>
 
       {/* Import */}
-      <section aria-label="Importar JSON" className="mt-8 p-4 rounded-lg bg-solar-dark-content/70 border border-hairline">
+      <section aria-label="Importar JSON" className="mt-8 p-4 rounded-lg bg-surface/70 border border-hairline">
         <h2 className="font-semibold mb-2">Importar JSON de regras</h2>
         <textarea
           value={importText}

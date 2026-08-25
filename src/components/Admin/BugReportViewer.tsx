@@ -48,7 +48,7 @@ const LogLine: React.FC<{ log: LogEntry }> = ({ log }) => {
             break;
         default:
              levelBadge = log.level.toUpperCase();
-             badgeColor = 'bg-gray-500/20 text-gray-300';
+             badgeColor = 'bg-white/10 text-gray-200';
     }
     return (
         <div className={`font-mono text-xs flex gap-3 ${color} border-b border-white/5 pb-1`}>
@@ -120,12 +120,12 @@ const BugReportViewer: React.FC<BugReportViewerProps> = ({ isOpen, onClose }) =>
             onClick={onClose}
         >
             <div 
-                className="bg-solar-dark-content text-white w-full max-w-4xl h-[80vh] rounded-lg shadow-xl flex flex-col"
+                className="bg-surface text-white w-full max-w-4xl h-[80vh] rounded-lg shadow-pop border border-hairline flex flex-col"
                 onClick={e => e.stopPropagation()}
             >
-                <header className="flex-shrink-0 flex justify-between items-center p-4 border-b border-solar-dark-border">
+                <header className="flex-shrink-0 flex justify-between items-center p-4 border-b border-hairline">
                     <h2 className="font-bold text-lg">System Reports</h2>
-                    <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors" aria-label="Close">
+                    <button onClick={onClose} className="p-2 rounded-full icon-btn" aria-label="Close">
                         <XIcon className="w-5 h-5" />
                     </button>
                 </header>
@@ -136,7 +136,7 @@ const BugReportViewer: React.FC<BugReportViewerProps> = ({ isOpen, onClose }) =>
                     
                     <ul className="p-2 space-y-2">
                         {reports.map(report => (
-                            <li key={report.id} className="bg-solar-dark-bg/50 rounded-lg transition-all duration-150">
+                            <li key={report.id} className="bg-surface-raised/50 rounded-lg transition-all duration-150">
                                 <button onClick={() => setSelectedReportId(selectedReportId === report.id ? null : report.id)} className="w-full text-left p-3 flex justify-between items-center">
                                     <div className="flex-1 min-w-0">
                                         <p className="truncate font-semibold">{report.description}</p>
@@ -151,15 +151,15 @@ const BugReportViewer: React.FC<BugReportViewerProps> = ({ isOpen, onClose }) =>
                                 </button>
 
                                 <div className={`transition-height duration-150 ease-in-out overflow-hidden ${selectedReportId === report.id ? 'h-auto' : 'h-0'}`}>
-                                    <div className="border-t border-solar-dark-border p-4 space-y-4">
+                                    <div className="border-t border-hairline p-4 space-y-4">
                                         <div>
                                             <h4 className="font-bold text-sm mb-2 text-gray-300">User Description:</h4>
-                                            <p className="text-sm whitespace-pre-wrap bg-solar-dark-bg p-3 rounded-md">{report.description}</p>
+                                            <p className="text-sm whitespace-pre-wrap bg-surface-raised p-3 rounded-md">{report.description}</p>
                                         </div>
                                         
                                         <div>
                                             <h4 className="font-bold text-sm mb-2 text-gray-300">Session Info:</h4>
-                                            <div className="text-xs text-gray-400 bg-solar-dark-bg p-3 rounded-md font-mono space-y-1">
+                                            <div className="text-xs text-gray-400 bg-surface-raised p-3 rounded-md font-mono space-y-1">
                                                 <p><span className="font-semibold text-ink-secondary">URL:</span> {report.url}</p>
                                                 <p><span className="font-semibold text-ink-secondary">User Agent:</span> {report.userAgent}</p>
                                             </div>
@@ -167,7 +167,7 @@ const BugReportViewer: React.FC<BugReportViewerProps> = ({ isOpen, onClose }) =>
 
                                         <div>
                                             <h4 className="font-bold text-sm mb-2 text-gray-300">Console Logs:</h4>
-                                            <div className="bg-solar-dark-bg p-3 rounded-md max-h-80 overflow-y-auto space-y-2">
+                                            <div className="bg-surface-raised p-3 rounded-md max-h-80 overflow-y-auto space-y-2">
                                                 {report.logs?.length > 0 ? report.logs.map((log, i) => <LogLine key={i} log={log} />) : <p className="text-xs text-ink-secondary">No logs captured.</p>}
                                             </div>
                                         </div>

@@ -48,13 +48,13 @@ const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose, userPr
 
   return (
     <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-solar-dark-content border border-solar-dark-border rounded-lg shadow-2xl w-full max-w-md flex flex-col overflow-hidden">
-        <header className="bg-solar-dark-bg p-4 border-b border-solar-dark-border flex justify-between items-center">
+      <div className="bg-surface border border-hairline rounded-lg shadow-pop w-full max-w-md flex flex-col overflow-hidden">
+        <header className="bg-surface-raised p-4 border-b border-hairline flex justify-between items-center">
           <div className="flex items-center gap-2 text-red-400">
             <BugIcon className="w-5 h-5" />
             <h2 className="font-bold text-gray-100">Report an Issue</h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-ink-secondary hover:text-ink transition-colors">
             <XIcon className="w-5 h-5" />
           </button>
         </header>
@@ -74,7 +74,7 @@ const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose, userPr
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="I clicked on X and Y happened..."
-              className="w-full h-32 bg-solar-dark-bg border border-solar-dark-border rounded-md p-3 text-sm text-gray-200 focus:ring-2 focus:ring-solar-accent focus:outline-none resize-none"
+              className="w-full h-32 bg-surface-raised border border-hairline rounded-md p-3 text-sm text-gray-200 focus:ring-2 focus:ring-solar-accent focus:outline-none resize-none"
               required
             />
           </div>
@@ -90,7 +90,7 @@ const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose, userPr
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+              className="px-4 py-2 rounded-md text-sm font-medium text-gray-300 wash-hover"
               disabled={isSending}
             >
               Cancel
@@ -98,9 +98,9 @@ const BugReportModal: React.FC<BugReportModalProps> = ({ isOpen, onClose, userPr
             <button
               type="submit"
               disabled={isSending || !description.trim() || sendStatus === 'success'}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold text-white transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold text-bg transition-all ${
                 sendStatus === 'success' 
-                  ? 'bg-green-600 hover:bg-green-700' 
+                  ? 'bg-ok hover:bg-ok/85' 
                   : 'bg-solar-accent hover:bg-solar-accent-hover'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
