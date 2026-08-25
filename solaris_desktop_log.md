@@ -278,3 +278,27 @@ Lane turbo-web absorvida pelo main @ 30b4b7b (merge ticks #1-#7). Worktree solar
   firebase ^10->^12, firebase-admin ^12->^14, googleapis ^140->^176,
   vite ^4->^8 (high dev).
 - src-tauri intocado. Sem Telegram.
+
+### 2026-08-25 ~19h — turbo-web tick #11: guardrail noturno — zero deltas, gates re-provados
+
+- Estado encontrado: fila 1–6 segue DONE/mergeada; origin/main = main local
+  @ 86b6b85 (tick #10); worktree limpo. Branches com ahead>0 sao de OUTRAS
+  lanes (desktop 37, redesign 25, audio 18, features 17) — nenhum trabalho da
+  fila web ficou orfao sem PR.
+- Gates re-provados nesta arvore exata:
+  - tsc --noEmit limpo; vitest 342/342 (31 arquivos);
+  - build deterministica: initial gz 86,71 KB byte-identico ao baseline
+    (index 33,67 + react-vendor 45,44 + css 7,60); lazy idem (firebase 97,35,
+    AdminGate 18,93, AnalysisWorkspace 19,71, sheetSync 11,18);
+  - E2E fluxo real 21/21 asserts;
+  - npm audit prod: 10 moderate major-gated, 0 high/0 critical (estavel vs #10);
+  - axe-core na build servida (preview porta alta aleatoria, hash do entry
+    conferido contra dist local): 0 violacoes login / 0 app principal;
+  - console probe CDP: 0 erros/0 warnings/0 excecoes;
+  - Lighthouse x2 rodadas (--headless=new --disable-gpu): 100/100/100/100 nas
+    duas — perf 99 do tick #10 confirmado como ruido de CPU; FCP 1,4s /
+    LCP 1,4s / TBT 0ms / CLS 0.
+- Nenhuma mudanca de codigo => nenhum commit alem deste registro. Pendencias
+  major-gated seguem as listadas no tick #10 (firebase 12, firebase-admin 14,
+  googleapis 176, vite 8).
+- src-tauri intocado. Sem Telegram.
