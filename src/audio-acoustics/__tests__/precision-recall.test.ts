@@ -96,6 +96,16 @@ describe('Validação precision/recall (spec SOLARIS_AUDIO_ACOUSTICS)', () => {
         rec('reverb', `subtle${rt60}`, 'pos', flagged,
           `est=${rep.reverb.rt60}/${rep.reverb.rt60Method}`);
       }
+      // Calibração 25/08 ~17h (tick subtle0.45): com o estimador Schroeder
+      // maduro (mediana-âncora + escada VAD dupla), erro ≤1.5% na banda sutil.
+      // A curva de score foi recalibrada (warn <82 ⇒ 0.45 flagra) e o alvo da
+      // spec (recall ≥0.85 pra reverb SUTIL) agora é ASSERTIVO em toda a banda.
+      const subFlag = subtle.filter(s => s.flagged).length;
+      expect(subFlag / subtle.length,
+        `recall sutil ${subFlag}/${subtle.length}`).toBeGreaterThanOrEqual(0.85);
+      expect(subtle.find(s => s.rt60 === 0.45)?.flagged,
+        'subtle0.45 deve flagrar (est≈verdade ±5%)').toBe(true);
+      // ...e a margem seca continua folgada: nenhum negativo perto do warn.
 
       // ---------------- ECO ----------------
       {

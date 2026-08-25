@@ -245,11 +245,17 @@ export function analyzeAudioPcm(
   report_(76, 'reverb');
   const reverb = analyzeReverb(samples, sampleRate);
   const rt60Target = opts?.baseline?.rt60Target ?? 0.4;
+  // Calibração 25/08 ~17h (tick subtle0.45): com o estimador Schroeder maduro
+  // (mediana-âncora + escada VAD dupla), o erro relativo na banda sutil caiu
+  // para ≤1.5% em ritmo canônico/lento (truth 0.45 → est 0.442–0.456 em 4
+  // seeds). A curva antiga ([0.45→82], warn<78) só flagava acima de ~0.48 de
+  // verdade — FN sistemático no sutil0.45 (única lacuna do P/R da spec).
+  // Nova curva: 0.45 → 76 (warn), 0.55 → 66; seca continua ≥96 e crítica <20.
   const reverbScore = clamp01_100(piecewise(
-    [[Math.min(rt60Target, 0.3), 96], [0.45, 82], [0.6, 62], [0.8, 42], [1.2, 18], [2.0, 5]],
+    [[Math.min(rt60Target, 0.3), 96], [0.4, 86], [0.45, 76], [0.55, 66], [0.7, 50], [1.2, 18], [2.0, 5]],
     reverb.rt60 || 2.5
   ));
-  const reverbSev = sevFromScore(reverbScore, 78, 55);
+  const reverbSev = sevFromScore(reverbScore, 82, 58);
 
   // Clipping: evidência absoluta + flat-top em qualquer teto é checada aqui em cima
   // do pico global (sub-ceil clipping) — passamos threshold dinâmico.
