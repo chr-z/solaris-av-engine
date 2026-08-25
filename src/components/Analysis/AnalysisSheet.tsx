@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { SearchIcon, LinkIcon, ChevronDownIcon, FilterIcon, RefreshIcon, XIcon, WaveformIcon } from '../Core/icons';
 import LoadingIndicator from '../Core/LoadingIndicator';
 import Popover from '../Core/Popover';
@@ -8,7 +8,7 @@ type DbSnapshot = SnapshotLike;
 import { UserProfile } from '../../types';
 import UserAvatar from '../Auth/UserAvatar';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
-import { getVideoIdFromUrl } from '../../utils/videoUtils';
+import { findCachedWaveformForRow, getHeaderIndexMap, ListHeaderKey } from '../../utils/waveformRowStatus';
 
 declare const gapi: any;
 
@@ -88,41 +88,32 @@ type RowWithIndex = RowWithSheetIndex;
 // --- ListItem Component (Memoized) ---
 interface ListItemProps extends RowWithIndex {
     headers: string[];
+    headerIdx: Record<ListHeaderKey, number>;
     isSelected: boolean;
     onClick: (index: number, row: RowData) => void;
     lockInfo?: LockInfo | null;
     isLockedByCurrentUser: boolean;
 }
 
-const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, isSelected, onClick, lockInfo, isLockedByCurrentUser }) => {
+const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, headerIdx, isSelected, onClick, lockInfo, isLockedByCurrentUser }) => {
     const { cachedVideoIds } = useWaveformCache();
-    const [hasCachedWaveform, setHasCachedWaveform] = useState(false);
 
-    // Using new English Headers
-    const osCell = row[headers.indexOf('W.O.')];
-    const professorCell = row[headers.indexOf('INSTRUCTOR')];
-    const dataCell = row[headers.indexOf('DATE')];
-    const estudioCell = row[headers.indexOf('STUDIO')];
-    const finalCell = row[headers.indexOf('FINAL SCORE')];
+    // turbo-web perf: all derived values computed synchronously during render.
+    // The old version seeded this badge via useEffect+setState, which rendered
+    // every visible row twice on mount and on every cache mutation; the pure
+    // helper below (unit-tested in waveformRowStatus.test.ts) makes it a
+    // single-render derivation. headerIdx also replaces 6x headers.indexOf()
+    // per render with one O(1)-per-column map built once by the parent.
+    const hasCachedWaveform = findCachedWaveformForRow(row, headerIdx, cachedVideoIds);
+
+    const osCell = row[headerIdx.WO];
+    const professorCell = row[headerIdx.INSTRUCTOR];
+    const dataCell = row[headerIdx.DATE];
+    const estudioCell = row[headerIdx.STUDIO];
+    const finalCell = row[headerIdx.FINAL_SCORE];
     
     const infoParts = [estudioCell?.value, dataCell?.value].filter(Boolean);
     const isLockedByOther = lockInfo && !isLockedByCurrentUser;
-
-    useEffect(() => {
-        const osLink = row[headers.indexOf('W.O.')]?.link;
-        const operatorLink = row[headers.indexOf('OPERATOR')]?.link;
-        const potentialLinks = [osLink, operatorLink].filter(Boolean);
-
-        let found = false;
-        for (const link of potentialLinks) {
-            const videoId = getVideoIdFromUrl(link!);
-            if (videoId && cachedVideoIds.has(videoId)) {
-                found = true;
-                break;
-            }
-        }
-        setHasCachedWaveform(found);
-    }, [cachedVideoIds, row, headers]);
 
     const handleForceUnlock = (e: React.MouseEvent) => {
         e.stopPropagation(); 
@@ -219,6 +210,10 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
     const [isCompletedOpen, setIsCompletedOpen] = useState(false);
     const [activeLocks, setActiveLocks] = useState<{[key: number]: LockInfo}>({});
 
+    // turbo-web perf: column indices for the list derived once per headers
+    // identity instead of 8x headers.indexOf() inside every ListItem render.
+    const headerIdx = useMemo(() => getHeaderIndexMap(headers), [headers]);
+
     useEffect(() => {
         // turbo-web: subscribe only after the lazy SDK resolves; skip if unmounted first.
         let listener: ((snapshot: DbSnapshot) => void) | null = null;
@@ -297,8 +292,9 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
                 return (
                     <ListItem 
                         key={item.rowIndex} 
-                        {...item} 
+                        {...item}
                         headers={headers} 
+                        headerIdx={headerIdx} 
                         isSelected={selectedOsIndex === item.rowIndex} 
                         onClick={onRowSelected} 
                         lockInfo={lockInfo}
