@@ -20,8 +20,6 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 walkdir = "2"
 # Seletor nativo de pastas (Windows: IFileDialog COM — zero dependências de UI extras)
 rfd = "0.15"
-# Diretórios de dados do SO (%APPDATA% no Windows) pro SQLite local
-dirs = "5"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri = { version = "2", features = [] }

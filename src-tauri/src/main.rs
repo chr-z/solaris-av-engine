@@ -84,10 +84,12 @@ async fn pick_folder_command(
 /// Caminho do SQLite local (dados nunca saem da rede do cliente): fica na
 /// pasta de dados do app — `%APPDATA%\<identifier>\solaris.sqlite3` no
 /// Windows. Fallback: temp dir (não deve acontecer no desktop real).
+/// Lê %APPDATA% direto do ambiente: evita o crate `dirs`, que puxa
+/// windows-sys/windows-targets e inchava o exe em ~2MB.
 fn db_path() -> Result<std::path::PathBuf, String> {
-    let base = match dirs::data_dir() {
-        Some(d) => d,
-        None => std::env::temp_dir(),
+    let base = match std::env::var_os("APPDATA") {
+        Some(v) if !v.is_empty() => std::path::PathBuf::from(v),
+        _ => std::env::temp_dir(),
     };
     Ok(base.join("dev.chr-z.solaris").join("solaris.sqlite3"))
 }

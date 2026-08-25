@@ -344,4 +344,34 @@ mod tests {
             .unwrap();
         assert_eq!(n, 1);
     }
+
+    /// Prova o fluxo real do desktop: grava num arquivo em disco, FECHA a
+    /// conexão, reabre e lê de volta — é isso que faz o último scan
+    /// sobreviver ao reinício do app.
+    #[test]
+    fn relatorio_sobrevive_reabertura_do_banco_em_arquivo() {
+        let tmp = std::env::temp_dir().join(format!(
+            "solaris_persist_test_{}.sqlite3",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&tmp);
+        {
+            let conn = open_db(&tmp).unwrap();
+            save_alfred_report(
+                &conn,
+                &AlfredReportRow {
+                    root: "\\\\ALFRED\\Producao",
+                    scanned_dirs: 42,
+                    skipped_permission_errors: 1,
+                    report_json: r#"{"oss":["x"]}"#,
+                },
+            )
+            .unwrap();
+        } // conexão fechada aqui
+        let reaberto = open_db(&tmp).unwrap();
+        let row = load_last_alfred_report(&reaberto).unwrap().unwrap();
+        assert_eq!(row.scanned_dirs, 42);
+        assert_eq!(row.report_json, r#"{"oss":["x"]}"#);
+        let _ = std::fs::remove_file(&tmp);
+    }
 }
