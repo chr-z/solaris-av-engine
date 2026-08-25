@@ -140,13 +140,18 @@ export function applyBulk(
   };
   const plan = planBulk(rows, selectedIds, action);
   const eligible = new Set(plan.applicableIds);
+  // Ordem dos eventos segue a SELEÇÃO (intenção do usuário), não a ordem da
+  // lista — undo em lote reverte na mesma ordem em que o usuário escolheu.
   const events: QueueActionEvent[] = [];
-  const nextRows = rows.map((row) => {
-    if (!eligible.has(row.os_id)) return row;
-    const outcome = execOne(row, action, d);
-    if ('refused' in outcome) return row; // corrida improvável entre plan/exec
+  const byId = new Map<string, QueueRowLike>();
+  for (const row of rows) byId.set(row.os_id, row);
+  for (const osId of new Set(selectedIds)) {
+    if (!eligible.has(osId)) continue;
+    const outcome = execOne(byId.get(osId) as QueueRowLike, action, d);
+    if ('refused' in outcome) continue; // corrida improvável entre plan/exec
     events.push(outcome.event);
-    return outcome.row;
-  });
+    byId.set(osId, outcome.row);
+  }
+  const nextRows = rows.map((row) => byId.get(row.os_id) ?? row);
   return { ...plan, rows: nextRows, events };
 }
