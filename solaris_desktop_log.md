@@ -2,6 +2,44 @@
 
 ## features
 
+### 2026-08-25 ~16h35 — tick features-worker: A1 scratchpad VIVO na tela de análise + resgate de log triturado + push do backlog
+
+- **Resgate**: cabeçalho deste log estava triturado por edição externa (linhas
+  `\n` literais no lugar do título "## features") — restaurado em commit
+  próprio (0b6ef95); nenhuma seção perdida.
+- **Push do backlog**: 5 commits que estavam só locais (fila inteligente no
+  painel ao vivo e043271, higiene QoL 6e553a5/a5b75e1, shuttle+scratchpad
+  núcleo 81d23a0) + este resgate subiram pra origin (`2a72853..0b6ef95`).
+- **A1 notas rápidas no ar**: ScratchpadPanel colapsável no topo da folha de
+  análise, fechando o wiring que faltava do tick 13:04 (o núcleo existia com
+  testes mas nenhum componente o montava).
+  - `useScratchpad.ts` (ciclo de vida React sobre o controller puro): debounce
+    200ms, flush determinístico em beforeunload/visibilitychange/unmount;
+    núcleo ganhou callback opcional `onSaved` (badge).
+  - Contrato de "oficial": `handleSave` dispara evento `solaris:scratch-cleaned`
+    (mesmo padrão dos eventos solaris:* existentes) → nota pessoal sai do
+    storage junto com o rascunho do auto-save.
+  - Padrão anti-cascata (react-hooks v7): wrapper decide visibilidade e REMONTA
+    o interno por `key={osId}`; carga da nota no inicializador de estado puro;
+    zero ref-em-render, zero setState-em-efeito.
+  - Retomada: nota persistida → painel nasce aberto; badge discreto "salvo ✓";
+    hint de privacidade permanente; clamp 20k com aviso honesto; guest
+    (osId null) não monta nada; modo foco esconde mantendo estado vivo.
+- **Bug real pego pelo teste novo**: a limpeza via evento dependia do controller
+  TER NASCIDO nesta sessão — nota escrita em sessão anterior sobrevivia à
+  análise oficial se o analista não digitasse nada antes de salvar. O handler
+  agora remove a chave do storage diretamente, independente do controller.
+- **Provas**: suíte **562/562** (+8 asserts em scratchpadUi.test.tsx: colapso,
+  debounce com fake timers, retomada, limpeza por evento, guest, visible=false
+  preserva nota, paridade i18n EN/PT, troca de OS sem vazamento); tsc limpo
+  fora de __tests__; eslint ratchet estável **54=54** (meus 3 arquivos novos
+  zerados; erros pré-existentes do AnalysisWorkspace intocados); e2e-flow
+  **26/26**; bundle initial INALTERADO **~104,6KB gz** (index 50,6 +
+  react-vendor 45,4 + css 8,5) — painel nasceu DENTRO do chunk lazy do
+  AnalysisWorkspace (+~0,3KB gz), chunks pesados (firebase/echarts/pdfmake/
+  vfs_fonts/wavesurfer) seguem lazy; budget <500KB preservado de sobra.
+- Sem Telegram; src-tauri, audio-acoustics, tokens.css e pitch intactos.
+
 ### 2026-08-25 ~11h20 — tick features-worker: F6 troca #3 — Intl/fuso fixo na forma honesta (date-fns REJEITADO com prova)
 
 - **Decisão da troca D #3 (date-fns+Intl)**: o CÁLCULO de calendário já era
