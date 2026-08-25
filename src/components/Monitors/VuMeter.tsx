@@ -99,7 +99,7 @@ const VuMeter: React.FC<VuMeterProps> = ({ volume, isReady, onZoom }) => {
         {onZoom && (
           <button
             onClick={onZoom}
-            className="p-1 -mr-1 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors"
+            className="icon-btn p-1 -mr-1 rounded-md"
             title="Expand"
             aria-label="Expand VU Meter"
           >

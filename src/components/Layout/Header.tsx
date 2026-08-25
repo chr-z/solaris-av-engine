@@ -134,7 +134,7 @@ const Header: React.FC<HeaderProps> = ({
               <Popover 
                 contentClassName="w-56"
                 trigger={
-                  <button className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-500/20 transition-colors">
+                  <button className="icon-btn flex items-center gap-2 p-1 rounded-full">
                       <UserAvatar user={userProfile} className="w-8 h-8"/>
                   </button>
                 }
@@ -146,9 +146,9 @@ const Header: React.FC<HeaderProps> = ({
                         <p className="text-xs text-gray-400 truncate" title={userProfile.email}>{userProfile.email}</p>
                     </div>
                     <div className="py-1">
-                        <button 
-                          onClick={() => { setIsBugReportModalOpen(true); close(); }} 
-                          className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
+                        <button
+                          onClick={() => { setIsBugReportModalOpen(true); close(); }}
+                          className="menu-item"
                         >
                           {t('header.reportIssue')}
                         </button>
@@ -156,7 +156,7 @@ const Header: React.FC<HeaderProps> = ({
                         {isAdminUser && (
                           <a
                             href="#/admin"
-                            className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
+                            className="menu-item"
                           >
                             {t('header.adminPanel')}
                           </a>
@@ -166,24 +166,24 @@ const Header: React.FC<HeaderProps> = ({
                           <a
                             href="#/admin/dashboards"
                             data-testid="header-dashboards-link"
-                            className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
+                            className="menu-item"
                           >
                             {t('header.dashboards')}
                           </a>
                         )}
                         {/* Admin Panel Link */}
                         {userProfile.email.endsWith('.admin') && (
-                          <button 
-                            onClick={() => { setIsBugReportViewerOpen(true); close(); }} 
-                            className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
+                          <button
+                            onClick={() => { setIsBugReportViewerOpen(true); close(); }}
+                            className="menu-item"
                           >
                             {t('header.systemReports')}
                           </button>
                         )}
                     </div>
-                    <button 
-                      onClick={() => { onLogout(); close(); }} 
-                      className="w-full text-left mt-1 px-3 py-2 text-sm rounded-md text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors border-t border-hairline"
+                    <button
+                      onClick={() => { onLogout(); close(); }}
+                      className="menu-item menu-item-danger mt-1 border-t border-hairline"
                     >
                       {t('header.signOut')}
                     </button>

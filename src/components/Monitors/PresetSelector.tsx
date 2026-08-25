@@ -55,7 +55,7 @@ const PresetSelector: React.FC<PresetSelectorProps> = ({ settings, setSettings }
               className={`flex flex-col items-center justify-start gap-0.5 p-1.5 rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent ${
                 isActive
                   ? 'bg-solar-accent/20 text-solar-accent'
-                  : 'text-gray-300 hover:bg-gray-500/10 hover:text-white'
+                  : 'text-ink-secondary wash-hover'
               }`}
             >
               {PRESET_ICONS[preset.id]}

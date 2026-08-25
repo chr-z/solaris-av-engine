@@ -394,7 +394,7 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
                     <button
                         onClick={() => fetchData(filters, true)}
                         disabled={isLoading}
-                        className="flex-shrink-0 p-2 rounded-md hover:bg-gray-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-solar-accent"
+                        className="flex-shrink-0 p-2 rounded-md icon-btn focus:outline-none focus:ring-2 focus:ring-solar-accent"
                         title="Refresh List"
                         aria-label="Refresh List"
                     >
@@ -403,7 +403,7 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
                     <Popover
                         trigger={
                             <button
-                                className="flex-shrink-0 p-2 rounded-md hover:bg-gray-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-solar-accent relative"
+                                className="flex-shrink-0 p-2 rounded-md icon-btn focus:outline-none focus:ring-2 focus:ring-solar-accent relative"
                                 title="Filters"
                                 aria-label="Open Filters"
                             >

@@ -145,7 +145,7 @@ const TabButton = ({ id, label, icon, activeTab, onSelect }: TabButtonProps) => 
     className={`flex items-center gap-2 px-4 py-2 rounded-t-md transition-colors ${
       activeTab === id
         ? 'bg-surface dark:bg-surface text-solar-accent border-b-2 border-solar-accent'
-        : 'bg-transparent text-ink-secondary dark:text-gray-400 hover:bg-gray-500/10'
+        : 'bg-transparent text-ink-secondary wash-hover'
     }`}
   >
     {icon}

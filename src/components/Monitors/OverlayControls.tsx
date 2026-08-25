@@ -23,7 +23,7 @@ const TypeButton: React.FC<TypeButtonProps> = ({ type, label, icon, active, onSe
     title={label}
     aria-pressed={active}
     className={`flex flex-col items-center justify-start p-2 rounded-md transition-colors flex-1 h-16 focus-visible:ring-2 focus-visible:ring-solar-accent ${
-      active ? 'bg-solar-accent/20 text-solar-accent' : 'text-white hover:bg-gray-500/10'
+      active ? 'bg-solar-accent/20 text-solar-accent' : 'text-ink wash-hover'
     }`}
   >
     {icon}

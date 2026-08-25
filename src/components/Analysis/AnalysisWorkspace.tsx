@@ -249,9 +249,9 @@ export const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose,
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <div className="flex items-center gap-1 text-xs bg-bg px-2 py-1 rounded-md">
                             <span className="text-gray-400">Sort by:</span>
-                            <button onClick={() => setSortOrder('time')} className={`px-2 py-0.5 rounded ${sortOrder === 'time' ? 'bg-solar-accent/20 text-solar-accent font-semibold' : 'hover:bg-gray-500/20'}`}>Time</button>
-                            <button onClick={() => setSortOrder('comment')} className={`px-2 py-0.5 rounded ${sortOrder === 'comment' ? 'bg-solar-accent/20 text-solar-accent font-semibold' : 'hover:bg-gray-500/20'}`}>Comment</button>                        </div>
-                        <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors" aria-label="Close">
+                            <button onClick={() => setSortOrder('time')} className={`chip-sort ${sortOrder === 'time' ? 'is-active' : ''}`}>Time</button>
+                            <button onClick={() => setSortOrder('comment')} className={`chip-sort ${sortOrder === 'comment' ? 'is-active' : ''}`}>Comment</button>                        </div>
+                        <button onClick={onClose} className="icon-btn p-2 rounded-full" aria-label="Close">
                             <XIcon className="w-5 h-5" />
                         </button>
                     </div>
@@ -280,7 +280,7 @@ export const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose,
                                     <div className="p-3 space-y-2">
                                         <textarea value={editingComment} onChange={e => setEditingComment(e.target.value)} rows={2} className="w-full bg-bg border border-hairline rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200" autoFocus/>
                                         <div className="flex justify-end gap-2">
-                                            <button onClick={handleCancelEdit} className="px-3 py-1 text-sm rounded-md hover:bg-gray-500/20">Cancel</button>
+                                            <button onClick={handleCancelEdit} className="menu-item !w-auto">Cancel</button>
                                             <button onClick={handleSaveEdit} disabled={!editingComment.trim()} className="btn btn-primary px-3 py-1 text-sm disabled:opacity-50">Save</button>                                        </div>
                                     </div>
                                 ) : (
@@ -296,8 +296,8 @@ export const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose,
                                                 </div>
                                                 {userProfile?.id === ts.analyst.id && (
                                                     <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button onClick={() => handleStartEdit(ts)} className="p-1 rounded-full text-gray-400 hover:bg-gray-500/20 hover:text-white" aria-label="Edit"><PencilIcon className="w-3 h-3" /></button>
-                                                        <button onClick={() => handleDelete(ts.id)} className="p-1 rounded-full text-gray-400 hover:bg-red-500/20 hover:text-red-400" aria-label="Remove"><XIcon className="w-3 h-3" /></button>
+                                                        <button onClick={() => handleStartEdit(ts)} className="icon-btn p-1 rounded-full" aria-label="Edit"><PencilIcon className="w-3 h-3" /></button>
+                                                        <button onClick={() => handleDelete(ts.id)} className="icon-btn icon-btn-danger p-1 rounded-full" aria-label="Remove"><XIcon className="w-3 h-3" /></button>
                                                     </div>
                                                 )}
                                             </div>
@@ -960,7 +960,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
             <span className="font-bold text-xs uppercase tracking-wide text-solar-accent">{t('compare.title')}</span>
             <button
               onClick={compare.toggleSyncMode}
-              className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent ${compare.syncMode === 'locked' ? 'bg-solar-accent text-bg hover:bg-solar-accent-hover' : 'bg-bg border border-hairline text-gray-300 hover:bg-gray-500/20'}`}              title={compare.syncMode === 'locked' ? t('compare.syncLocked') : t('compare.syncFree')}
+              className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent ${compare.syncMode === 'locked' ? 'bg-solar-accent text-bg hover:bg-solar-accent-hover' : 'bg-bg border border-hairline wash-hover'}`}              title={compare.syncMode === 'locked' ? t('compare.syncLocked') : t('compare.syncFree')}
               aria-label={t('compare.syncMode')}
             >
               {compare.syncMode === 'locked' ? '⇄ ' + t('compare.syncLocked') : '✕ ' + t('compare.syncFree')}
@@ -979,13 +979,13 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
             <span id="compare-offset-hint" className="text-[11px] text-ink-secondary hidden lg:inline">{t('compare.offsetHint')}</span>
             <button
               onClick={compare.resetOffset}
-              className="px-2 py-0.5 rounded-md text-xs bg-bg border border-hairline text-gray-300 hover:bg-gray-500/20 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
+              className="px-2 py-0.5 rounded-md text-xs bg-bg border border-hairline wash-hover focus-visible:ring-2 focus-visible:ring-solar-accent"
             >
               0
             </button>
             <button
               onClick={compare.toggleLayout}
-              className="p-1.5 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
+              className="icon-btn p-1.5 rounded-md focus-visible:ring-2 focus-visible:ring-solar-accent"
               title={t('compare.layout')}
               aria-label={t('compare.layout')}
             >
@@ -1051,7 +1051,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
                       onClick={handleToggleCompare}
                       disabled={!videoSrc}
                       aria-pressed={compare.isActive}
-                      className={`p-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed ${compare.isActive ? 'bg-solar-accent/30 text-solar-accent hover:bg-solar-accent/40' : 'text-gray-400 hover:bg-gray-500/20 hover:text-white'}`}
+                      className={`p-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed ${compare.isActive ? 'bg-solar-accent/30 text-solar-accent hover:bg-solar-accent/40' : 'icon-btn'}`}
                       title={t('compare.open')}
                       aria-label={t('compare.open')}
                     >
@@ -1062,7 +1062,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
                       onClick={() => window.dispatchEvent(new CustomEvent('solaris:open-pro-upgrade'))}
                       aria-label={t('pro.lock.openUpgrade', { feature: t('compare.title') })}
                       title={t('pro.lock.description', { feature: t('compare.title') })}
-                      className="relative p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
+                      className="relative icon-btn p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
                     >
                       <ColumnsIcon className="w-5 h-5" />
                       <svg
@@ -1078,7 +1078,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
                   <button
                     onClick={() => setIsTimestampModalOpen(true)}
                     disabled={!currentVideoId}
-                    className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="icon-btn p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Time Markers"
                     aria-label="Open time markers"
                   >
@@ -1087,7 +1087,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
                   {/* S5.1: keyboard shortcut reference (also via "?"). */}
                   <button
                     onClick={() => setIsShortcutHelpOpen(true)}
-                    className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
+                    className="icon-btn p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
                     title={t('header.shortcutHelp')}
                     aria-label={t('header.shortcutHelp')}
                   >
@@ -1097,7 +1097,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
                     contentClassName="w-72"
                     trigger={
                       <button
-                        className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
+                        className="icon-btn p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
                         title="Overlay Settings"
                         aria-label="Open overlay settings"
                       >
@@ -1110,7 +1110,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
                   {pickerFolderId && (
                     <button
                         onClick={() => onOpenPicker(pickerFolderId)}
-                        className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
+                        className="icon-btn p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
                         title="Open Drive Picker"
                         aria-label="Open Drive Picker"
                     >

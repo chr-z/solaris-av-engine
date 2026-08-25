@@ -19,7 +19,7 @@ const Dock: React.FC<DockProps> = ({ children, className = '', title, onZoom }) 
           {onZoom && (
             <button
               onClick={onZoom}
-              className="p-1 -mr-1 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors"
+              className="icon-btn p-1 -mr-1 rounded-md"
               title={t('dock.expandMonitor', { monitor: title ?? '' })}
               aria-label={t('dock.expandMonitor', { monitor: title ?? '' })}
             >
