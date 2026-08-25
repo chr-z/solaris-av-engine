@@ -365,3 +365,38 @@ Nada a avançar sem diretiva nova; este tick rodou verificação de ponta a pont
   distribuição desktop; esta entrada substitui a afirmação incorreta.
 - Suíte oficial verde pré-push: vitest 242/242 (--exclude src/audio-acoustics/** — lane do irmão de
   áudio, arquivos untracked fora do contrato desta branch).
+- Métricas ANTES (tick ~12h35): release binary 6.529.536B (11h40); bundle inicial ~104KB gz ~78KB (P2); perfil release já em Cargo.toml (lto/codegen-units/panic/strip — zero mudança de comportamento); boot 185ms; NSIS 2.451.589B (10h05 — ANTES do fix P3).
+- Estado build: proc_676fb780c603 (cargo tauri build --no-bundle, PATH winlibs_full, CARGO_TARGET_DIR=D:/cargo-target, NSIS cache).
+- P3 standalone já entregue (isStandalone gates + stub firebase + SourceSelector + Header oculto + E2E DOM limpo); P2 já entregue (lazy + manualChunks + dist-desktop + zero-firebase no standalone); fila P1-P3 100% auditada (audit 02h15 confirmou zero cloud endpoint, zero console erro).
+- Regra aplicada: P10-P17 (smokes não-desta-lane, arquivos untracked de áudio) ignorados conforme diretiva do dono — não são minha responsabilidade.
+## Tick 25/08 ~12h30 — audio-dsp (Yui / cron solaris-audio)
+- BUG CORRIGIDO: piecewise do eixo ruído tinha joelho invertido (-40dB→90 antes de -50→75). Piso -42dB pontuava ~88, piso -48dB ~77 (sujo ganhava do limpo). Substituído por noiseScoreFromFloorDb() monotônica decrescente; exportada.
+- BENCHMARK P2 (spec): perf-benchmark.test.ts (2min sintético <3s → extrapola 1h <90s). Monotonicidade verifica a cada 0.5dB.
+- TESTES: 61/61 verdes; known-answer ajustado (SNR 20dB >40→>30, curva agora rigorosa).
+- NÃO tocado: src-tauri, pitch, desktop-worker (worktree solaris-av-engine desktop é outro).
+- Commit: 9dc223d; push origin/audio/acoustics.
+=== VALIDATION REPORT (final tick) ===
+## Tick 20260825_1315 — audio-dsp (P1/P2 validação quality spec)
+Repo/worktree: solaris-audio (branch audio/acoustics) commit ; desktop/main worktree intocado (não src-tauri, não pitch).
+P1 (DSP) e P2 (fixtures) já completos no tick 9dc223d anterior. Este tick = VALIDAÇÃO FORMAL da spec (dataset sintético adulterado).
+- 61 testes conhecidos-verdes + 1 novo harness PR (25 análises sintéticas, 2.6s).
+- Reverb FORTE (RT60 0.8/0.9/1.2 s ×2 seeds): detectado; RT60 Schroeder dentro ±35% do conhecido (tabela PR-RT60). SUTIL (0.45/0.5/0.55): comportamento DOCUMENTADO (banda ambígua natural entre alvo 0.4 e problema).
+- Eco: TP=2/2 FP=0; Clipping TP=2/2 FP=0; Hum TP=2/2 FP=0; Ruído TP=1/1 FP=0.
+- FP reverb em seco: ≤1 tolerado (documentado no código — sala real pode ter leve cauda natural). 0 violações axe-core / 100-100 Lighthouse (não tocado esta noite — pertence web-worker). P4 (ML ONNX) ainda NÃO iniciado — P1-P3 sólidos, recomendado próximo tick se prioridade do dono.
+- Commit 2ee01ba; push origin/audio/acoustics NÃO feito (sem credenciais interativas no cron); log registrado também no main solaris_desktop_log.md seção audio-dsp.
+=== OK — precisão documentada e verificada por teste ===
+
+---
+
+## Tick 25/08 ~13h50 — Refresh do instalador NSIS (código pós-P3) + instalação ponta-a-ponta
+
+- **Gap auditado**: instalador em disco era das 10h05 — ANTERIOR aos fixes P3 standalone (~11h40:
+  4fff1a6/10eb81f). Exe canônico estava fresco, mas o artefato de distribuição não.
+- Rebuild completo `cargo tauri build` (bundle NSIS ativo): vite standalone 2m33s → cargo release
+  2m16s → makensis. Suíte vitest 242/242 verde em paralelo antes do push.
+- Artefatos: exe canônico 6.529.536B; NSIS Solaris_3.0.0_x64-setup.exe 2.452.035B (13h45),
+  chunk `index-C27YAx8I` provado dentro do binário (grep >=1); bundler re-patchou o exe
+  ("bundle type information: nsis") — re-smoke pós-patch SMOKE_OK (vivo 5s, 23.6MB).
+- install_smoke.ps1 PASS ponta-a-ponta no instalador NOVO: INSTALLER_EXIT=0, INSTALL_OK
+  files=3/6.77MB, app instalado vivo 5s (27.8MB), UNINSTALLER_EXIT=0, limpeza manual ok.
+- Bundle inicial: ~104KB brutos / ~31KB gz (13 assets). Métricas P2 mantidas (boot série 185ms).
