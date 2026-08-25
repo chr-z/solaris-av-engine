@@ -11,6 +11,8 @@ export const en = {
   'login.connecting': 'Connecting...',
   'login.continueAsGuest': 'Continue as Guest (Demo Mode)',
   'login.authError': 'Authentication Error',
+  'login.errorTitle': 'We could not sign you in.',
+  'login.errorHint': "Google didn't complete the sign-in. Wait a few seconds and try again — or continue as guest to explore the demo.",
 
   // Header
   'header.backToList': 'Back to List',
@@ -147,6 +149,18 @@ export const en = {
   'a11y.skipToContent': 'Skip to main content',
   'a11y.loadingStatus': 'Loading',
 
+  // Queue (Work Orders list) — empty states with contextual hints
+  'queue.empty.search': 'Nothing matches this search.',
+  'queue.empty.searchHint': 'Clear the search or filters to see every Work Order again.',
+  'queue.empty.pending': 'No pending Work Orders.',
+  'queue.empty.pendingHint': 'New W.O.s appear here as soon as the studio syncs.',
+  'queue.empty.completed': 'Nothing completed yet.',
+  'queue.empty.completedHint': 'Analyze a W.O. and save it — it lands here with its final score.',
+  'queue.empty.special': 'No system/special W.O.s.',
+  'queue.empty.specialHint': 'Special rows from the sheet show up in this section.',
+  'queue.empty.all': 'No Work Orders found.',
+  'queue.empty.allHint': 'They may still be syncing — use the refresh button above to pull again.',
+
   // PWA / offline
   'pwa.offlineBadge': 'Offline — cached mode',
   'pwa.offlineBadgeTitle': 'You are offline. The app shell keeps working; media and cloud features need a connection.',
@@ -266,6 +280,8 @@ export const pt: Record<TranslationKey, string> = {
   'login.connecting': 'Conectando...',
   'login.continueAsGuest': 'Continuar como Visitante (Modo Demo)',
   'login.authError': 'Erro de Autenticação',
+  'login.errorTitle': 'Não conseguimos te conectar.',
+  'login.errorHint': 'O Google não concluiu o login. Espere alguns segundos e tente de novo — ou continue como visitante pra explorar a demo.',
 
   // Header
   'header.backToList': 'Voltar para a Lista',
@@ -401,6 +417,18 @@ export const pt: Record<TranslationKey, string> = {
   // Accessibility
   'a11y.skipToContent': 'Pular para o conteúdo principal',
   'a11y.loadingStatus': 'Carregando',
+
+  // Queue (Work Orders list) — empty states with contextual hints
+  'queue.empty.search': 'Nada corresponde a esta busca.',
+  'queue.empty.searchHint': 'Limpe a busca ou os filtros pra ver todas as Ordens de Serviço de novo.',
+  'queue.empty.pending': 'Nenhuma O.S. pendente.',
+  'queue.empty.pendingHint': 'Novas O.S.s aparecem aqui assim que o estúdio sincroniza.',
+  'queue.empty.completed': 'Nada concluído ainda.',
+  'queue.empty.completedHint': 'Analise uma O.S. e salve — ela entra aqui com o score final.',
+  'queue.empty.special': 'Sem O.S.s de sistema/especiais.',
+  'queue.empty.specialHint': 'Linhas especiais da planilha aparecem nesta seção.',
+  'queue.empty.all': 'Nenhuma Ordem de Serviço encontrada.',
+  'queue.empty.allHint': 'Podem estar ainda sincronizando — use o botão de atualizar acima pra puxar de novo.',
 
   // PWA / offline
   'pwa.offlineBadge': 'Offline — modo cacheado',

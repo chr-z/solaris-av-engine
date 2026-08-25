@@ -97,3 +97,58 @@ export function humanizeSaveError(raw?: string): HumanError {
         hint: 'Your changes are still here — check the connection and save again.',
     };
 }
+
+/**
+ * Erro humano para a tela de login (popup fechado, rede, popup bloqueado…).
+ * Nunca devolve a mensagem crua do provider; sempre oferece um caminho
+ * (tentar de novo / entrar como visitante na demo).
+ */
+export function humanizeAuthError(raw?: string | null): HumanError {
+    const msg = (raw || '').toLowerCase();
+    if (
+        msg.includes('popup') && msg.includes('clos') ||
+        msg.includes('cancelled') ||
+        msg.includes('canceled')
+    ) {
+        return {
+            title: 'The sign-in window was closed before finishing.',
+            hint: 'No problem — try signing in again when you are ready.',
+        };
+    }
+    if (
+        msg.includes('popup blocked') ||
+        msg.includes('blocked')
+    ) {
+        return {
+            title: 'Your browser blocked the sign-in window.',
+            hint: 'Allow popups for this site and sign in again.',
+        };
+    }
+    if (
+        msg.includes('network') ||
+        msg.includes('fetch') ||
+        msg.includes('timeout') ||
+        msg.includes('failed to')
+    ) {
+        return {
+            title: 'We could not reach Google right now.',
+            hint: 'Check your connection and try again in a few seconds.',
+        };
+    }
+    if (
+        msg.includes('unauthorized domain') ||
+        msg.includes('domain') ||
+        msg.includes('configuration') ||
+        msg.includes('operation not allowed')
+    ) {
+        return {
+            title: 'This sign-in method is not available here yet.',
+            hint: 'Continue as guest to explore the demo while access is set up.',
+        };
+    }
+    // Fallback: nunca a mensagem crua do provider.
+    return {
+        title: 'We could not sign you in.',
+        hint: "Google didn't complete the sign-in. Wait a few seconds and try again — or continue as guest.",
+    };
+}

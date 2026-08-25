@@ -75,25 +75,31 @@ export const QCExportButton: React.FC<{ className?: string }> = ({ className = '
       aria-label="QC Report Exported"
     >
       <div
-        className="bg-solar-dark-content rounded-lg p-6 max-w-sm w-full mx-4 text-center text-white border border-solar-dark-border shadow-xl"
+        className="card card-raised rounded-lg p-6 max-w-sm w-full mx-4 text-center shadow-pop"
         onClick={event => event.stopPropagation()}
       >
+        <div className="w-12 h-12 mx-auto mb-3 flex items-center justify-center" aria-hidden="true">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="19" stroke="var(--color-ok)" strokeWidth="2.5" strokeDasharray="95 25" strokeLinecap="round" transform="rotate(-90 24 24)" />
+            <path d="M17 24.5l4.5 4.5L31 20" stroke="var(--color-ok)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
         <h3 className="font-bold text-lg mb-1">Report exported</h3>
-        <p className="text-sm text-gray-300 mb-4">
+        <p className="text-sm text-ink-secondary mb-4">
           {summary.title} — {summary.totalRows} rows · avg {summary.avgAnalysisTime}s ·{' '}
-          {summary.errorCount} errors
+          <span className={`tnum ${summary.errorCount > 0 ? 'text-warn' : ''}`}>{summary.errorCount} errors</span>
         </p>
         <div className="flex justify-center gap-2">
           <button
             onClick={() => lastDataURI && triggerDownload(lastDataURI)}
             disabled={!lastDataURI}
-            className="px-4 py-2 bg-solar-accent text-white rounded-md hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-solar-accent disabled:opacity-50"
+            className="btn btn-primary px-4 py-2 rounded-md transition-colors disabled:opacity-50"
           >
             Download again
           </button>
           <button
             onClick={() => setSummary(null)}
-            className="px-4 py-2 rounded-md hover:bg-gray-500/20 transition-colors"
+            className="btn btn-ghost px-4 py-2 rounded-md"
           >
             Close
           </button>
