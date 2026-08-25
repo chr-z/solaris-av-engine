@@ -525,3 +525,29 @@ virou ASSERTIVO em toda a banda 0.45–0.55).
 
 --- FIM TICK — FN sutil extinto por calibracao medida; zero regressao ---
 
+
+---
+
+## Tick 25/08 ~18h30 - desktop worker: auditoria LITERAL da fila P1-P3 (so leitura, zero re-execucao)
+
+- Diretriz do dono re-lida linha a linha contra o estado real do repo; nada foi
+  reconstruido nem re-verificado por duplicidade - apenas conferencia de existencia.
+- P1: config conforme spec (identifier dev.chr-z.solaris, productName Solaris,
+  frontendDist ../dist-desktop, CSP restritiva); artefatos VIVOS em disco: exe
+  canonico D:/cargo-target/release/solaris-av-engine.exe 6.529.536B (13h45) e
+  NSIS D:/cargo-target/release/bundle/nsis/Solaris_3.0.0_x64-setup.exe 2.452.035B
+  (13h45); install_smoke PASS ponta-a-ponta ja registrado as 13h50.
+- P2: codigo CONFIRMADO presente (nao re-medido): React.lazy+Suspense em App.tsx /
+  AnalysisWorkspace.tsx / Header.tsx com chunks por componente no dist-desktop
+  (ex.: AnalysisWorkspace-Cu7Qfu3B.js 90KB separado do entry);
+  [profile.release] lto=true, codegen-units=1, strip, panic=abort; metricas
+  ANTES/DEPOIS ja registradas neste log (bundle inicial ~243KB -> ~104KB brutos;
+  boot serie ~185ms).
+- P3: modo standalone entregue (alias vite firebase->stub offline, define
+  __SOLARIS_STANDALONE__, strip dos loaders Google no shell) + testes dos DOIS
+  modos no repo: analysisFormStandalone, analysisSheetStandalone, standaloneUiGates,
+  firebaseStandalone, runtimeMode, pwa.
+- CONCLUSAO: fila P1-P3 VAZIA sob leitura literal da diretiva. Pendencias reais
+  conhecidas estao FORA desta lane (audio/acoustics: P4 ML ONNX, aguardando dono).
+- Sem commit de codigo nesta entrada (apendice somente neste log compartilhado,
+  via append no disco conforme protocolo do cabecalho).
