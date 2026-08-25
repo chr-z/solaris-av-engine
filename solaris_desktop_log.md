@@ -492,3 +492,36 @@ Pendências: subtle0.45 (feature extra tipo flatness pós-pausa), P4 ML ONNX NÃ
 - Untracked (smoke-p*, desktop_*.mjs, src/audio-acoustics/) = lanes de irmaos, intocados.
 - Pendencias reais conhecidas estao FORA desta lane (audio: subtle0.45 / P4 ONNX).
   Fila P1-P3 segue VAZIA - nenhum pacote re-executado neste tick.
+
+---
+
+## Tick 25/08 ~17h15 — audio-dsp (Yui / cron solaris-audio)
+
+Worktree solaris-audio (branch audio/acoustics); desktop/src-tauri/pitch intocados.
+TEMA: subtle0.45 RESOLVIDO — a ultima lacuna do P/R da spec caiu. Reverb agora
+P=1.00 R=1.00 no dataset adulterado (alvo de recall >=0.85 pra reverb SUTIL
+virou ASSERTIVO em toda a banda 0.45–0.55).
+
+- Diagnostico por probe descartavel: o estimador Schroeder JA media a banda
+  sutil com erro <=1.5% (truth 0.45 -> est 0.442–0.456 em 4 seeds; slow 0.442,
+  canon 0.446). O FN era puramente CALIBRACAO da curva de score em
+  audioAcoustics.ts: [0.45->82] com corte warn<78 so flagava acima de ~0.48
+  de RT60 verdadeiro. Nada de DSP novo foi preciso — a generalizacao do tick
+  anterior e' que tornou o aperto seguro.
+- Fix: curva recalibrada p/ o estimador maduro ([0.3->96][0.4->86][0.45->76]
+  [0.55->66][0.7->50][1.2->18][2->5]); cortes warn<82 crit<58. Seca continua
+  score 96 (margem folgada, nunca flagra), critico <20.
+- Margens medidas pos-patch (sweep ritmo x nivel): sutil 0.45 score 77–78
+  (warn) em canon/slow; fast superle +58% na direcao segura (ja flagrava);
+  dry/dry-noise20 = ok em 9/9 pontos. PR final: reverb TP=9 FP=0 TN=4 FN=0;
+  echo/clipping/noise/hum mantidos P=R=1.00; custo 25 analises em 3.4s.
+- TESTES: precision-recall endurecido (recall sutil >=0.85 + sutil0.45 deve
+  flagrar); suíte 41 arquivos / 405 testes VERDES (~121s); tsc --noEmit limpo;
+  eslint do modulo = baseline do HEAD (12 pre-existentes, zero novo).
+- COMMITS/PUSH: 80cd516 -> origin/audio/acoustics (push verificado por
+  ls-remote). Probes descartaveis removidos apos uso.
+- Pendencia restante da lane: P4 (ML ONNX p/ reverb fino) — NAO iniciado,
+  aguarda priorizacao do dono. Banda sutil sem lacunas conhecidas.
+
+--- FIM TICK — FN sutil extinto por calibracao medida; zero regressao ---
+
