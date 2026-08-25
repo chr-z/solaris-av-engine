@@ -138,6 +138,16 @@ export function isSaveCombo(event: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'meta
   return (event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 's';
 }
 
+/** Ctrl/Cmd+K — universal search (QoL F2). */
+export function isCommandPaletteCombo(event: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'>): boolean {
+  return (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'k';
+}
+
+/** Ctrl/Cmd+Shift+Z — global undo window (QoL F2). Plain ctrl+z stays native. */
+export function isUndoCombo(event: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'>): boolean {
+  return (event.ctrlKey || event.metaKey) && !event.altKey && event.shiftKey && event.key.toLowerCase() === 'z';
+}
+
 /** Groups shortcuts by scope for the help modal columns. Order-stable. */
 export function groupShortcutsByScope(): Record<ShortcutContext, ShortcutDef[]> {
   const groups: Record<ShortcutContext, ShortcutDef[]> = { global: [], workspace: [], player: [], dashboard: [] };

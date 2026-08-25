@@ -16,6 +16,17 @@ import { useI18n } from './i18n/I18nContext';
 import { computeFilteredRows } from './utils/rowFiltering';
 import { isAdminHash, isDashboardsHash } from './utils/adminRoute';
 import { persistGuestEmail, clearGuestEmail } from './hooks/useAdminRole';
+// F2 QoL Core: busca universal, modo foco e undo global 24h.
+import { isCommandPaletteCombo, isUndoCombo } from './utils/shortcuts';
+import type { IndexedDoc, ScoredResult } from './features/qol/commandPalette';
+import {
+  FOCUS_PREF_KEY,
+  FOCUS_MONITORS_KEY,
+  readFocusFlag,
+  writeFocusFlag,
+} from './features/qol/focusMode';
+import { applyUndo, registerUndoApplier, clearUndoAppliers } from './features/qol/undoApply';
+import { getUndoLog } from './features/qol/undoStore';
 
 // Code splitting (S3.1): the heavy analysis workspace (player + monitors + form)
 // is only fetched when an OS row is opened for the first time.
@@ -25,6 +36,11 @@ const AnalysisWorkspace = React.lazy(
 
 // v3 admin console (#/admin) ships as its own chunk; fetched on first visit only.
 const AdminGate = React.lazy(() => import('./components/Admin/AdminGate'));
+
+// F2: Ctrl+K command palette — own lazy chunk (only downloaded on first use).
+const CommandPaletteModal = React.lazy(
+  () => import(/* webpackChunkName: "command-palette" */ './components/Core/CommandPaletteModal'),
+);
 
 // Initialize log capture service
 logCaptureService.init();
@@ -54,6 +70,17 @@ const COLS = {
 
 type AuthStatus = 'initializing' | 'signedOut' | 'signedIn' | 'error';
 type MediaSource = { source: File | string; info?: { name?: string; isDriveLink?: boolean; isYoutube?: boolean } };
+
+/** True quando o foco está em campo de texto — undo global não deve roubar o atalho nativo de edição. */
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    target.isContentEditable
+  );
+}
 
 const getInitialDateRange = (): { startDate: string; endDate: string } => {
     const today = new Date();
@@ -100,6 +127,43 @@ const App: React.FC = () => {
   const [isAdminRoute, setIsAdminRoute] = useState(() => isAdminHash(window.location.hash));
   // P5 dashboards sub-route (#/admin/dashboards) — same RBAC gate, own panel.
   const [isDashboardsRoute, setIsDashboardsRoute] = useState(() => isDashboardsHash(window.location.hash));
+
+  // ── F2 QoL Core ──────────────────────────────────────────────────────
+  // Ctrl+K busca universal (modal lazy).
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  // Modo foco: esconde header+lista (workspace esconde monitores/form).
+  const [isFocusMode, setIsFocusMode] = useState(() => readFocusFlag(window.localStorage, FOCUS_PREF_KEY));
+  const [focusKeepMonitors, setFocusKeepMonitors] = useState(() => readFocusFlag(window.localStorage, FOCUS_MONITORS_KEY));
+  const toggleFocusMode = useCallback(() => {
+    setIsFocusMode((prev) => {
+      writeFocusFlag(window.localStorage, FOCUS_PREF_KEY, !prev);
+      return !prev;
+    });
+  }, []);
+  const toggleKeepMonitors = useCallback(() => {
+    setFocusKeepMonitors((prev) => {
+      writeFocusFlag(window.localStorage, FOCUS_MONITORS_KEY, !prev);
+      return !prev;
+    });
+  }, []);
+  // Ctrl+Shift+Z undo global — appliers são registrados pelos donos da ação.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isCommandPaletteCombo(event)) {
+        event.preventDefault();
+        setIsPaletteOpen((open) => !open);
+        return;
+      }
+      if (isUndoCombo(event) && !isEditableTarget(event.target)) {
+        event.preventDefault();
+        applyUndo(getUndoLog());
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+
   useEffect(() => {
     const onHashChange = () => {
       setIsAdminRoute(isAdminHash(window.location.hash));
@@ -696,6 +760,60 @@ const App: React.FC = () => {
     document.documentElement.classList.add('dark');
   }, []);
 
+  // ── F2: busca universal (Ctrl+K) ─────────────────────────────────────
+  // Docs derivados das linhas carregadas + settings conhecidos. Memoizado:
+  // reconstruir é barato e só ocorre quando os dados mudam.
+  const paletteDocs = useMemo<IndexedDoc[]>(() => {
+    const osDocs: IndexedDoc[] = allRows.map((r) => ({
+      id: `os:${r.rowIndex}`,
+      kind: 'os',
+      title: `W.O. ${r.row[headers.indexOf(COLS.WO)]?.value ?? r.rowIndex}`,
+      subtitle: headers.indexOf(COLS.STUDIO) > -1 ? r.row[headers.indexOf(COLS.STUDIO)]?.value ?? undefined : undefined,
+      keywords: [String(r.rowIndex)],
+    }));
+    const settingDocs: IndexedDoc[] = [
+      { id: 'set:focus', kind: 'setting', title: t('qol.focus.toggle'), keywords: ['focus', 'foco'] },
+      { id: 'set:focusMonitors', kind: 'setting', title: t('qol.focus.monitors'), keywords: ['monitor', 'waveform'] },
+      { id: 'set:shortcuts', kind: 'setting', title: t('header.shortcutHelp'), keywords: ['keyboard', 'atalhos', '?'] },
+    ];
+    return [...osDocs, ...settingDocs];
+  }, [allRows, headers, t]);
+
+  const handlePalettePick = useCallback((result: ScoredResult) => {
+    if (result.entry.kind === 'os') {
+      const rowIndex = Number(result.entry.id.slice(3));
+      const target = allRows.find((r) => r.rowIndex === rowIndex);
+      if (target && userProfile) handleOsSelect(rowIndex, target.row);
+    } else if (result.entry.id === 'set:focus') {
+      toggleFocusMode();
+    } else if (result.entry.id === 'set:focusMonitors') {
+      toggleKeepMonitors();
+    }
+  }, [allRows, userProfile, toggleFocusMode, toggleKeepMonitors]);
+
+  // Overlays globais do F2: palette lazy sobre qualquer rota autenticada.
+  const f2Overlays = (
+    <React.Suspense fallback={null}>
+      {isPaletteOpen && (
+        <CommandPaletteModal
+          isOpen
+          onClose={() => setIsPaletteOpen(false)}
+          docs={paletteDocs}
+          onPick={handlePalettePick}
+          kindLabels={{
+            palette: t('qol.palette.title'),
+            placeholder: t('qol.palette.placeholder'),
+            empty: t('qol.palette.empty'),
+            os: t('qol.kind.os'),
+            analyst: t('qol.kind.analyst'),
+            studio: t('qol.kind.studio'),
+            setting: t('qol.kind.setting'),
+          }}
+        />
+      )}
+    </React.Suspense>
+  );
+
   const renderContent = () => {
     switch(authStatus) {
       case 'initializing':
@@ -721,14 +839,17 @@ const App: React.FC = () => {
             <WaveformCacheProvider>
               <div className="flex flex-col h-screen font-sans text-sm bg-solar-light-bg dark:bg-solar-dark-bg text-gray-800 dark:text-gray-200 overflow-hidden">
                 <a href="#main-workspace" className="skip-link">{t('a11y.skipToContent')}</a>
-                <Header
-                  onSourceSelected={handleSourceSelected}
-                  isWorkspaceOpen={false}
-                  onCloseWorkspace={() => { /* no workspace behind the admin route */ }}
-                  title="Solaris"
-                  userProfile={userProfile}
-                  onLogout={handleLogout}
-                />
+                {/* F2 modo foco também vale no console admin (esconde o shell). */}
+                <div className={`flex-shrink-0 ${isFocusMode ? 'hidden' : ''}`}>
+                  <Header
+                    onSourceSelected={handleSourceSelected}
+                    isWorkspaceOpen={false}
+                    onCloseWorkspace={() => { /* no workspace behind the admin route */ }}
+                    title="Solaris"
+                    userProfile={userProfile}
+                    onLogout={handleLogout}
+                  />
+                </div>
                 <React.Suspense fallback={
                   <div className="flex items-center justify-center h-screen bg-solar-dark-bg">
                     <LoadingIndicator statusText={t('loading.generic')} />
@@ -736,6 +857,7 @@ const App: React.FC = () => {
                 }>
                   <AdminGate dashboards={isDashboardsRoute} />
                 </React.Suspense>
+                {f2Overlays}
               </div>
             </WaveformCacheProvider>
           );
@@ -749,17 +871,19 @@ const App: React.FC = () => {
               >
                 {t('a11y.skipToContent')}
               </a>
-              <Header
-                onSourceSelected={handleSourceSelected}
-                isWorkspaceOpen={isWorkspaceOpen}
-                onCloseWorkspace={handleCloseWorkspace}
-                title={isWorkspaceOpen && selectedRowPartialData ? `W.O: ${selectedRowPartialData[headers.indexOf(COLS.WO)]?.value}` : 'Solaris'}
-                userProfile={userProfile}
-                onLogout={handleLogout}
-              />
+              <div className={`flex-shrink-0 ${isFocusMode ? 'hidden' : ''}`}>
+                <Header
+                  onSourceSelected={handleSourceSelected}
+                  isWorkspaceOpen={isWorkspaceOpen}
+                  onCloseWorkspace={handleCloseWorkspace}
+                  title={isWorkspaceOpen && selectedRowPartialData ? `W.O: ${selectedRowPartialData[headers.indexOf(COLS.WO)]?.value}` : 'Solaris'}
+                  userProfile={userProfile}
+                  onLogout={handleLogout}
+                />
+              </div>
               <main id="main-workspace" className="flex-1 relative overflow-hidden bg-solar-light-bg dark:bg-solar-dark-bg">
-                <div className={`absolute inset-0 h-full transition-all duration-500 ease-in-out ${isWorkspaceOpen ? 'w-[320px]' : 'w-full'}`}>
-                  <AnalysisSheetList 
+                <div className={`absolute inset-0 h-full transition-all duration-500 ease-in-out ${isWorkspaceOpen && !isFocusMode ? 'w-[320px]' : 'w-full'} ${isFocusMode ? 'hidden' : ''}`}>
+                  <AnalysisSheetList
                     onDataLoaded={handleDataLoaded}
                     onRowSelected={handleOsSelect}
                     selectedOsIndex={selectedOsIndex}
@@ -774,9 +898,9 @@ const App: React.FC = () => {
                     setFilters={setFilters}
                   />
                 </div>
-                <div 
+                <div
                   className={`absolute top-0 right-0 h-full bg-solar-light-bg dark:bg-solar-dark-bg transition-transform duration-500 ease-in-out ${isWorkspaceOpen ? 'translate-x-0' : 'translate-x-full'}`}
-                  style={{ width: 'calc(100% - 320px)' }}
+                  style={{ width: isFocusMode ? '100%' : 'calc(100% - 320px)' }}
                 >
                   {isWorkspaceOpen && (
                     <React.Suspense
@@ -810,12 +934,17 @@ const App: React.FC = () => {
                       onClosePicker={handleClosePicker}
                       onFileFromPickerSelected={handleFileSelectedFromPicker}
                       userProfile={userProfile}
+                      isFocusMode={isFocusMode}
+                      onToggleFocusMode={toggleFocusMode}
+                      onToggleKeepMonitors={toggleKeepMonitors}
+                      focusKeepMonitors={focusKeepMonitors}
                         onClose={handleUnloadMedia}
                       />
                     </React.Suspense>
                   )}
                 </div>
               </main>
+              {f2Overlays}
             </div>
           </WaveformCacheProvider>
         );

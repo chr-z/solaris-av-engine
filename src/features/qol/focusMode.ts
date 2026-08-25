@@ -67,7 +67,7 @@ export function readFocusFlag(storage: Pick<Storage, 'getItem'> | null, key: str
 }
 
 /** Grava boolean de forma best-effort. */
-export function writeFocusFlag(storage: Pick<Storage, 'setItem'> | null, key: string, value: boolean): void {
+export function writeFocusFlag(storage: Pick<Storage, 'setItem' | 'removeItem'> | null, key: string, value: boolean): void {
   try {
     if (value) storage?.setItem(key, '1');
     else storage?.removeItem(key);

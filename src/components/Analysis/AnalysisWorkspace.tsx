@@ -18,7 +18,7 @@ import Dock from '../Layout/Dock';
 import UserAvatar from '../Auth/UserAvatar';
 import Popover from '../Core/Popover';
 import ShortcutHelpModal from '../Core/ShortcutHelpModal';
-import { SaveIcon, ClipboardCheckIcon, YouTubeIcon, GoogleDriveIcon, XIcon, GridIcon, ClockIcon, PencilIcon, InfoIcon, ColumnsIcon, RowsIcon, RefreshIcon } from '../Core/icons';
+import { SaveIcon, ClipboardCheckIcon, YouTubeIcon, GoogleDriveIcon, XIcon, GridIcon, ClockIcon, PencilIcon, InfoIcon, ColumnsIcon, RowsIcon, RefreshIcon, FocusIcon } from '../Core/icons';
 
 // Imports locais (mesma pasta Analysis)
 import AnalysisForm from './AnalysisForm';
@@ -32,6 +32,11 @@ import { useLicense } from '../../licensing/LicenseContext';
 import { OverlaySettings, VideoChoice, UserProfile, Timestamp } from '../../types';
 import { useI18n } from '../../i18n/I18nContext';
 import { dropdownFields, inconformityToCategoryMap, resultFields, inconformityScores, categoryMaxScores } from '../../utils/constants';
+// F2 QoL Core: auto-save/retomada, modo foco e undo global.
+import { useAutosaveResume, autosaveKeyFor } from '../../hooks/useAutosaveResume';
+import { focusLayout, applyFocusPreferences } from '../../features/qol/focusMode';
+import { registerUndoApplier } from '../../features/qol/undoApply';
+import { getUndoLog, resetUndoLog } from '../../features/qol/undoStore';
 import { getCompareGridClass } from '../../utils/compareMode';
 import { database } from '../../config/firebase';
 import firebase from 'firebase/compat/app';
@@ -306,6 +311,12 @@ interface AnalysisWorkspaceProps {
   onClosePicker: () => void;
   onFileFromPickerSelected: (file: DriveFile) => void;
   userProfile: UserProfile | null;
+  /** F2: modo foco global (header+lista já escondidos pelo App). */
+  isFocusMode?: boolean;
+  onToggleFocusMode?: () => void;
+  onToggleKeepMonitors?: () => void;
+  /** F2: preferência do analista de manter monitores no modo foco. */
+  focusKeepMonitors?: boolean;
   onClose: () => void;
 }
 
@@ -378,6 +389,10 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   onClosePicker,
   onFileFromPickerSelected,
   userProfile,
+  isFocusMode = false,
+  onToggleFocusMode,
+  onToggleKeepMonitors,
+  focusKeepMonitors = false,
   onClose,
 }) => {
   const { t } = useI18n();
@@ -399,6 +414,88 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
 
   // S5.2: A/B compare orchestration (state + imperative sync channel).
   const compare = useCompareMode({ hasMedia: !!videoSrc });
+
+  // ── F2 QoL Core ──────────────────────────────────────────────────────
+  // Identificador estável da OS p/ chave de auto-save (W.O. da linha).
+  const woIndex = headers.indexOf('W.O.');
+  const osId = localRowData?.[woIndex]?.value || String(selectedOsIndex);
+
+  // Espelho da linha p/ callbacks estáveis (transporte do player).
+  const localRowDataRef = useRef<RowData | null>(null);
+  useEffect(() => { localRowDataRef.current = localRowData; });
+
+  // Transporte do player: alimenta debounce de auto-save + duração p/ resume.
+  const [videoDuration, setVideoDuration] = useState<number | null>(null);
+
+  const {
+    lastSavedAt,
+    scheduleSave,
+    flushNow,
+    markCleaned,
+    planResumeForOs,
+  } = useAutosaveResume(osId, videoDuration);
+
+  const handleQolTransport = useCallback((state: { time: number; playing: boolean; duration: number }) => {
+    setVideoDuration(state.duration > 0 ? state.duration : null);
+    if (localRowDataRef.current) {
+      scheduleSave(localRowDataRef.current, state.time);
+    }
+  }, [scheduleSave]);
+
+  // Transporte combinado: A/B compare segue em lockstep E o QoL salva posição.
+  const publishTransportCombined = useCallback((state: { time: number; playing: boolean; duration: number }) => {
+    compare.publishTransport(state);
+    handleQolTransport(state);
+  }, [compare, handleQolTransport]);
+
+  // Retomada: decisão única por OS/mídia; aplicada quando a duração chega.
+  const resumeDecision = planResumeForOs();
+  const appliedResumeRef = useRef<{ osId: string; src: string | null } | null>(null);
+  useEffect(() => {
+    if (!resumeDecision.shouldSeek || videoDuration === null) return;
+    const alreadyApplied = appliedResumeRef.current?.osId === osId && appliedResumeRef.current?.src === videoSrc;
+    if (alreadyApplied) return;
+    playerControlsRef.current?.seekTo?.(Math.min(resumeDecision.positionSec, Math.max(0, videoDuration - 0.5)));
+    appliedResumeRef.current = { osId, src: videoSrc };
+  }, [resumeDecision, videoDuration, osId, videoSrc]);
+
+  // Undo do edit-cell enquanto o workspace está montado (com coalescing).
+  const lastEditEventRef = useRef<{ columnIndex: number; eventId: string; at: number } | null>(null);
+  useEffect(() => {
+    return registerUndoApplier('edit-cell', (event) => {
+      const payload = event.payload as { prevData?: RowData };
+      if (!payload.prevData) return false;
+      queueMicrotask(() => setLocalRowData(payload.prevData!));
+      lastEditEventRef.current = null;
+      return true;
+    });
+  }, []);
+
+  // Modo foco: regiões visíveis/ocultas derivadas do núcleo puro.
+  const focusRegions = useMemo(
+    () => applyFocusPreferences(focusLayout(isFocusMode), { keepMonitors: focusKeepMonitors }),
+    [isFocusMode, focusKeepMonitors],
+  );
+  const hideRegion = (region: string): string =>
+    isFocusMode && focusRegions.hidden.includes(region as never) ? 'hidden' : '';
+
+  /** Registra/coalesce a edição de célula no log global de undo. */
+  const recordCellEdit = useCallback((columnIndex: number, prevData: RowData) => {
+    const log = getUndoLog();
+    const now = Date.now();
+    const last = lastEditEventRef.current;
+    if (last && last.columnIndex === columnIndex && now - last.at < 1500) {
+      // Mesma célula em fluxo: substitui o evento mantendo o estado ORIGINAL.
+      const originalPrev = (log.undoable.find((e) => e.id === last.eventId)?.payload as { prevData?: RowData } | undefined)?.prevData;
+      log.consume(last.eventId);
+      const ev = log.record('edit-cell', t('qol.undo.editCell', { column: headers[columnIndex] ?? String(columnIndex) }), { prevData: originalPrev ?? prevData });
+      lastEditEventRef.current = { columnIndex, eventId: ev.id, at: now };
+      return;
+    }
+    const ev = log.record('edit-cell', t('qol.undo.editCell', { column: headers[columnIndex] ?? String(columnIndex) }), { prevData });
+    lastEditEventRef.current = { columnIndex, eventId: ev.id, at: now };
+  }, [headers, t]);
+
   // S6.1: compare mode is a Pro feature — the toggle is flag-gated.
   const { flags } = useLicense();
   const isCompareAllowed = flags.abCompareMode;
@@ -412,6 +509,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
     togglePlay: () => void;
     seekBy: (seconds: number) => void;
     seekToStart: () => void;
+    seekTo?: (seconds: number) => void;
     changeVolume: (delta: number) => void;
   } | null>(null);
   const registerPlayerControls = useCallback((controls: NonNullable<typeof playerControlsRef.current>) => {
@@ -531,6 +629,12 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
       const newCell = { ...(newData[columnIndex] || {}), value };
       newData[columnIndex] = newCell;
 
+      // F2: undo global — snapshot ANTES da edição (estado reversível).
+      recordCellEdit(columnIndex, prevData);
+
+      // F2: auto-save 200ms — a marcação feita já está a salvo.
+      scheduleSave(newData, videoRef.current?.currentTime ?? 0);
+
       const fieldName = headers[columnIndex];
       // v3: score via the ScoringEngine (versioned rules) when the field is a
       // known inconformity — covers v2 EN headers and legacy MVP PT-BR ones.
@@ -545,7 +649,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
 
       return newData;
     });
-  }, [headers]);
+  }, [headers, recordCellEdit, scheduleSave]);
 
   const handleSave = async () => {
     if (!localRowData || selectedOsIndex === null) return;
@@ -555,6 +659,8 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
     try {
       await updateSheetRow(selectedOsIndex, localRowData);
       onSaveSuccess(localRowData);
+      // F2: análise oficial na planilha → rascunho do auto-save sai do storage.
+      markCleaned();
 
       if (isLocalVideo && localFilePath.trim()) {
         await database.ref(`analysisMetadata/${selectedOsIndex}/localFilePath`).set(localFilePath.trim());
@@ -569,6 +675,16 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
       setIsSaving(false);
     }
   };
+
+  // F2: logout/troca de conta zera o undo global (eventos são do próprio usuário).
+  useEffect(() => {
+    if (!userProfile) resetUndoLog();
+  }, [userProfile]);
+
+  // F2: flush de emergência quando o workspace desmonta (troca/fechamento de OS).
+  useEffect(() => {
+    return () => { flushNow(); };
+  }, [flushNow]);
 
   // S5.1: keep the shortcut layer pointed at the latest save handler.
   // Written in an effect (react-hooks/refs forbids ref writes during render).
@@ -730,7 +846,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
         isOpen={isShortcutHelpOpen}
         onClose={() => setIsShortcutHelpOpen(false)}
       />
-      <div className="w-2/3 h-full flex flex-col gap-4">
+      <div className={`w-2/3 h-full flex flex-col gap-4 ${hideRegion('monitors')}`}>
         <div className="flex-1 min-h-0">
           {compare.isActive ? (
             <div className={getCompareGridClass(compare.layout)}>
@@ -747,7 +863,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                     onRetry={onRetryLoad}
                     onClose={onClose}
                     registerPlayerControls={registerPlayerControls}
-                    onTransport={compare.publishTransport}
+                    onTransport={publishTransportCombined}
                 >
                     {videoChoices.length > 1 && (
                         <VideoSourceChooser
@@ -796,7 +912,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                 onRetry={onRetryLoad}
                 onClose={onClose}
                 registerPlayerControls={registerPlayerControls}
-                onTransport={compare.publishTransport}
+                onTransport={publishTransportCombined}
             >
                 {videoChoices.length > 1 && (
                     <VideoSourceChooser
@@ -867,7 +983,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
             </button>
           </div>
         )}
-        <div className="h-32 flex-shrink-0 flex gap-4">
+        <div className={`h-32 flex-shrink-0 flex gap-4 ${hideRegion('monitors')}`}>
             <div className="flex-1">
                 <Dock title="RGB Parade" onZoom={() => setZoomedDock('rgbParade')}>
                   <RgbParade pixelData={analysisData.video} />
@@ -890,6 +1006,26 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
           <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-solar-light-border dark:border-solar-dark-border">
               <h2 className="font-bold">Analysis Sheet</h2>
               <div className="flex items-center gap-2">
+                  {/* F2 QoL: badge discreto do auto-save (spec A1 "salvo ✓"). */}
+                  {lastSavedAt && (
+                    <span
+                      className="text-[11px] text-emerald-400/90 mr-1"
+                      title={new Date(lastSavedAt).toLocaleTimeString()}
+                      aria-live="polite"
+                    >
+                        ✓ {t('qol.autosave.saved')}
+                    </span>
+                  )}
+                  {/* F2 QoL: modo foco — esconde tudo exceto player+timeline. */}
+                  <button
+                    onClick={onToggleFocusMode}
+                    aria-pressed={isFocusMode}
+                    title={t('qol.focus.toggle')}
+                    aria-label={t('qol.focus.toggle')}
+                    className={`p-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent ${isFocusMode ? 'bg-solar-accent/30 text-solar-accent' : 'text-gray-400 hover:bg-gray-500/20 hover:text-white'}`}
+                  >
+                      <FocusIcon className="w-5 h-5" />
+                  </button>
                   {saveStatus === 'error' && <p className="text-sm text-red-400 mr-2">{saveError}</p>}
                   {/* S5.2: enter/exit A/B compare split (also via V). S6.1: Pro-gated — free tier gets the upsell lock. */}
                   {isCompareAllowed ? (

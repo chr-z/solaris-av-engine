@@ -7,7 +7,7 @@ import {
   loadAutosave,
 } from '../features/qol/autosave';
 import { planResume } from '../features/qol/resume';
-import { suggestNext, NEW_QUEUE_WINDOW_HOURS } from '../features/qol/queue';
+import { suggestNext, NEW_QUEUE_WINDOW_HOURS, type QueueRowLike } from '../features/qol/queue';
 
 /** Agendador manual: devolve o disparador p/ o teste controlar o tempo. */
 function manualSchedule() {
@@ -184,14 +184,14 @@ describe('F2 queue — fila inteligente (atrasada > nova > antiga)', () => {
   const HOUR = 60 * 60 * 1000;
   const NOW = Date.parse('2026-08-24T15:00:00Z');
 
-  const row = (over: Partial<typeof base>) => ({ ...base, ...over });
-  const base = {
+  const base: QueueRowLike = {
     os_id: 'OS-1',
     status: 'queued',
-    priority: 2 as number,
+    priority: 2,
     deadline: null,
     created_at: '2026-08-20T12:00:00Z',
   };
+  const row = (over: Partial<QueueRowLike>) => ({ ...base, ...over });
 
   it('fila vazia → sugestão vazia', () => {
     const s = suggestNext([], { now: NOW });

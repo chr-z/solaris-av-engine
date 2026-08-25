@@ -88,7 +88,7 @@ describe('F2 commandPalette — busca universal', () => {
 describe('F2 focusMode — regiões do modo foco', () => {
   it('modo foco preserva exatamente player+timeline', () => {
     const l = focusLayout(true);
-    expect(l.visible.sort()).toEqual([...FOCUS_KEEP_REGIONS].sort());
+    expect([...l.visible].sort()).toEqual([...FOCUS_KEEP_REGIONS].sort());
     expect(l.hidden).toEqual(['header', 'sheetList', 'monitors', 'form']);
   });
 

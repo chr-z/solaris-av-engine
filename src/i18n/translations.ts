@@ -252,6 +252,19 @@ export const en = {
   'drill.table.wo': 'W.O.',
   'drill.table.event': 'Event',
   'drill.table.score': 'Final score',
+
+  // v3 F2 QoL Core: universal search, focus mode, autosave, undo.
+  'qol.palette.title': 'Universal search',
+  'qol.palette.placeholder': 'Search OSs, analysts, studios, settings…',
+  'qol.palette.empty': 'No results.',
+  'qol.kind.os': 'OSs',
+  'qol.kind.analyst': 'Analysts',
+  'qol.kind.studio': 'Studios',
+  'qol.kind.setting': 'Settings',
+  'qol.focus.toggle': 'Focus mode (player + timeline only)',
+  'qol.focus.monitors': 'Keep monitors in focus mode',
+  'qol.autosave.saved': 'saved',
+  'qol.undo.editCell': 'Edited {column}',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -504,6 +517,19 @@ export const pt: Record<TranslationKey, string> = {
   'drill.table.wo': 'W.O.',
   'drill.table.event': 'Evento',
   'drill.table.score': 'Nota final',
+
+  // v3 F2 QoL Core: busca universal, modo foco, auto-save, undo.
+  'qol.palette.title': 'Busca universal',
+  'qol.palette.placeholder': 'Buscar OSs, analistas, estúdios, settings…',
+  'qol.palette.empty': 'Nenhum resultado.',
+  'qol.kind.os': 'OSs',
+  'qol.kind.analyst': 'Analistas',
+  'qol.kind.studio': 'Estúdios',
+  'qol.kind.setting': 'Configurações',
+  'qol.focus.toggle': 'Modo foco (apenas player + timeline)',
+  'qol.focus.monitors': 'Manter monitores no modo foco',
+  'qol.autosave.saved': 'salvo',
+  'qol.undo.editCell': 'Editou {column}',
 };
 
 export const dictionaries = { en, pt } as const;

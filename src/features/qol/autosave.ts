@@ -28,6 +28,8 @@ export interface AutosaveDeps<T> {
   delayMs?: number;
   /** Agendador injetável; padrão setTimeout global. */
   schedule?: (fn: () => void, ms: number) => () => void;
+  /** Aviso pós-gravação bem-sucedida (badge "salvo ✓"). */
+  onSaved?: (entry: AutosaveEntry<T>) => void;
 }
 
 const DEFAULT_DELAY_MS = 200;
@@ -74,6 +76,7 @@ export class AutosaveController<T> {
     this.pending = null;
     try {
       this.deps.write(JSON.stringify(entry));
+      this.deps.onSaved?.(entry);
     } catch {
       /* quota/privacidade: auto-save é best-effort, nunca derruba a análise */
     }

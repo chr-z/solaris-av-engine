@@ -27,6 +27,8 @@ interface VideoPlayerProps {
     togglePlay: () => void;
     seekBy: (seconds: number) => void;
     seekToStart: () => void;
+    /** F2 QoL: seek absoluto (retomada de posição do auto-save). */
+    seekTo?: (seconds: number) => void;
     changeVolume: (delta: number) => void;
   }) => () => void;
   /** S5.2: transport telemetry for the A/B compare follower pane. */
@@ -274,6 +276,14 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
                 if (!video) return;
                 video.currentTime = 0;
                 setCurrentTime(0);
+                showControlsAndStartTimer();
+            },
+            // F2 QoL: seek absoluto p/ retomada da posição salva.
+            seekTo: (seconds: number) => {
+                const video = internalVideoRef.current;
+                if (!video || !isFinite(video.duration)) return;
+                video.currentTime = Math.max(0, Math.min(video.duration, seconds));
+                setCurrentTime(video.currentTime);
                 showControlsAndStartTimer();
             },
             changeVolume: (delta: number) => {

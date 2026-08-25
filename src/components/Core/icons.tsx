@@ -228,3 +228,8 @@ export const ColumnsIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export const RowsIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="4" y="3" width="16" height="7" rx="1"></rect><rect x="4" y="14" width="16" height="7" rx="1"></rect></svg>
 );
+
+// F2 QoL: modo foco — alvo com ponto central (focus mode).
+export const FocusIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="3"></circle><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path></svg>
+);
