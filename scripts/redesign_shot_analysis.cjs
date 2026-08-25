@@ -1,14 +1,14 @@
-// Capturas v3 (robusto): bloqueia URLs do Google via Network.setBlockedURLs,
-// espera LoginScreen (timeout controlado do app), fotografa, entra como guest
-// e fotografa o workspace com dados demo. Logs por fase.
+// Captura v3 (R3): entra como guest, abre a PRIMEIRA linha da fila (tela de
+// análise: player + timeline + painel) e fotografa. Reusa o protocolo
+// anti-órfão: porta via SHOT_URL, stubs gapi/google, bloqueio de rede Google.
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const OUT = 'C:/Yui/data/saas_factory/redesign_shots';
-const PORT = 9227;
-const PREFIX = process.env.SHOT_PREFIX || 'r2'; // prefixo do arquivo de saída por pacote
+const PORT = 9229;
+const PREFIX = process.env.SHOT_PREFIX || 'r3';
 const PROFILE = path.join(process.env.TEMP || '/tmp', 'solaris-shot-' + Date.now());
 
 function httpGetJson(url) {
@@ -33,7 +33,7 @@ async function main() {
     'about:blank',
   ], { stdio: 'ignore' });
 
-  const hardExit = setTimeout(() => { console.log('[!] timeout global'); chrome.kill(); process.exit(2); }, 110000);
+  const hardExit = setTimeout(() => { console.log('[!] timeout global'); chrome.kill(); process.exit(2); }, 150000);
 
   try {
     let targets = null;
@@ -42,7 +42,6 @@ async function main() {
       try { targets = await httpGetJson(`http://127.0.0.1:${PORT}/json/list`); break; } catch (e) {}
     }
     if (!targets) throw new Error('devtools nao subiu');
-    console.log('[1] devtools ok');
 
     const page = targets.find((t) => t.type === 'page');
     const ws = new WebSocket(page.webSocketDebuggerUrl);
@@ -70,64 +69,74 @@ async function main() {
     await send('Runtime.enable');
     await send('Network.enable');
     await send('Network.setBlockedURLs', { urls: ['*accounts.google.com*', '*apis.google.com*', '*googleapis.com*', '*.gstatic.com*', '*www.google.com*'] });
-    // Stubs do gapi/google ANTES dos scripts da página: leva o app direto ao
-    // estado signedOut (LoginScreen) sem depender de rede do Google.
     await send('Page.addScriptToEvaluateOnNewDocument', {
       source: `
         window.gapi = { load: (n, o) => o && o.callback && o.callback(), client: { init: async () => ({}), setToken: () => {} } };
         window.google = { accounts: { oauth2: { initTokenClient: (c) => ({ requestAccessToken: () => c && c.error_callback && c.error_callback({ type: 'stub' }) }) } } };
       `,
     });
-    console.log('[2] stubs injetados');
-    console.log('[2] network pronto');
 
-    // IMPORTANTE: porta via env (anti-colisão com previews órfãos de outros
-    // ticks/workers). Default mantido por compatibilidade.
-    await send('Page.navigate', { url: process.env.SHOT_URL || 'http://127.0.0.1:4173/' });
-    console.log('[3] navegou, esperando login screen');
+    await send('Page.navigate', { url: process.env.SHOT_URL || 'http://localhost:4321/' });
 
-    // espera botão guest (aparece após timeout do gapi ~10s)
-    let clicked = 'timeout';
-    for (let i = 0; i < 40; i++) {
+    // espera botão guest e clica
+    let clicked = false;
+    for (let i = 0; i < 40 && !clicked; i++) {
       await sleep(1000);
       try {
-        const r = await send('Runtime.evaluate', {
-          expression: `[...document.querySelectorAll('button')].some(b => /guest|convidado/i.test(b.textContent))`,
+        await send('Runtime.evaluate', {
+          expression: `[...document.querySelectorAll('button')].find(b => /guest|convidado/i.test(b.textContent))?.click()`,
           returnByValue: true,
         });
-        if (r.result.value === true) {
-          const s1 = await send('Page.captureScreenshot', { format: 'png' });
-          fs.writeFileSync(path.join(OUT, PREFIX + '_login.png'), Buffer.from(s1.data, 'base64'));
-          console.log('[4] login shot ok');
-          await sleep(500);
-          await send('Runtime.evaluate', {
-            expression: `[...document.querySelectorAll('button')].find(b => /guest|convidado/i.test(b.textContent)).click()`,
-            returnByValue: true,
-          });
-          clicked = 'clicked';
-          break;
-        }
-      } catch (e) { /* página recarregando */ }
-    }
-    console.log('[5] guest:', clicked);
-    if (clicked !== 'clicked') throw new Error('botao guest nunca apareceu');
-
-    let rows = 0;
-    for (let i = 0; i < 25; i++) {
-      await sleep(1000);
-      try {
+        // a fila é uma <ul> com <li> clicáveis (ListItem), não table
         const r = await send('Runtime.evaluate', {
-          expression: `(document.body.innerText.includes('WO-2024') ? 1 : 0) + document.querySelectorAll('main li').length`,
+          expression: `document.querySelectorAll('main li, ul li').length > 0`,
           returnByValue: true,
         });
-        rows = r.result.value || 0;
-        if (rows > 1) break;
+        clicked = r.result.value === true;
       } catch (e) {}
     }
-    await sleep(3000);
-    const s2 = await send('Page.captureScreenshot', { format: 'png' });
-    fs.writeFileSync(path.join(OUT, PREFIX + '_workspace.png'), Buffer.from(s2.data, 'base64'));
-    console.log('[6] workspace shot ok, tbody rows =', rows);
+    if (!clicked) throw new Error('guest/login falhou');
+    console.log('[1] guest ok, tabela visivel');
+
+    // espera linhas da fila carregarem (demo) — <li> clicáveis
+    let rows = 0;
+    for (let i = 0; i < 20; i++) {
+      await sleep(1000);
+      const r = await send('Runtime.evaluate', {
+        expression: `document.querySelectorAll('ul li').length`,
+        returnByValue: true,
+      }).catch(() => ({ result: { value: 0 } }));
+      rows = r.result.value || 0;
+      if (rows > 0) break;
+    }
+    if (!rows) throw new Error('fila demo nao carregou');
+    console.log('[2] itens na fila:', rows);
+
+    // clica no primeiro item clicável da fila → abre o workspace de análise
+    await send('Runtime.evaluate', {
+      expression: `(() => { const li = [...document.querySelectorAll('ul li')].find(el => el.onclick || el.getAttribute('tabindex') !== null || el.className.includes('cursor')) || document.querySelector('ul li'); li?.click(); return !!li; })()`,
+      returnByValue: true,
+    });
+    console.log('[3] clique na primeira OS');
+
+    // workspace aberto? (procura painel Analysis Sheet / player)
+    let open = false;
+    for (let i = 0; i < 15; i++) {
+      await sleep(1000);
+      const r = await send('Runtime.evaluate', {
+        expression: `document.body.innerText.includes('Analysis Sheet') || document.body.innerText.includes('RGB Parade')`,
+        returnByValue: true,
+      }).catch(() => ({ result: { value: false } }));
+      open = r.result.value === true;
+      if (open) break;
+    }
+    console.log('[4] workspace de analise:', open);
+
+    // dá tempo do layout/monitores estabilizarem
+    await sleep(4000);
+    const s = await send('Page.captureScreenshot', { format: 'png' });
+    fs.writeFileSync(path.join(OUT, PREFIX + '_analysis.png'), Buffer.from(s.data, 'base64'));
+    console.log('[5] analysis shot ok');
     clearTimeout(hardExit);
     ws.close();
   } finally { chrome.kill(); }
