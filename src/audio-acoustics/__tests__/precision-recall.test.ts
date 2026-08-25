@@ -196,10 +196,12 @@ describe('Validação precision/recall (spec SOLARIS_AUDIO_ACOUSTICS)', () => {
       const strongHit = strong.filter(r => r.flagged).length;
       expect(strongHit / strong.length).toBeGreaterThanOrEqual(0.95);
 
-      // Zero falso positivo de reverb em salas secas (com e sem ruído).
+      // ZERO falso positivo de reverb em salas secas, com ou sem ruído de
+      // fundo (fix 25/08 tarde: janela de pausa com ruído fabricava RT60≈1.3s;
+      // porta pela forma da janela — cauda decai, ruído é plano — zera o FP).
       const dryRows = rows.filter(r => r.axis === 'reverb' && r.id.startsWith('dry'));
       const dryFp = dryRows.filter(r => r.flagged).length;
-      expect(dryFp, `FP reverb seco: ${dryFp}/2`).toBeLessThanOrEqual(1);
+      expect(dryFp, `FP reverb seco: ${dryFp}/2`).toBe(0);
 
       // Eco: 2/2 positivos, zero falso positivo (limpo e reverb-only).
       expect(pr.echo!.tp).toBe(2);
