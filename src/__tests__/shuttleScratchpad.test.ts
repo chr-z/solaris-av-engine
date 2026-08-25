@@ -1,6 +1,6 @@
 // Solaris v3 — A2 shuttle + A1 scratchpad — bordas (TDD fixado).
 import { describe, it, expect } from 'vitest';
-import { pulseShuttle, INITIAL_SHUTTLE_STATE, rateAt, formatRate, SHUTTLE_RATES } from '../features/qol/shuttle';
+import { pulseShuttle, INITIAL_SHUTTLE_STATE, rateAt, formatRate, SHUTTLE_RATES, type ShuttleState } from '../features/qol/shuttle';
 import { SCRATCH_CHAR_LIMIT, loadScratch, clampScratchText, ScratchpadController } from '../features/qol/scratchpad';
 
 describe('A2 shuttle', () => {
@@ -11,8 +11,8 @@ describe('A2 shuttle', () => {
     expect(s.index).toBe(SHUTTLE_RATES.length - 1);
   });
   it('troca de direção reseta ao 1x (não desenha degrau extra)', () => {
-    let s = { index: 4, lastDirection: 'up' as const };
-    s = pulseShuttle(s, 'down');
+    const before: ShuttleState = { index: 4, lastDirection: 'up' };
+    const s = pulseShuttle(before, 'down');
     expect(rateAt(s.index)).toBe(1);
   });
   it('formatRate resolve pt-BR', () => {
