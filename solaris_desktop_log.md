@@ -1,6 +1,20 @@
 # SOLARIS — log de trabalho
 
 ## turbo-web
+### 2026-08-25 ~21h40 - tick #15: guardrail noturno - fila DONE, zero deltas, gates re-provados
+
+- Fila bundle/split/e2e/a11y/lighthouse segue 100% DONE (ticks #1-#14); sem diretiva nova.
+- Deps: npm audit re-checado - prod 10 moderates major-gated (0 high/critical),
+  sem advisory nova desde o tick #12. Nada a atualizar.
+- Gates na main @ d479238 (sync origin 0/0):
+  vitest **342/342** (+tsc clean), e2e fluxo real **21/21**, axe **0/0** violacoes,
+  console probe **0 eventos**, build byte-estavel `index-C1mX7UAW.js` -
+  initial gz **79,65KB core** (index 33,86 + react-vendor 45,79; +CSS 7,60 = 87,25KB) vs alvo <500KB.
+- Lighthouse x2 (headless --disable-gpu): R1 **99/100/100/100**, R2 **98/100/100/100**
+  (perf <100 = ruido CPU ambiente ~40% ja documentado nos ticks #13/#14; TBT 20/140ms).
+- Preview servido em porta alta aleatoria com PROVA de hash (entry servido == dist local);
+  preview v4->v6 segue IPv6-only (::1), localhost family:6 ok, 127.0.0.1 ECONNREFUSED esperado.
+
 
 ### 2026-08-24 — tick 1: auditoria de bundle (baseline)
 
