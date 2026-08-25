@@ -27,6 +27,85 @@ export interface ClipResult {
   dcOffset: number;
 }
 
+export interface CrestEvidence {
+  /**
+   * Fração de janelas ELEGÍVEIS (com movimento pico-a-pico suficiente) com
+   * crest factor < limiar (padrão 9dB). Calibração 25/08 ~19h (probes ritmo ×
+   * nível × estrutura, pcm+mp3): sinal limpo fica ≤0.31 MESMO quente/próximo
+   * do teto (fixture 16k a -0.5dBFS); conteúdo com saturação fica ≥0.59 em
+   * PCM e após round-trip mp3/aac — o codec achata os plateaus mas não
+   * restaura a dinâmica.
+   */
+  lowCrestFrac: number;
+  /** Janelas que entraram na estatística (movimento pico-a-pico suficiente). */
+  eligibleWindows: number;
+}
+
+/**
+ * Decisão de saturação por crest. Corte 0.45 = ponto médio da banda vazia
+ * medida (limpo ≤0.31 × saturado ≥0.59); mínimo de 40 janelas elegíveis
+ * (~2s de fala) para significância estatística.
+ */
+export function isCrestSaturated(e: CrestEvidence): boolean {
+  return e.lowCrestFrac >= 0.45 && e.eligibleWindows >= 40;
+}
+
+/**
+ * Evidência de saturação por crest factor (peak/RMS em dB por janela curta).
+ *
+ * Imune a codec lossy: mp3 destrói os plateaus de valor idêntico e recua o
+ * pico, mas o crest esmagado das janelas de fala permanece — medido: seco/
+ * reverb/ruído têm frac(crest<9dB) ≤0.02 em PCM e pós-mp3; clipado tem
+ * ≥0.24 nas mesmas condições. Janelas SEM movimento pico-a-pico relevante
+ * (silêncio digital, canal DC travado) são excluídas da estatística —
+ * canal constante tem crest 0dB por definição mas não é áudio dinâmico.
+ */
+export function crestClippingEvidence(
+  samples: Float64Array | Float32Array,
+  sampleRate: number,
+  opts?: { winMs?: number; crestMaxDb?: number; minPtpRel?: number }
+): CrestEvidence {
+  const winMs = opts?.winMs ?? 50;
+  const crestMaxDb = opts?.crestMaxDb ?? 9;
+  const minPtpRel = opts?.minPtpRel ?? 0.1;
+  const w = Math.max(1, Math.floor((winMs / 1000) * sampleRate));
+  const n = samples.length;
+  if (n < w) return { lowCrestFrac: 0, eligibleWindows: 0 };
+
+  // Passada 1: pico global (referência do movimento mínimo da janela).
+  let globalPeak = 0;
+  for (let i = 0; i < n; i++) {
+    const a = Math.abs(samples[i]);
+    if (a > globalPeak) globalPeak = a;
+  }
+  if (globalPeak <= 1e-9) return { lowCrestFrac: 0, eligibleWindows: 0 };
+  const minPtp = minPtpRel * globalPeak;
+
+  // Passada 2: crest por janela; só janelas "vivas" contam.
+  let eligible = 0;
+  let low = 0;
+  for (let off = 0; off + w <= n; off += w) {
+    let e = 0, pk = 0, mn = Infinity, mx = -Infinity;
+    for (let i = off; i < off + w; i++) {
+      const v = samples[i];
+      e += v * v;
+      if (v > mx) mx = v;
+      if (v < mn) mn = v;
+      const a = v < 0 ? -v : v;
+      if (a > pk) pk = a;
+    }
+    const rms = Math.sqrt(e / w);
+    if (rms <= 1e-6 || mx - mn <= minPtp) continue; // silêncio / canal travado
+    eligible++;
+    const crestDb = 20 * Math.log10(pk / rms);
+    if (crestDb < crestMaxDb) low++;
+  }
+  return {
+    lowCrestFrac: eligible > 0 ? low / eligible : 0,
+    eligibleWindows: eligible,
+  };
+}
+
 /**
  * Detecta clipping num trecho de amostras.
  * threshold padrão 1.0 (=0dBFS). Conta runs consecutivos e flat-tops

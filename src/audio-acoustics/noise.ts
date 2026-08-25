@@ -257,11 +257,40 @@ export function detectHumFromQuietSpectrum(
 
   const c50 = evalF0(50);
   const c60 = evalF0(60);
-  // Decisão pela ENERGIA DA FUNDAMENTAL (dente real ≫ saia de lóbulo do
-  // hipotético vizinho): contar harmônicos empata porque as saias do pente
-  // verdadeiro alimentam os bins dos harmônicos da hipótese errada.
-  const cand = [c50, c60].filter((c): c is NonNullable<typeof c50> => c !== null);
-  const best = cand.length > 0 ? cand.reduce((a, b) => (b.fundDb > a.fundDb ? b : a)) : null;
+  // Decisão pela POSIÇÃO do pico espectral na região da fundamental (40–70Hz),
+  // NÃO por comparação de energia das bandas candidatas: quando as duas bandas
+  // contêm o mesmo dente físico (48k/fft4096: tom 60Hz vaza pro centro de bin
+  // 58.6Hz, que está DENTRO das bandas de 50 e de 60), a energia normalizada
+  // por nº de bins elege a banda mais ESTREITA — medido: 50Hz eleito por 0.6dB
+  // com fundamental verdadeira de 60Hz. Interpolação quadrática no pico dá a
+  // frequência real; atribuição ao vizinho mais próximo de {50,60} é imune ao
+  // overlap das bandas (erro de interpolação << 5Hz num tom limpo).
+  let fPeakHz = 0;
+  {
+    const loK = Math.max(1, Math.round(40 / binHz));
+    const hiK = Math.min(quietMags.length - 2, Math.round(70 / binHz));
+    let bi = -1, bv = -Infinity;
+    for (let k = loK; k <= hiK; k++) {
+      if (quietMags[k] > bv) { bv = quietMags[k]; bi = k; }
+    }
+    if (bi >= 1 && bi <= quietMags.length - 2 && bv > 0) {
+      const a = Math.log(Math.max(quietMags[bi - 1], 1e-30));
+      const b = Math.log(Math.max(bv, 1e-30));
+      const c = Math.log(Math.max(quietMags[bi + 1], 1e-30));
+      const den = a - 2 * b + c;
+      const delta = den !== 0 ? Math.max(-0.5, Math.min(0.5, 0.5 * ((a - c) / den))) : 0;
+      fPeakHz = (bi + delta) * binHz;
+    }
+  }
+  const f0ByPeak: 50 | 60 = Math.abs(fPeakHz - 50) <= Math.abs(fPeakHz - 60) ? 50 : 60;
+  // Energia da fundamental continua como EVIDÊNCIA (gate ≥8dB sobre piso),
+  // mas a identidade 50 vs 60 vem da posição do pico.
+  const ordered: Array<NonNullable<typeof c50>> = [];
+  const primary = f0ByPeak === 50 ? c50 : c60;
+  const secondary = f0ByPeak === 50 ? c60 : c50;
+  if (primary !== null) ordered.push(primary);
+  if (secondary !== null) ordered.push(secondary);
+  const best = ordered.length > 0 ? ordered[0] : null;
   if (best === null || best.score < 2 || best.fundDb < 8) {
     return { ...NONE, harmonicCount: best?.score ?? 0 };
   }

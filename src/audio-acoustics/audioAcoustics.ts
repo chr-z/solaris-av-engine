@@ -12,7 +12,7 @@
 
 import { FFT, hannWindow } from './fft';
 import { rmsTime } from './features';
-import { detectClip, estimateTHDFromSpectrum, type ClipResult } from './clipping';
+import { detectClip, estimateTHDFromSpectrum, crestClippingEvidence, isCrestSaturated, type ClipResult, type CrestEvidence } from './clipping';
 import {
   detectHum, estimateNoiseFloorDb, sibilanceRatioDb, percentile,
   HumSpectrumAccumulator, detectHumFromQuietSpectrum,
@@ -264,15 +264,23 @@ export function analyzeAudioPcm(
   // Flat-top sub-ceil: plateaus ≥4 samples dentro de 1dB abaixo do pico global.
   const flatTop = detectPlateausNearCeil(samples, Math.pow(10, (globalPeakDb - 1.2) / 20));
   const subCeilClip = flatTop.count >= 8 && clipAbs.flatTopRuns < flatTop.count / 4;
+  // Crest factor por janela de 50ms: assinatura de saturação que SOBREVIVE a
+  // codec lossy (plateaus idênticos morrem no mp3/aac; dinâmica esmagada não
+  // ressuscita). Calibração: limpo ≤0.31, saturado ≥0.59 pós-codec — corte 0.45.
+  const crest: CrestEvidence = crestClippingEvidence(samples, sampleRate);
+  const crestSaturated = isCrestSaturated(crest);
   const clipRatio = Math.max(clipAbs.clipRatio, flatTop.samples / Math.max(samples.length, 1));
   // Hard clip digital tem assinatura exata (samples bit-idênticos saturados):
   // mesmo com poucos samples afetados, a evidência é definitiva — o score não
   // pode ficar alto só porque a razão é pequena.
   const definiteHardClip = clipAbs.exactSatRuns >= 2;
-  let clippingScore = !clipAbs.hasClip && !subCeilClip
+  let clippingScore = !clipAbs.hasClip && !subCeilClip && !crestSaturated
     ? 98
     : clamp01_100(piecewise([[0, 92], [0.0005, 72], [0.003, 45], [0.02, 15], [0.08, 3]], clipRatio));
   if (definiteHardClip) clippingScore = Math.min(clippingScore, 40);
+  // Saturação confirmada por crest (única evidência — típico pós-codec):
+  // teto de score equivalente a clipRatio ~1e-4..3e-5 (warn), nunca "ok".
+  if (crestSaturated && !definiteHardClip) clippingScore = Math.min(clippingScore, 68);
   const clippingSev = sevFromScore(clippingScore, 80, 50);
 
   // Distorção: THD mediana dos frames tonais; sem tonalidade → neutro-bom.
@@ -285,10 +293,10 @@ export function analyzeAudioPcm(
       distortionValue
     ));
   } else {
-    distortionScore = clipAbs.hasClip || subCeilClip ? 55 : 92;
+    distortionScore = clipAbs.hasClip || subCeilClip || crestSaturated ? 55 : 92;
     // Aviso só faz sentido quando a falta de tom NÃO é explicada por clipping
     // (com clipping confirmado, o eixo clipping já carrega a informação).
-    if (!(clipAbs.hasClip || subCeilClip)) {
+    if (!(clipAbs.hasClip || subCeilClip || crestSaturated)) {
       warnings.push('Sem tom sustentado identificável — THD não mensurável neste trecho.');
     }
   }
@@ -298,7 +306,11 @@ export function analyzeAudioPcm(
   // Curva ESTRITAMENTE decrescente (tick 25/08 ~12h): a versão anterior tinha
   // o joelho [-40, 90] DEPOIS de [-50, 75] — um piso MAIS SUJO (-42dB)
   // pontuava ~88 enquanto um mais limpo (-48dB) pontuava ~77. Invertido = injusto.
-  const noiseFloorDb = estimateNoiseFloorDb(frameRmsDb, 10);
+  // Entradas mais curtas que uma janela de FFT (ex.: <93ms @44.1k) geram ZERO
+  // frames: percentile([]) é NaN por contrato e contaminaria o relatório
+  // inteiro (noiseFloorDb → score de ruído → JSON do sheet-sync quebra).
+  // Piso -120dBFS = "silêncio digital", valor neutro-bem-formado.
+  const noiseFloorDb = frameRmsDb.length > 0 ? estimateNoiseFloorDb(frameRmsDb, 10) : -120;
   const floorMax = opts?.baseline?.noiseFloorDbMax ?? -45;
   const noiseScoreRaw = clamp01_100(noiseScoreFromFloorDb(noiseFloorDb));
 
@@ -381,7 +393,7 @@ export function analyzeAudioPcm(
     reverb: makeAxis(reverbScore, reverbSev, reverb.rt60,
       explainReverb(reverb, rt60Target, opts?.baseline?.name)),
     clipping: makeAxis(clippingScore, clippingSev, clipRatio,
-      explainClipping(clipAbs, subCeilClip, clipRatio)),
+      explainClipping(clipAbs, subCeilClip, clipRatio, crest)),
     distortion: makeAxis(distortionScore, distortionSev, distortionValue,
       explainDistortion(distortionValue, tonalFrames, clipAbs.hasClip || subCeilClip)),
     noise: makeAxis(noiseScoreFinal, noiseSev, noiseFloorDb,
@@ -519,7 +531,13 @@ function explainReverb(r: ReverbResult, target: number, studio?: string): string
   }
   return 'Trecho curto demais para estimar reverb.';
 }
-function explainClipping(c: ClipResult, subCeil: boolean, ratio: number): string {
+function explainClipping(c: ClipResult, subCeil: boolean, ratio: number, crest?: CrestEvidence): string {
+  if (crest && isCrestSaturated(crest)) {
+    const codecNote = !c.hasClip && !subCeil
+      ? ' (plateaus apagados por codec — assinatura de dinâmica esmagada)'
+      : '';
+    return `Saturação por crest factor: ${(crest.lowCrestFrac * 100).toFixed(0)}% das janelas com dinâmica comprimida (<9dB pico/RMS)${codecNote}.`;
+  }
   if (!c.hasClip && !subCeil) return `Sem clipping (pico ${Math.round(c.peakDb * 10) / 10}dBFS).`;
   const modo = subCeil && !c.hasClip ? 'plateaus de hard clip abaixo de 0dBFS' : 'samples em 0dBFS';
   return `Clipping por ${modo}: ${(ratio * 100).toFixed(3)}% dos samples, run máx ${c.clipRunLen}.`;
