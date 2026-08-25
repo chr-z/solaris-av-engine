@@ -5,7 +5,7 @@
 // TEMPORAL (dia+estúdio) para o front resolver as camadas de confiança.
 // Leitura-only; ignora system files; ffprobe opcional fica no Tauri layer.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -14,7 +14,7 @@ use std::time::UNIX_EPOCH;
 /// Extensões de vídeo consideradas "bloco".
 pub const VIDEO_EXTS: &[&str] = &["mp4", "mov", "mkv", "mxf"];
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BlockCandidate {
     pub path: String,
     pub file_name: String,
@@ -23,7 +23,7 @@ pub struct BlockCandidate {
     pub mtime_epoch: u64,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OsScanResult {
     /// Número da OS extraído do nome da pasta ("OS-12345" → "12345").
     pub os_id: String,
@@ -38,7 +38,7 @@ pub struct OsScanResult {
     pub blocks: Vec<BlockCandidate>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrphanGroup {
     pub folder_path: String,
     pub studio_norm: String,
@@ -48,7 +48,7 @@ pub struct OrphanGroup {
 
 /// Candidato de match por janela temporal (camada 3): o front cruza com a
 /// DATA+ESTÚDIO das OSs do Saturno. `confidence_hint` é dica de UI.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WindowMatchCandidate {
     /// OS detectada na mesma pasta-dia.
     pub os_id: String,
@@ -57,11 +57,16 @@ pub struct WindowMatchCandidate {
     pub studio_norm: String,
     pub day_iso: Option<String>,
     pub block_paths: Vec<String>,
-    /// "unique-window" | "conflict-window"
-    pub confidence_hint: &'static str,
+    /// "unique-window" | "conflict-window" (String p/ suportar roundtrip JSON)
+    #[serde(default = "default_confidence_hint")]
+    pub confidence_hint: String,
 }
 
-#[derive(Debug, Default, Serialize)]
+fn default_confidence_hint() -> String {
+    "unique-window".to_string()
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct AlfredScanReport {
     pub root: String,
     pub scanned_dirs: u32,
@@ -272,9 +277,9 @@ pub fn scan_alfred(root: &Path, opts: &ScanOptions) -> AlfredScanReport {
             day_iso: group.day_iso.clone(),
             block_paths: group.blocks.iter().map(|b| b.path.clone()).collect(),
             confidence_hint: if same_window.len() > 1 {
-                "conflict-window"
+                "conflict-window".to_string()
             } else {
-                "unique-window"
+                "unique-window".to_string()
             },
         });
     }

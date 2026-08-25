@@ -8,10 +8,16 @@
 use rusqlite::Connection;
 use std::path::Path;
 
-const MIGRATIONS: &[(&str, &str)] = &[(
-    "0001_saturno_matching",
-    include_str!("../migrations/0001_saturno_matching.sql"),
-)];
+const MIGRATIONS: &[(&str, &str)] = &[
+    (
+        "0001_saturno_matching",
+        include_str!("../migrations/0001_saturno_matching.sql"),
+    ),
+    (
+        "0002_alfred_reports",
+        include_str!("../migrations/0002_alfred_reports.sql"),
+    ),
+];
 
 pub fn open_db(path: &Path) -> rusqlite::Result<Connection> {
     let conn = Connection::open(path)?;
@@ -134,6 +140,69 @@ pub fn assign_block(
     Ok(n)
 }
 
+// ── Cache persistente do scan Alfred ─────────────────────────────────────
+
+#[derive(Debug)]
+pub struct AlfredReportRow<'a> {
+    pub root: &'a str,
+    pub scanned_dirs: u32,
+    pub skipped_permission_errors: u32,
+    pub report_json: &'a str,
+}
+
+/// Salva o último relatório de varredura (linha única id=1, UPSERT puro —
+/// nunca cresce, cada scan substitui o anterior). `scanned_at` fica com o
+/// momento da gravação (datetime do SQLite, UTC).
+pub fn save_alfred_report(conn: &Connection, row: &AlfredReportRow) -> rusqlite::Result<usize> {
+    conn.execute(
+        "INSERT INTO alfred_reports (id, root, scanned_dirs, skipped_permission_errors, report_json)
+         VALUES (1, ?1, ?2, ?3, ?4)
+         ON CONFLICT(id) DO UPDATE SET
+             root = excluded.root,
+             scanned_at = datetime('now'),
+             scanned_dirs = excluded.scanned_dirs,
+             skipped_permission_errors = excluded.skipped_permission_errors,
+             report_json = excluded.report_json",
+        rusqlite::params![
+            row.root,
+            row.scanned_dirs,
+            row.skipped_permission_errors,
+            row.report_json
+        ],
+    )
+}
+
+/// Linha do último relatório salvo (`None` ⇒ banco ainda sem nenhum scan).
+pub struct LastReportRow {
+    pub root: String,
+    pub scanned_at: String,
+    pub scanned_dirs: u32,
+    pub skipped_permission_errors: u32,
+    pub report_json: String,
+}
+
+pub fn load_last_alfred_report(conn: &Connection) -> rusqlite::Result<Option<LastReportRow>> {
+    let res = conn.query_row(
+        "SELECT root, scanned_at, scanned_dirs, skipped_permission_errors, report_json
+         FROM alfred_reports WHERE id = 1",
+        [],
+        |row| {
+            Ok(LastReportRow {
+                root: row.get(0)?,
+                scanned_at: row.get(1)?,
+                scanned_dirs: row.get::<_, i64>(2)? as u32,
+                skipped_permission_errors: row.get::<_, i64>(3)? as u32,
+                report_json: row.get(4)?,
+            })
+        },
+    );
+    match res {
+        Ok(row) => Ok(Some(row)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(e),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -219,5 +288,60 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM matching_audit", [], |r| r.get(0))
             .unwrap();
         assert_eq!(audit, 1);
+    }
+
+    #[test]
+    fn relatorio_alfred_roundtrip_e_upsert_ultima_vence() {
+        let conn = mem_db();
+        // Banco virgem ⇒ nenhum relatório.
+        assert!(load_last_alfred_report(&conn).unwrap().is_none());
+
+        save_alfred_report(
+            &conn,
+            &AlfredReportRow {
+                root: "\\\\ALFRED\\Producao",
+                scanned_dirs: 120,
+                skipped_permission_errors: 2,
+                report_json: r#"{"oss":[1,2]}"#,
+            },
+        )
+        .unwrap();
+
+        // Segundo scan na mesma raiz SUBSTITUI (linha única, banco não cresce).
+        save_alfred_report(
+            &conn,
+            &AlfredReportRow {
+                root: "\\\\ALFRED\\Producao",
+                scanned_dirs: 155,
+                skipped_permission_errors: 0,
+                report_json: r#"{"oss":[1,2,3]}"#,
+            },
+        )
+        .unwrap();
+
+        let row = load_last_alfred_report(&conn).unwrap().unwrap();
+        assert_eq!(row.root, "\\\\ALFRED\\Producao");
+        assert_eq!(row.scanned_dirs, 155);
+        assert_eq!(row.skipped_permission_errors, 0);
+        assert_eq!(row.report_json, r#"{"oss":[1,2,3]}"#);
+        assert!(!row.scanned_at.is_empty());
+
+        let total: i64 = conn
+            .query_row("SELECT COUNT(*) FROM alfred_reports", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(total, 1, "UPSERT deve manter exatamente uma linha");
+    }
+
+    #[test]
+    fn migration_0002_cria_tabela_alfred_reports() {
+        let conn = mem_db();
+        let n: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='alfred_reports'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(n, 1);
     }
 }
