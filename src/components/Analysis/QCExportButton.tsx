@@ -5,6 +5,8 @@ import {
   getQCSummary,
   QCReport,
 } from '../../utils/qcReport';
+import { useCountUp } from '../../hooks/useCountUp';
+import { countFrame } from '../../utils/countUp';
 
 /**
  * S4.1 (repaired in S5.1): downloads a printable QC report for the current
@@ -13,6 +15,18 @@ import {
  * Uses the app's own lightweight i18n (the previous draft imported
  * react-i18next, which was never installed and broke `tsc --noEmit`).
  */
+// Momento wow #2 da spec v3: ao concluir a análise/exportar o relatório, os
+// números resumidos animam de 0 até o total (ease-out cúbico, 900ms).
+// O util countFrame faz snap EXATO no destino no último frame, então o texto
+// final renderizado é idêntico ao estático de antes — só a chegada muda.
+const AnimatedStat: React.FC<{ value: number; format: (n: number) => string }> = ({
+  value,
+  format,
+}) => {
+  const animated = useCountUp(value);
+  return <span className="tnum">{format(animated)}</span>;
+};
+
 export const QCExportButton: React.FC<{ className?: string }> = ({ className = '' }) => {
   const [summary, setSummary] = useState<ReturnType<typeof getQCSummary> | null>(null);
   const [lastDataURI, setLastDataURI] = useState<string | null>(null);
@@ -86,8 +100,17 @@ export const QCExportButton: React.FC<{ className?: string }> = ({ className = '
         </div>
         <h3 className="font-bold text-lg mb-1">Report exported</h3>
         <p className="text-sm text-ink-secondary mb-4">
-          {summary.title} — {summary.totalRows} rows · avg {summary.avgAnalysisTime}s ·{' '}
-          <span className={`tnum ${summary.errorCount > 0 ? 'text-warn' : ''}`}>{summary.errorCount} errors</span>
+          {summary.title} — <AnimatedStat value={summary.totalRows} format={(n) => `${Math.round(n)} rows`} /> · avg{' '}
+          <AnimatedStat value={summary.avgAnalysisTime} format={(n) => n.toFixed(1)} />s ·{' '}
+          <span className={summary.errorCount > 0 ? 'text-warn' : ''}>
+            <AnimatedStat
+              value={summary.errorCount}
+              format={(n) => {
+                const r = Math.round(n);
+                return `${r} ${r === 1 ? 'error' : 'errors'}`;
+              }}
+            />
+          </span>
         </p>
         <div className="flex justify-center gap-2">
           <button
