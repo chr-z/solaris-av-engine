@@ -8,6 +8,7 @@ import Spectrogram from '../Monitors/Spectrogram';
 import Dock from '../Layout/Dock';
 import { XIcon } from '../Core/icons';
 import { useAVAnalysis } from '../../hooks/useAVAnalysis';
+import { useEscapeToClose } from '../../hooks/useEscapeToClose';
 
 /**
  * LiveMonitors (turbo-web runtime perf).
@@ -44,6 +45,7 @@ const LiveMonitors: React.FC<LiveMonitorsProps> = ({ videoRef, videoSrc }) => {
   }, []);
 
   const closeZoom = useCallback(() => setZoomedDock(null), []);
+  useEscapeToClose(zoomedDock !== null, closeZoom);
   const stopPropagation = useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
 
   const renderZoomedContent = useCallback(() => {
@@ -78,14 +80,16 @@ const LiveMonitors: React.FC<LiveMonitorsProps> = ({ videoRef, videoSrc }) => {
         aria-modal="true"
       >
         <div
-          className="relative w-full h-full max-w-5xl bg-solar-dark-bg border border-solar-dark-border rounded-lg shadow-2xl flex flex-col p-4"
+          className="relative w-full h-full max-w-5xl bg-surface border border-hairline rounded-lg shadow-pop flex flex-col p-4 animate-fade-in-fast"
           onClick={stopPropagation}
+          role="document"
+          aria-label={`${ZOOM_TITLES[zoomedDock]} zoom`}
         >
-          <header className="flex-shrink-0 flex justify-between items-center pb-2 mb-2 border-b border-solar-dark-border">
+          <header className="flex-shrink-0 flex justify-between items-center pb-2 mb-2 border-b border-hairline">
             <h2 className="text-lg font-bold">{ZOOM_TITLES[zoomedDock]}</h2>
             <button
               onClick={closeZoom}
-              className="p-2 rounded-full text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors"
+              className="p-2 rounded-full text-ink-secondary hover:bg-white/5 hover:text-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               aria-label="Close"
             >
               <XIcon className="w-6 h-6" />
