@@ -476,3 +476,19 @@ RESULTADO SWEEP (27 condições): 100% correto — seco nunca flagra reverb nem 
 NOVO TESTE: generalization-regression.test.ts trava o sweep inteiro com asserts (27 condições: dry ok, dry+noise20 ok, rt0.9 FLAG, rt0.55 FLAG + est ±35%, echo150 FLAG, hum60 detectado).
 TESTES: 40 arquivos / 404 testes VERDES (~104s, fileParallelism:false); tsc --noEmit limpo; probes descartáveis removidos após uso.
 Pendências: subtle0.45 (feature extra tipo flatness pós-pausa), P4 ML ONNX NÃO iniciado.
+
+---
+
+## Tick 25/08 ~16h35 - desktop worker: guardrail (fila P1-P3 continua vazia)
+
+- Sync: fetch origin/desktop -> desktop == origin/desktop (8a4b69c). Zero trabalho proprio pendente.
+- Config P1 conferida conforme spec (leitura, nao rebuild): identifier dev.chr-z.solaris,
+  productName Solaris, frontendDist ../dist-desktop (flavor standalone), CSP restritiva.
+- Artefatos vivos em disco (13h45, pos-P3): exe canonico D:/cargo-target/release/solaris-av-engine.exe
+  6.529.536B; NSIS bundle/nsis/Solaris_3.0.0_x64-setup.exe 2.452.035B. Nada reconstruido -
+  diretriz do dono: nao re-verificar escopo ja entregue.
+- Toolchain sadia p/ proximo build que surgir: cargo-tauri em ~/.cargo/bin,
+  winlibs_full/mingw64/bin/gcc presente, D:/cargo-target existente.
+- Untracked (smoke-p*, desktop_*.mjs, src/audio-acoustics/) = lanes de irmaos, intocados.
+- Pendencias reais conhecidas estao FORA desta lane (audio: subtle0.45 / P4 ONNX).
+  Fila P1-P3 segue VAZIA - nenhum pacote re-executado neste tick.
