@@ -2,6 +2,7 @@ import React from 'react';
 import { GoogleIcon } from '../Core/icons';
 import SolarisLogo from '../Core/SolarisLogo';
 import { useI18n } from '../../i18n/I18nContext';
+import { isFirebaseConfigured } from '../../config/firebase';
 import LanguageSwitcher from '../../i18n/LanguageSwitcher';
 import { humanizeAuthError } from '../../utils/humanErrors';
 
@@ -15,8 +16,7 @@ interface LoginScreenProps {
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestLogin, isLoading, error }) => {
   const { t } = useI18n();
   return (
-    <div className="flex flex-col items-center justify-center h-screen w-screen bg-bg text-gray-200 font-sans relative overflow-hidden">
-      {/* Background Elements */}
+    <main className="flex flex-col items-center justify-center h-screen w-screen bg-solar-dark-bg text-gray-200 font-sans relative overflow-hidden">      {/* Background Elements */}
       <div className="absolute inset-0 bg-gradient-to-br from-surface via-bg to-bg opacity-50"></div>
       <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-accent/10 rounded-full filter blur-3xl animate-pulse-slow"></div>
       <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-yellow-400/10 rounded-full filter blur-3xl animate-pulse-slow animation-delay-4000"></div>
@@ -57,6 +57,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestLogin, isLoad
             </button>
         )}
 
+        {/* turbo-web: offline/demo builds carry no Firebase env vars */}
+        {!isFirebaseConfigured() && (
+            <p className="mt-4 text-xs text-gray-400" data-testid="demo-mode-notice">
+              {t('login.demoNotice')}
+            </p>
+        )}
+
         {error && (() => {
           // R3: erro humano — nunca o raw error do provider.
           const he = humanizeAuthError(error);
@@ -85,7 +92,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestLogin, isLoad
           animation-delay: -4s;
         }
       `}</style>
-    </div>
+    </main>
   );
 };
 

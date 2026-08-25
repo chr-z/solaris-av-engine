@@ -128,8 +128,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({ activeFilters, onFilter
                 <button onClick={handleClear} className="text-sm text-gray-400 hover:text-white">
                     Clear Filters
                 </button>
-                <button onClick={handleApply} className="px-4 py-2 bg-solar-accent text-bg rounded-md hover:bg-solar-accent-hover transition-colors flex items-center gap-2">
-                    Apply {activeFilterCount > 0 && <span className="bg-white/20 text-xs rounded-full px-2 py-0.5">{activeFilterCount}</span>}
+                <button onClick={handleApply} className="px-4 py-2 bg-solar-accent text-bg rounded-md hover:bg-solar-accent-hover transition-colors flex items-center gap-2">                    Apply {activeFilterCount > 0 && <span className="bg-white/20 text-xs rounded-full px-2 py-0.5">{activeFilterCount}</span>}
                 </button>
             </div>
         </div>

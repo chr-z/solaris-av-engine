@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ClipboardCheckIcon, UploadIcon } from '../Core/icons';
+import { ClipboardCheckIcon } from '../Core/icons';
 import SourceSelector from './SourceSelector';
 
 interface LocalFileHelperProps {

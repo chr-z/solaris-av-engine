@@ -116,8 +116,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
               <button
                 onClick={handleActivate}
                 disabled={!keyInput.trim() || isActivating}
-                className="btn btn-primary w-full px-3 py-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+                className="btn btn-primary w-full px-3 py-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"              >
                 {isActivating ? t('solaris.pro.activating') : t('solaris.pro.activate')}
               </button>
               {source === 'env-override' && (

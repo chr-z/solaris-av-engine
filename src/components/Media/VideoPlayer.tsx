@@ -508,8 +508,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
                     )}
                 </div>
             );
-        })()}
-        {!src && !isMediaLoading && !errorMessage && children}
+        })()}        {!src && !isMediaLoading && !errorMessage && children}
         {renderOverlay()}
       </div>
     );

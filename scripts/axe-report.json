@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-08-25T18:01:47.766Z",
+  "build": "http://localhost:4681/ (vite preview, production dist)",
+  "engine": "axe-core@4.13.0",
+  "phases": {
+    "login": [],
+    "mainApp": []
+  },
+  "totals": {
+    "loginRules": 0,
+    "mainAppRules": 0,
+    "criticalOrSeriousMainApp": 0
+  }
+}

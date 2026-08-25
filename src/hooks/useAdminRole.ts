@@ -4,7 +4,7 @@
 // Firebase SDK); this module composes it with Firebase auth state.
 
 import { useState, useEffect } from 'react';
-import { auth } from '../config/firebase';
+import { getFirebaseCompat, isFirebaseConfigured } from '../config/firebase';
 import {
   resolveAdminSource,
   readGuestEmail,
@@ -40,7 +40,18 @@ export function useAdminRole(): AdminRoleState {
     let cancelled = false;
 
     const resolve = async () => {
-      const user = auth.currentUser;
+      // turbo-web: offline/demo builds have no Firebase config — the local
+      // allowlist decides immediately, the SDK never loads.
+      if (!isFirebaseConfigured()) {
+        const email = readGuestEmail();
+        if (!cancelled && isLocalAdmin(email)) {
+          setState({ isAdmin: true, source: 'local-fallback', loading: false });
+          return;
+        }
+        deny(cancelled, setState);
+        return;
+      }
+      const user = (await getFirebaseCompat()).fbAuth.currentUser;
       if (!user) {
         // Guest/demo path: no Firebase user → local allowlist decides.
         const email = readGuestEmail();
@@ -67,8 +78,13 @@ export function useAdminRole(): AdminRoleState {
     // Deferred off the effect's synchronous path (microtask) — the initial
     // decision lands after paint, mirroring the auth-listener updates below.
     void Promise.resolve().then(resolve);
-    const unsub = auth.onAuthStateChanged(() => { void resolve(); });
-    return () => { cancelled = true; unsub(); };
+    // turbo-web: attach after the lazy SDK resolves; unmount before that is a no-op.
+    let unsub: (() => void) | null = null;
+    void getFirebaseCompat().then(({ fbAuth }) => {
+      if (cancelled) return;
+      unsub = fbAuth.onAuthStateChanged(() => { void resolve(); });
+    }).catch(() => { /* deny path below stays */ });
+    return () => { cancelled = true; if (unsub) unsub(); };
   }, []);
 
   return state;

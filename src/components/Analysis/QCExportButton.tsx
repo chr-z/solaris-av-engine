@@ -56,8 +56,7 @@ export const QCExportButton: React.FC<{ className?: string }> = ({ className = '
     return (
       <button
         onClick={handleDownload}
-        className={`btn btn-primary px-3 py-2 rounded-md ${className}`}
-        aria-label="Export QC Report"
+        className={`btn btn-primary px-3 py-2 rounded-md ${className}`}        aria-label="Export QC Report"
         title="Export QC Report"
       >
         <svg
@@ -116,8 +115,7 @@ export const QCExportButton: React.FC<{ className?: string }> = ({ className = '
           <button
             onClick={() => lastDataURI && triggerDownload(lastDataURI)}
             disabled={!lastDataURI}
-            className="btn btn-primary px-4 py-2 rounded-md transition-colors disabled:opacity-50"
-          >
+            className="btn btn-primary px-4 py-2 rounded-md transition-colors disabled:opacity-50"          >
             Download again
           </button>
           <button
