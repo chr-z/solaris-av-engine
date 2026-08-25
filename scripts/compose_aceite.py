@@ -12,10 +12,11 @@ SUB = (139, 147, 167)     # #8B93A7
 ACC = (143, 111, 247)     # roxo accent
 
 pairs = [
-    ("mvp_login.png",      "r4_login.png",      "LOGIN",              "aceite_1_login_mvp_vs_v3.png"),
-    ("mvp_fila.png",       "r4_fila.png",       "FILA DE ANALISES",   "aceite_2_fila_mvp_vs_v3.png"),
-    ("mvp_analysis.png",   "r4_analysis.png",   "ANALISE (player + timeline + painel)", "aceite_3_analise_mvp_vs_v3.png"),
-    ("mvp_qc_dialog.png",  "r4_qc_report.png",  "RELATORIO QC",       "aceite_4_relatorio_mvp_vs_v3.png"),
+    # t17: pares recapturados pos-t8..t16 (main @ 78f6266 vs redesign-premium @ 0f66d34)
+    ("mvp_login.png",      "v3_login.png",      "LOGIN",              "aceite_1_login_mvp_vs_v3.png"),
+    ("mvp_fila.png",       "v3_fila.png",       "FILA DE ANALISES",   "aceite_2_fila_mvp_vs_v3.png"),
+    ("mvp_analysis.png",   "v3_analysis.png",   "ANALISE (player + timeline + painel)", "aceite_3_analise_mvp_vs_v3.png"),
+    ("mvp_qc_dialog.png",  "v3_qc_dialog.png",  "RELATORIO QC (dialogo de exportacao)", "aceite_4_relatorio_mvp_vs_v3.png"),
 ]
 
 def fit(img, h):

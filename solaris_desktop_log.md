@@ -690,3 +690,44 @@ src-tauri intocado. Sem Telegram.
   ProUpgradeModal) — telas fora do fluxo principal do analista; ou
   diretiva nova do dono.
 - src-tauri/audio-acoustics/pitch intocados. Sem Telegram.
+
+## redesign (tick 17) — aceite visual regenerado pos-t8..t16 + fusao turbo #13 — 25/08/2026 ~19h35
+
+- **Fusao primeiro**: merge 0f66d34 absorveu origin/main (turbo #13, docs-only).
+  Conflito do log resolvido em ordem cronologica t15 -> turbo #13 -> t16
+  (scripts/resolve_log_merge_t17.py, removido apos uso).
+- **Aceite visual REGENERADO** (artefato de decisao do dono da spec
+  SOLARIS_REDESIGN.md estava defasado: composites de 07:02 eram anteriores a
+  t8-t16 — anel de score animado, sparklines, menu do usuario, chips de
+  markers, sweep de interacao):
+  - Lado MVP reconstruido ISOLADO em worktree-probe @ origin/main 78f6266
+    (build reproduziu o hash canonico index-C1mX7UAW.js provado pelo turbo #13);
+    node_modules via junction; probe removido apos uso (worktree de volta aos
+    5 canonicos).
+  - Lado v3 = dist fresco desta lane @ 0f66d34 (initial 38,35 + react-vendor
+    45,79 gz; CSS 10,2KB gz, orcamento <30 intacto).
+  - Composites novos em redesign_shots/: aceite_1_login / aceite_2_fila /
+    aceite_3_analise / aceite_4_relatorio _mvp_vs_v3.png (3220x880 cada).
+- **Verificacao de conteudo por pixel** (visao auxiliar indisponivel no cron,
+  401): PIL confirma 8 shots nao-vazios com variancia real, lado v3 mais
+  escuro (media RGB ~18,21,26 vs ~33,33,33 do MVP — base #0B0E14 da spec) e
+  assinatura do accent roxo SOMENTE no v3 (MVP zero pixels roxos nas 4 telas).
+  Anatomia preservada: perfil de variancia equivalente por par de tela.
+- **ARMADILHAS DO TICK (harness de captura)**:
+  1. Patch do SHOT_DIST perdido => primeiro run capturou o dist ERRADO (v3 no
+     lugar do MVP); o PROVA-DE-HASH do proprio script pegou ([dist] entries
+     mostrava index-DAcE2LNn.js da lane). Nunca confiar no prefixo do shot.
+  2. MVP sem .env.local nao tem gate de login (isFirebaseConfigured() falso =>
+     guest automatico) — tela de login so existe com Firebase configurado;
+     copiamos o .env.local dummy da lane pro probe p/ captura justa.
+  3. Shot de login tem que vir ANTES do clique no guest (antes fotografava
+     depois do fluxo: mvp_login byte-identico ao mvp_fila).
+  4. Porta de debug 9231 fixa colidia entre runs consecutivos ("devtools nao
+     subiu") — agora aleatoria 9300-9699; 9 chromes orfaos de probes antigos
+     mortos via kill_probe_chromes.ps1 (filtra por user-data-dir do harness).
+- Gates FINAIS: tsc limpo · vitest 403/403 (38 arquivos) · build verde ·
+  e2e-flow 21/21 · axe-core segue 0/0 do t16 (zero delta de src/ neste tick:
+  mudancas so em scripts/ e docs).
+- Proximo tick: residuo legado do painel ADMIN (DashboardPanel ~80 gray-*,
+  BugReport*, AdminRulesPanel, ProUpgradeModal) ou diretiva nova do dono.
+- src-tauri/audio-acoustics/pitch intocados. Sem Telegram.

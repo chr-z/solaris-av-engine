@@ -9,9 +9,12 @@ const { execFile } = require('child_process');
 
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const OUT = 'C:/Yui/data/saas_factory/redesign_shots';
-const DIST = path.join(__dirname, '..', 'dist');
+// DIST pode ser sobrescrito p/ capturar outro checkout (ex.: probe isolado da main)
+const DIST = process.env.SHOT_DIST ? path.resolve(process.env.SHOT_DIST) : path.join(__dirname, '..', 'dist');
 const PREFIX = process.env.SHOT_PREFIX || 'mvp';
 const PORT = 4200 + Math.floor(Math.random() * 500);
+// porta de debug tambem aleatoria: runs consecutivos colidem na 9231 fixa
+const DEBUG_PORT = 9300 + Math.floor(Math.random() * 400);
 
 function httpGetJson(url) {
   return new Promise((resolve, reject) => {
@@ -48,7 +51,7 @@ async function main() {
   const { spawn } = require('child_process');
   console.log('[0] subindo chrome headless');
   const chrome = spawn(CHROME, [
-    `--remote-debugging-port=9231`, '--headless=new', '--disable-gpu',
+    `--remote-debugging-port=${DEBUG_PORT}`, '--headless=new', '--disable-gpu',
     '--window-size=1600,900', '--hide-scrollbars', '--no-first-run',
     `--user-data-dir=${path.join(process.env.TEMP || '/tmp', 'solaris-mvp-shot-' + Date.now())}`,
     'about:blank',
@@ -59,7 +62,7 @@ async function main() {
     let targets = null;
     for (let i = 0; i < 30; i++) {
       await sleep(500);
-      try { targets = await httpGetJson(`http://127.0.0.1:${9231}/json/list`); break; } catch (e) {}
+      try { targets = await httpGetJson(`http://127.0.0.1:${DEBUG_PORT}/json/list`); break; } catch (e) {}
     }
     if (!targets) throw new Error('devtools nao subiu');
     const page = targets.find((t) => t.type === 'page');
@@ -118,9 +121,22 @@ async function main() {
     console.log('[hash] nosso entry servido:', servedOk);
     if (!servedOk) throw new Error('build servido nao confere com dist local');
 
+    // espera a TELA DE LOGIN (botao google/guest presente, fila ausente) ou fila direta
+    let sawLogin = false;
+    for (let i = 0; i < 25; i++) {
+      const st = await evalJs(`(() => {
+        const b = [...document.querySelectorAll('button')].find(b => /google|guest|convidado/i.test((b.textContent||'') + ' ' + (b.getAttribute('aria-label')||'')));
+        return { login: !!b && !document.body.innerText.includes('Pending'), fila: document.querySelectorAll('ul li').length >= 5 };
+      })()`).catch(() => ({ login: false, fila: false }));
+      if (st.login) { await sleep(800); await shotTo(`${PREFIX}_login.png`); sawLogin = true; break; }
+      if (st.fila) break;
+      await sleep(1000);
+    }
+    console.log('[login] tela capturada:', sawLogin);
+
     // login guest — tolerante: botão guest OU qualquer formulário de email+senha demo
     const guestClicked = await waitFor(`(() => { const b=[...document.querySelectorAll('button')].find(b=>/guest|convidado/i.test(b.textContent||b.getAttribute('aria-label')||'')); if(b){b.click();return true}return false})()`, 20, 'guest');
-    if (!guestClicked) throw new Error('login guest falhou no MVP');
+    if (!guestClicked) throw new Error('login guest falhou');
     await sleep(2500);
 
     // fila logo após o guest (antes de abrir qualquer OS)
@@ -128,8 +144,6 @@ async function main() {
     console.log('[fila] linhas:', filaRows);
     await sleep(1000);
     await shotTo(`${PREFIX}_fila.png`);
-
-    await shotTo(`${PREFIX}_login.png`);
 
     // ================= ANÁLISE =================
     // abre a primeira OS da fila; se a fila estiver vazia, tenta seed via localStorage
