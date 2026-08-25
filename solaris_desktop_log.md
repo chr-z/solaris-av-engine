@@ -302,3 +302,38 @@ Lane turbo-web absorvida pelo main @ 30b4b7b (merge ticks #1-#7). Worktree solar
   major-gated seguem as listadas no tick #10 (firebase 12, firebase-admin 14,
   googleapis 176, vite 8).
 - src-tauri intocado. Sem Telegram.
+
+---
+
+### 2026-08-25 ~20h20 - turbo-web tick #12: vite 4->6.4.3 (security) + robots.txt; guardrail re-provado
+
+- Guardrail inicial (arvore no estado do tick #11): tsc limpo, vitest 342/342,
+  build initial gz 86,71KB byte-identica, e2e 21/21, axe 0/0 (hash entry
+  conferido), console probe 0 eventos, Lighthouse 100/100/100/100.
+- Divergencia de audit detectada vs tick #10/#11: 1 HIGH apareceu (13 vulns
+  total) — vite <=6.4.2 com 7 advisories de dev-server (path traversal /
+  server.fs.deny bypass no Windows, launch-editor cmd injection). A pendencia
+  major-gated "vite 8" virou high real.
+- Decisao por dados (OSV): todas as 7 advisories tem fix na linha 6.x
+  (6.4.3 fecha a ultima). Upgrade MINIMO escolhido: vite ^4.2->^6.4.3 +
+  plugin-react ^3.1->^4.7.0 (peer cobre vite 4-7); evita salto p/ v8
+  (rolldown-by-default, blast radius maior). vitest 4 ja aceitava vite ^6.
+- Resultado seguranca: 13 -> 10 vulns (0 high, 0 low); prod segue 10 moderate
+  major-gated (firebase 12 / firebase-admin 14 / googleapis 176 continuam na
+  fila, um tick cada).
+- Bundle: initial gz 86,71 -> 87,25 KB (+0,54KB, +0,6% = runtime novo do
+  bundler; alvo <500KB intacto). Chunks lazy preservados (firebase 97,38,
+  AdminGate 18,99, AnalysisWorkspace 20,04, sheetSync 11,19).
+- Fix colateral: vite 6 preview responde index.html com 200 em rotas nao-
+  existentes (SPA fallback) => audit LH robots-txt reprovava (92).
+  public/robots.txt adicionado (valido e permissivo; Disallow:/ derrubaria o
+  audit is-crawlable pra 66 — testado e descartado). SEO de volta a 100.
+- Gates na arvore final: tsc limpo; vitest 342/342; e2e 21/21; axe 0/0;
+  console probe 0 eventos; Lighthouse x2 (--headless=new --disable-gpu):
+  R1 99/100/100/100 (FCP 1,4s LCP 1,5s TBT 0 CLS 0), R2 100/100/100/100.
+- Higiene de maquina: kill_turbo_orphans.ps1 -MaxAgeHours 0 limpou 6 previews
+  orfaos DESTE projeto (portas 4223/4261/4707/4711/4713; kill do wrapper npx
+  NAO mata o filho node do preview — usar sempre o script). ~50 orfaos de
+  vite preview da lane redesign (outras pastas) FORA do meu escopo por
+  politica do script — alertado aqui pro worker responsavel limpar.
+- src-tauri intocado. Sem Telegram.
