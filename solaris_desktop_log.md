@@ -95,3 +95,49 @@
     estático exato. Shots: redesign_shots/t8_qc_final.png (+r3b_* revalidados:
     fila, empty state, diálogo QC, erro humano login — build pós-tick-8).
 - src-tauri/audio-acoustics/pitch intocados (só worktree redesign-premium).
+
+## redesign (tick 9) — micro-sparkline da tendência + housekeeping — 25/08/2026 ~09h
+
+- Housekeeping: o registro do tick 8 tinha ficado SEM COMMIT (código pushed
+  em b80c422, log não) — resgatado no commit 56b50d6 antes de qualquer coisa.
+- Auditoria fina da spec pós-tick-8 achou UM residual real: "Badges de score:
+  pill com número tabular + micro-sparkline da tendência" não existia (grep
+  spark vazio). Decisão de leitura da spec: NÃO há série temporal de análises
+  anteriores no domínio (e inventá-la seria mudança funcional — proibido). A
+  "tendência" implementada é o PERFIL das notas por categoria do ScoringEngine
+  (fração nota/máximo das 5 categorias, normalizada pois os máximos diferem
+  1.27..0.70): dado real já computado a cada marcação, zero funcionalidade nova.
+- Implementação (padrões da casa):
+  - src/utils/scoreSpark.ts — categoryFractions + sparkPoints puros
+    (guards NaN/max<=0, clamp 0..1, pad vertical, ponto único centralizado);
+  - src/components/Core/ScoreSpark.tsx — svg decorativo aria-hidden,
+    polyline com gradiente accent dos tokens (--color-accent-from→to),
+    ponto final marca a categoria mais fraca;
+  - AnalysisWorkspace: memo categoryBreakdownForSpark (recalculateScoresWithEngine)
+    + spark ao lado do ScoreRing, tooltip rico com nota/máximo por categoria
+    (IDs do seed JÁ são o vocabulário MVP: ENQUADRAMENTO, ILUMINAÇÃO...);
+  - i18n en/pt ('workspace.scoreSparkTitle').
+- Testes: scoreSpark.test.ts 10 novos (frações seed reais, guards, clamp,
+  pontos, dimensões inválidas). Suite 375 -> 385/385 verde. tsc limpo. Build:
+  CSS 9.92KB gz estável (<30KB spec); index 36.83KB gz (+0.06); spark dentro
+  do chunk lazy AnalysisWorkspace (23.43KB gz). Commit 107f6e3.
+- Prova em browser real x2 (protocolo anti-órfão, preview própria porta alta +
+  hash servido==dist, chrome headless --disable-gpu):
+  - estado limpo: points "0,2 14,2 28,2 42,2 56,2", dot no topo, tooltip lista
+    as 5 categorias 100% (1,27/1,27 ... 0,94/0,94);
+  - marcando 'Uneven Lighting': ILUMINAÇÃO cai pra 0,77/0,87 -> y 2->3,61 na
+    linha, dot migra pra categoria mais fraca, tooltip reflete na hora.
+    Shots: redesign_shots/t9_workspace_spark.png + t9_workspace_spark_marked.png.
+- axe-core 4.10.2 no workspace COM sparkline e regra marcada: ZERO violações
+  (todas as impacts). Spark svg aria-hidden+focusable=false confirmado.
+  Script: scripts/redesign_axe_t9.cjs (axe via init-script + Page.reload —
+  evaluate gigante por WS provou-se frágil p/ 553KB).
+- Armadilha registrada: o seletor "ul li > 0" como sinal de login é FRÁGIL —
+  a fila demo pré-renderiza atrás do overlay de login. Sinal correto: botão
+  guest SUMIR da tela. (Custo: ~6 iterações perdidas no axe script.)
+- DECISÃO PENDENTE DO DONO (não implementado): spec pede "labels flutuantes"
+  nos inputs; o app usa labels permanentes acima dos campos em TODO lugar.
+  Flutuantes mudam a anatomia que o usuário do MVP conhece — mantive permanentes
+  (filosofia inegociável > detalhe estético). Se o dono quiser, vira tick próprio
+  com aceite visual.
+- src-tauri/audio-acoustics/pitch intocados (worktree dedicado solaris-redesign).
