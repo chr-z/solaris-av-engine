@@ -10,13 +10,11 @@ import DriveFilePicker from '../Media/DriveFilePicker';
 import SourceSelector from '../Media/SourceSelector';
 import LocalFileHelper from '../Media/LocalFileHelper';
 
-import RgbParade from '../Monitors/RgbParade';
-import Waveform from '../Monitors/Waveform';
-import VuMeter from '../Monitors/VuMeter';
-import Spectrogram from '../Monitors/Spectrogram';
+// turbo-web: live monitors are a self-contained island that owns the 15 Hz
+// analysis state — playback ticks re-render only the docks, not this tree.
+import LiveMonitors from './LiveMonitors';
 import OverlayControls from '../Monitors/OverlayControls';
 
-import Dock from '../Layout/Dock';
 import UserAvatar from '../Auth/UserAvatar';
 import Popover from '../Core/Popover';
 import ShortcutHelpModal from '../Core/ShortcutHelpModal';
@@ -27,7 +25,8 @@ import AnalysisForm from './AnalysisForm';
 import { RowData, updateSheetRow, DriveFile } from './AnalysisSheet';
 
 // Imports de Lógica (Hooks/Utils/Config)
-import { useAVAnalysis } from '../../hooks/useAVAnalysis';
+// turbo-web: 15 Hz analysis state moved INTO the LiveMonitors island —
+// this tree no longer re-renders on playback ticks.
 import { useAnalystShortcuts } from '../../hooks/useAnalystShortcuts';
 import { useCompareMode } from '../../hooks/useCompareMode';
 import { useLicense } from '../../licensing/LicenseContext';
@@ -397,12 +396,10 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
 }) => {
   const { t } = useI18n();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { analysisData, isAudioReady } = useAVAnalysis(videoRef, videoSrc);
   const [localRowData, setLocalRowData] = useState<RowData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [zoomedDock, setZoomedDock] = useState<string | null>(null);
   const [isTimestampModalOpen, setIsTimestampModalOpen] = useState(false);
   // S5.1: keyboard shortcuts — "?" opens the quick-reference modal.
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
@@ -701,27 +698,6 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
 
   const osIdentifier = localRowData ? (localRowData[headers.indexOf('W.O.')]?.value || '') : '';
 
-  const renderZoomedContent = () => {
-    switch (zoomedDock) {
-      case 'rgbParade':
-        return <RgbParade pixelData={analysisData.video} isZoomed />;
-      case 'waveform':
-        return <Waveform pixelData={analysisData.video} isZoomed />;
-      case 'spectrogram':
-        return <Spectrogram frequencyData={analysisData.frequency} isReady={isAudioReady} />;
-      case 'vuMeter':
-        return (
-          <div className="w-full h-full flex justify-center items-center p-4">
-            <div className="h-full w-40">
-              <VuMeter volume={analysisData.volume} isReady={isAudioReady} />
-            </div>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
     <div className="w-full h-full flex p-4 gap-4 overflow-hidden bg-solar-dark-bg">
         {isPickerOpen && pickerFolderId && (
@@ -886,24 +862,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
             </button>
           </div>
         )}
-        <div className="h-32 flex-shrink-0 flex gap-4">
-            <div className="flex-1">
-                <Dock title="RGB Parade" onZoom={() => setZoomedDock('rgbParade')}>
-                  <RgbParade pixelData={analysisData.video} />
-                </Dock>
-            </div>
-            <div className="flex-1">
-                <Dock title="Waveform" onZoom={() => setZoomedDock('waveform')}>
-                  <Waveform pixelData={analysisData.video} />
-                </Dock>
-            </div>
-            <div className="flex-1">
-                <Dock title="Spectrogram" onZoom={() => setZoomedDock('spectrogram')}>
-                    <Spectrogram frequencyData={analysisData.frequency} isReady={isAudioReady} />
-                </Dock>
-            </div>
-            <VuMeter volume={analysisData.volume} isReady={isAudioReady} onZoom={() => setZoomedDock('vuMeter')} />
-        </div>
+        <LiveMonitors videoRef={videoRef} videoSrc={videoSrc} />
       </div>
       <div className="w-1/3 h-full flex flex-col bg-solar-light-content/80 dark:bg-solar-dark-content/80 backdrop-blur-md rounded-lg shadow-sm border border-solar-light-border dark:border-solar-dark-border overflow-hidden">
           <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-solar-light-border dark:border-solar-dark-border">
@@ -998,38 +957,6 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
             />
           </div>
       </div>
-      {zoomedDock && (
-        <div 
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-8 animate-fade-in-fast" 
-          onClick={() => setZoomedDock(null)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div 
-            className="relative w-full h-full max-w-5xl bg-solar-dark-bg border border-solar-dark-border rounded-lg shadow-2xl flex flex-col p-4"
-            onClick={e => e.stopPropagation()}
-          >
-            <header className="flex-shrink-0 flex justify-between items-center pb-2 mb-2 border-b border-solar-dark-border">
-                <h2 className="text-lg font-bold">
-                    {zoomedDock === 'rgbParade' && 'RGB Parade'}
-                    {zoomedDock === 'waveform' && 'Waveform'}
-                    {zoomedDock === 'spectrogram' && 'Spectrogram'}
-                    {zoomedDock === 'vuMeter' && 'VU Meter'}
-                </h2>
-                <button 
-                    onClick={() => setZoomedDock(null)} 
-                    className="p-2 rounded-full text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors"
-                    aria-label="Close"
-                >
-                    <XIcon className="w-6 h-6" />
-                </button>
-            </header>
-            <div className="flex-1 min-h-0">
-              {renderZoomedContent()}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 });
