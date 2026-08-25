@@ -148,3 +148,25 @@ do solaris-web-turbo (3 grupos, portas 4214/4482/4371), re-scan em porta
 aleatória alta passou com hash conferido. Scripts auxiliares:
 scripts/list_preview_orphans.ps1 e kill_turbo_orphans.ps1.
 
+### 2026-08-25 (madrugada) — tick turbo-web #5: re-auditoria ponta a ponta (fila 1–6 já DONE)
+
+Fila da noite (bundle, code splitting, runtime, e2e, axe, lighthouse)
+confirmada 100% implementada nos ticks #1–#4. Este tick foi prova de
+não-regressão na HEAD (ac7ce76) com números frescos:
+
+| verificação | resultado |
+|---|---|
+| build (vite) | determinística — hashes idênticos em 2 builds seguidas |
+| initial gz (index+react-vendor+css) | **86,9 KB** (alvo <500KB: 6× folga) |
+| chunks | index 33,63 + react-vendor 45,44 + firebase 97,35 gz; firebase/ComparePane/BugReport* lazy |
+| vitest / tsc / test:e2e | 31 arq · **342 passed** / limpo / **21/21** |
+| axe-core (build servida, hash conferido) | **0 violações** (login n/a demo, app principal 0) |
+| console-probe CDP | **0 eventos** de erro/warning/exceção |
+| Lighthouse P/A/BP/SEO | **100 / 100 / 100 / 100** — FCP 1,4s · LCP 1,5s · TBT 0ms · CLS 0 · SI 1,9s |
+
+Fluxo E2E mandado coberto em scripts/e2e-flow.mjs (load→YouTube URL→análise
+mockada→export QC via funções puras + esbuild). Sem gaps novos: nenhum
+componente pesado fora de lazy, nenhum setState quente fora da ilha
+LiveMonitors, lista de 1036 linhas já memoizada com render único.
+Commit desta entrada em origin/turbo/web-opt.
+
