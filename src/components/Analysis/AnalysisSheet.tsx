@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { SearchIcon, LinkIcon, ChevronDownIcon, FilterIcon, RefreshIcon, XIcon, WaveformIcon } from '../Core/icons';
 import LoadingIndicator from '../Core/LoadingIndicator';
 import Popover from '../Core/Popover';
@@ -10,7 +10,9 @@ import { useWaveformCache } from '../../contexts/WaveformCacheContext';
 import { getVideoIdFromUrl } from '../../utils/videoUtils';
 import { isStandalone } from '../../config/runtimeMode';
 
-declare const gapi: any;
+declare const gapi: {
+    client: { getToken(): { access_token?: string } | null };
+};
 
 type CellData = {
     value: string;
@@ -80,7 +82,7 @@ export const fetchFullRowData = async (rowIndex: number): Promise<RowData> => {
     return response.json();
 };
 
-export const updateSheetRow = async (rowIndex: number, rowData: RowData): Promise<any> => {
+export const updateSheetRow = async (rowIndex: number, rowData: RowData): Promise<void> => {
     const token = gapi.client.getToken()?.access_token;
     if (!token) {
       throw new Error("User not authenticated. Please sign in again.");
@@ -113,7 +115,17 @@ interface ListItemProps extends RowWithIndex {
 
 const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, isSelected, onClick, lockInfo, isLockedByCurrentUser }) => {
     const { cachedVideoIds } = useWaveformCache();
-    const [hasCachedWaveform, setHasCachedWaveform] = useState(false);
+    // Derivado (não estado): o ícone reflete o cache atual sem effect/setState.
+    const hasCachedWaveform = useMemo(() => {
+        const potentialLinks = [
+            row[headers.indexOf('W.O.')]?.link,
+            row[headers.indexOf('OPERATOR')]?.link,
+        ].filter(Boolean);
+        return potentialLinks.some((link) => {
+            const videoId = getVideoIdFromUrl(link!);
+            return !!videoId && cachedVideoIds.has(videoId);
+        });
+    }, [cachedVideoIds, row, headers]);
 
     // Using new English Headers
     const osCell = row[headers.indexOf('W.O.')];
@@ -124,22 +136,6 @@ const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, isSele
     
     const infoParts = [estudioCell?.value, dataCell?.value].filter(Boolean);
     const isLockedByOther = lockInfo && !isLockedByCurrentUser;
-
-    useEffect(() => {
-        const osLink = row[headers.indexOf('W.O.')]?.link;
-        const operatorLink = row[headers.indexOf('OPERATOR')]?.link;
-        const potentialLinks = [osLink, operatorLink].filter(Boolean);
-
-        let found = false;
-        for (const link of potentialLinks) {
-            const videoId = getVideoIdFromUrl(link!);
-            if (videoId && cachedVideoIds.has(videoId)) {
-                found = true;
-                break;
-            }
-        }
-        setHasCachedWaveform(found);
-    }, [cachedVideoIds, row, headers]);
 
     const handleForceUnlock = (e: React.MouseEvent) => {
         e.stopPropagation(); 
@@ -236,8 +232,8 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
 
     useEffect(() => {
         const locksRef = database.ref('locks');
-        const listener = (snapshot: any) => {
-          setActiveLocks(snapshot.val() || {});
+        const listener = (snapshot: { val: () => unknown }) => {
+          setActiveLocks((snapshot.val() as { [key: number]: LockInfo }) || {});
         };
         locksRef.on('value', listener);
         return () => locksRef.off('value', listener);
@@ -282,15 +278,16 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
             onDataLoaded(data.headers, data.rows);
             setLoadingMessage('Ready');
 
-        } catch (err: any) {
-            setError(`Sync Error: ${err.message}`);
+        } catch (err: unknown) {
+            setError(`Sync Error: ${err instanceof Error ? err.message : String(err)}`);
         } finally {
             setIsLoading(false);
         }
     }, [onDataLoaded, userProfile]);
 
     useEffect(() => {
-        fetchData(filters);
+        // Microtask fora do commit: evita cascata de render síncrona no efeito.
+        queueMicrotask(() => { void fetchData(filters); });
     }, [filters, fetchData]);
     
     const activeFilterCount = (filters.startDate && filters.endDate ? 1 : 0) + filters.inconformities.length + (filters.studio ? 1 : 0);

@@ -39,7 +39,6 @@ function fromLocalStorage(): RuntimeMode | null {
 
 function fromBuildFlag(): RuntimeMode | null {
   try {
-    // eslint-disable-next-line no-undef
     if (typeof __SOLARIS_STANDALONE__ !== 'undefined' && __SOLARIS_STANDALONE__) {
       return 'standalone';
     }

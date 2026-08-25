@@ -74,8 +74,6 @@ const SourcesAdmin: React.FC<SourcesAdminProps> = ({ isOpen, onClose }) => {
   const problems = useMemo(() => validateSourcesConfig(cfg), [cfg]);
   const canSave = problems.length === 0;
 
-  if (!isOpen) return null;
-
   const patchSaturno = (patch: Partial<SourcesConfig['saturno']>) =>
     setCfg((c) => ({ ...c, saturno: { ...c.saturno, ...patch } }));
 
@@ -136,6 +134,9 @@ const SourcesAdmin: React.FC<SourcesAdminProps> = ({ isOpen, onClose }) => {
     );
     return { oss: r.oss.length, orphans: r.orphan_groups.length, blocksInOss, orphanBlocks };
   }, [scan]);
+
+  // Depois de TODOS os hooks (rules-of-hooks): fechado => nada renderiza.
+  if (!isOpen) return null;
 
   return (
     <div
