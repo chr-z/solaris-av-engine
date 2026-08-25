@@ -112,3 +112,47 @@ linhas quando standalone.
 - Build Tauri release: OK em 2m34s (`cargo tauri build --no-bundle`,
   toolchain gnu + winlibs_full/mingw64/bin no PATH p/ windres).
 - Push: 75eb38c..966180b desktop -> origin/desktop.
+## redesign (tick 4) — R2 componentes base — 25/08/2026 00:45
+- Commit c52803e @ redesign-premium, pushed.
+- **FIX crítico herdado do R1**: `@import tokens.css` depois de `@tailwind` = descartado
+  pelo postcss-import → `:root` inteiro fora do build, tema Tailwind apontando pra vars
+  vazias. Movido pro topo + fontes latin-only: CSS gz 30.8→**9.12KB** (meta <30KB).
+- FIX bg-solar-dark-border como fundo de input (rgba quase transparente) em AnalysisForm/SourceSelector.
+- Kit R2 completo: badge-pill+variantes semânticas, checkbox-custom animado (140ms),
+  tooltip-rich (título/desc/kbd), skeletons line/title/block, solaris-logo (intro 600ms 1x/sessão,
+  reduced-motion ok). Safelist Tailwind p/ classes ainda não citadas em tsx.
+- Aplicado: Tooltip core, LoginScreen premium, botões primários gradiente+glow (Header/SourceSelector),
+  checkboxes do filtro; migração alias→token em App/AdminRulesPanel/AnalysisForm/FilterControls/
+  AnalysisWorkspace/SourceSelector/AnalysisSheet/Header (~60 subs, ring-offsets claros removidos).
+- Validação: build verde; vitest 332/332; lint sem novos erros (18 pré-existentes);
+  verify_r2.cjs confirma no browser real: bg #0b0e14, Inter ativa, gradiente do disco,
+  regras .badge-pill/.checkbox-custom/.tooltip-rich/.skeleton-* presentes.
+- Screenshots: redesign_shots/r2_login.png + r2_workspace.png (login e workspace demo).
+- Próximo tick: R3 telas principais na ordem análise → fila → relatório QC (timeline pins,
+  score ring SVG animado, empty states ilustrados).
+
+---
+
+## Tick 25/08 ~02:15 — auditoria independente P1–P3 (fila turbo vazia)
+
+**Contexto:** fila P1/P2/P3 já executada em ticks anteriores (até a91df70).
+Nada a avançar sem diretiva nova; este tick rodou verificação de ponta a ponta
+(anti-false-done) em vez de re-auditar escopo piecemeal.
+
+### Verificação
+- vitest 233/233 (`--exclude src/audio-acoustics/**`, WIP de outra frente) — verde.
+- cargo test stable-gnu: 12/12 — verde.
+- `npm run build:desktop` + `cargo tauri build --no-bundle`: OK em 2m26s.
+- **Armadilha nova registrada:** `cargo tauri build` puro (sem wrapper
+  `rustup run`) usa o default MSVC e morre no link.exe do coreutils
+  ("extra operand"); fix validado = `RUSTUP_TOOLCHAIN=stable-gnu` exportado
+  no env (winlibs no PATH não basta sozinho). O exe canônico não foi tocado
+  pelo build quebrado (timestamp preservado até o rebuild bom).
+- Artefato: D:/cargo-target/release/solaris-av-engine.exe = 6.525.952 B
+  (6,22MB), rebuild 02:13, prova de conteúdo `grep -c pick_folder` ≥1.
+- Smoke: SMOKE_OK pid=32388 vivo após 5s mem=23,3MB, kill limpo.
+- Estado da fila: P1 (exe rodando) ✅, P2 (lto/cu=1/strip/panic=abort +
+  code-splitting, JS inicial ~245KB < meta 500KB) ✅, P3 (standalone sem
+  nuvem, 0 affordances de cloud) ✅ — pendências restantes são só as
+  conhecidas (NSIS assinado fora de escopo hoje; `.rsrc` cosmético).
+- Próximos ticks: só com diretiva nova do dono ou lane redesign (R3).
