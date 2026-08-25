@@ -113,3 +113,38 @@ Console-probe CDP próprio: 0 eventos de erro/warning/exceção.
 Suite: vitest 30 arquivos / 335 passed (+3 firebaseConfig), tsc limpo,
 test:e2e 21/21. Commits 9b274e2 + 56df76c na turbo/web-opt.
 Nota: redeploy Vercel da web herda os ganhos no próximo push para main.
+
+### 2026-08-25 (noite) — tick turbo-web #4: ilha LiveMonitors isola o loop de 15 Hz
+
+Fila 1-6 já DONE; auditoria do tick achou o último ponto quente de runtime:
+`useAVAnalysis` fazia setState a ~15 Hz DENTRO do AnalysisWorkspace durante
+todo o playback — cada tick re-renderizava a árvore inteira de 1036 linhas
+(sheet form, filtros, header, shortcuts) só para atualizar 4 canvases.
+
+Mudança: novo `src/components/Analysis/LiveMonitors.tsx` — ilha memoizada que
+vira DONA do estado de análise (hook + 4 docks RGB Parade/Waveform/
+Spectrogram/VU Meter + modal de zoom). Workspace passa a receber só
+`<LiveMonitors videoRef videoSrc/>`; videoRef continua compartilhado com o
+VideoPlayer. Modal de zoom migrou para `createPortal(document.body)`.
+
+| métrica | antes | depois |
+|---|---|---|
+| re-renders por tick de playback | workspace inteiro (~1036 linhas + filhos) | só a ilha (4 docks) |
+| AnalysisWorkspace.js | 68,8 KB raw | 67,7 KB raw (-1,1 KB) |
+| initial gz | 86 KB | 86 KB (inalterado) |
+| Lighthouse P/A/BP | 100/100/100 | **100/100/100** |
+| FCP / LCP / TBT / CLS | 1,4 s / 1,5 s / 0 ms / 0 | idem |
+| axe-core | 0 violações | **0 violações** |
+| console (probe CDP + LH) | 0 eventos | **0 eventos** |
+
+Suite: vitest 31 arquivos / 342 passed, tsc --noEmit limpo, test:e2e 21/21.
+Commit d67c66f em origin/turbo/web-opt.
+
+Incidente operacional (protocolo de porta validado funcionou): axe-scan da
+primeira tentativa falhou SAFE — hash servido ≠ dist local; um órfão de
+preview deste projeto (tick anterior, porta fixa baixa) respondia com build
+velha. Listados todos os `vite preview` via Win32_Process, matados SOMENTE os
+do solaris-web-turbo (3 grupos, portas 4214/4482/4371), re-scan em porta
+aleatória alta passou com hash conferido. Scripts auxiliares:
+scripts/list_preview_orphans.ps1 e kill_turbo_orphans.ps1.
+
