@@ -12,6 +12,7 @@ coverage
 # Production Build
 dist
 dist-ssr
+dist-desktop
 build
 
 # Environment Variables (CRÍTICO: Jamais remova isso)

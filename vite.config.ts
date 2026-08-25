@@ -10,7 +10,22 @@ export default defineConfig(({ mode }) => {
   const standalone = mode === 'standalone';
 
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      {
+        // P3 (zero-nuvem no desktop): o index.html fonte carrega os loaders
+        // Google (gapi + GIS) para o sabor web; no standalone eles são
+        // removidos do SHELL — senão o WebView tenta buscar apis.google.com e
+        // accounts.google.com mesmo com o app em modo local.
+        name: 'strip-cloud-loaders-when-standalone',
+        transformIndexHtml(html) {
+          if (!standalone) return html;
+          return html
+            .replace(/<script[^>]*src="https:\/\/apis\.google\.com\/[^"]*"[^>]*>\s*<\/script>\s*/i, '')
+            .replace(/<script[^>]*src="https:\/\/accounts\.google\.com\/[^"]*"[^>]*>\s*<\/script>\s*/i, '');
+        },
+      },
+    ],
     define: {
       __SOLARIS_STANDALONE__: JSON.stringify(standalone),
     },
@@ -34,6 +49,11 @@ export default defineConfig(({ mode }) => {
         }
       : undefined,
     build: {
+      // Sabor desktop escreve em dist-desktop/: o tauri.conf.json consome este
+      // diretório, então builds cloud concorrentes (`npm run build`) NUNCA mais
+      // contaminam o input embutido no executável.
+      outDir: standalone ? 'dist-desktop' : 'dist',
+      emptyOutDir: true,
       rollupOptions: {
         output: {
           // Vendor split driven by the shared, tested strategy in src/utils/chunking.ts.
