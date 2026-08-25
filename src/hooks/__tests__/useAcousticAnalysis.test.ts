@@ -10,6 +10,7 @@ import { act } from 'react';
 import {
   useAcousticAnalysis,
   ACOUSTIC_DEFAULTS,
+  clearSharedAcousticCache,
   type BaselineInfo,
 } from '../useAcousticAnalysis';
 import { makeSpeechLike, makeSine, addHum } from '../../audio-acoustics/fixtures';
@@ -25,6 +26,8 @@ function mountHook(
     report: unknown;
     error: string | null;
     baselineInfo: BaselineInfo;
+    progress: { pct: number; stage: string } | null;
+    fromCache: boolean;
   };
     markReference: () => boolean;
   forgetReference: () => boolean;
@@ -54,6 +57,8 @@ function mountHook(
       report: latest?.report ?? null,
       error: latest?.error ?? null,
       baselineInfo: latest?.baselineInfo ?? { ...ACOUSTIC_DEFAULTS, learned: false },
+      progress: latest?.progress ?? null,
+      fromCache: latest?.fromCache ?? false,
     }),
     markReference: (): boolean => act(() => latest!.markReference()) as unknown as boolean,
     forgetReference: (): boolean => act(() => latest!.forgetReference()) as unknown as boolean,
@@ -168,4 +173,113 @@ describe('useAcousticAnalysis', () => {
     expect(seen[seen.length - 1].rt60Target).toBeCloseTo(0.33);
     act(() => root.unmount());
   }, 15000);
+
+  it('exposes granular progress and finishes at 100/finalize', async () => {
+    clearSharedAcousticCache();
+    const h = mountHook({ getPcm: CLEAN_PCM, mediaKey: 'prog1' });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 150));
+    });
+    const s = h.getState();
+    expect(s.status).toBe('done');
+    expect(s.progress).not.toBeNull();
+    expect(s.progress?.pct).toBe(100);
+    expect(s.progress?.stage).toBe('finalize');
+    expect(s.fromCache).toBe(false);
+    h.unmount();
+  }, 20000);
+
+  it('second run of the same media+baseline is served from cache', async () => {
+    clearSharedAcousticCache();
+    let calls = 0;
+    const countingPcm = () => {
+      calls++;
+      return CLEAN_PCM();
+    };
+    const a = mountHook({ getPcm: countingPcm, mediaKey: 'cached-media' });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 150));
+    });
+    expect(a.getState().status).toBe('done');
+    const firstCalls = calls;
+    expect(firstCalls).toBe(1);
+    a.unmount();
+
+    const b = mountHook({ getPcm: countingPcm, mediaKey: 'cached-media' });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 120));
+    });
+    // PCM não é buscado de novo — veio do cache.
+    expect(calls).toBe(firstCalls);
+    expect(b.getState().status).toBe('done');
+    expect(b.getState().fromCache).toBe(true);
+    b.unmount();
+  }, 20000);
+
+  it('changing the studio baseline invalidates the cache (re-analysis)', async () => {
+    clearSharedAcousticCache();
+    localStorage.clear();
+    let calls = 0;
+    const countingPcm = () => {
+      calls++;
+      return CLEAN_PCM();
+    };
+    const a = mountHook({ getPcm: countingPcm, mediaKey: 'shift', studioName: 'BASE-A' });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 150));
+    });
+    expect(a.getState().status).toBe('done');
+    a.unmount();
+
+    // Aprende um baseline DIFERENTE para BASE-B (afeta outra chave de cache,
+    // então trocamos o estúdio da segunda montagem).
+    localStorage.setItem(
+      'solaris.acoustics.baselines.v1',
+      JSON.stringify({
+        'BASE-B': { rt60Target: 0.9, noiseFloorDbMax: -30, capturedAt: '2026-08-25T11:00:00Z', samples: 1 },
+      })
+    );
+    const b = mountHook({ getPcm: countingPcm, mediaKey: 'shift', studioName: 'BASE-B' });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 200));
+    });
+    expect(b.getState().status).toBe('done');
+    expect(b.getState().fromCache).toBe(false); // baseline diferente ⇒ re-analisou
+    expect(calls).toBe(2);
+    b.unmount();
+  }, 25000);
+
+  it('unmount mid-run cancels without surfacing stale results on next mount', async () => {
+    clearSharedAcousticCache();
+    const slowPcm = () => new Promise<{ samples: Float32Array; sampleRate: number }>((resolve) => {
+      setTimeout(() => resolve({ samples: new Float32Array(CLEAN_PCM_SYNC()), sampleRate: SR }), 400);
+    });
+    const a = mountHook({ getPcm: slowPcm, mediaKey: 'slow' });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 60)); // passou do defer, esperando PCM
+    });
+    expect(a.getState().status).toBe('running');
+    a.unmount(); // cancela em pleno voo
+    await new Promise((r) => setTimeout(r, 500));
+
+    // Nova montagem com PCM imediato termina normalmente.
+    const b = mountHook({ getPcm: CLEAN_PCM, mediaKey: 'slow2' });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 150));
+    });
+    expect(b.getState().status).toBe('done');
+    b.unmount();
+  }, 25000);
 });
+
+/** Versão síncrona do PCM limpo para helpers acima. */
+function CLEAN_PCM_SYNC(): Float64Array {
+  return makeSpeechLike(
+    [
+      { word: 1.2, pause: 0.9 },
+      { word: 1.4, pause: 0.9 },
+      { word: 1.3, pause: 0.0 },
+    ],
+    SR
+  );
+}
