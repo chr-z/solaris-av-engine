@@ -35,6 +35,10 @@ import {
 } from '../../features/qol/queueActions';
 import { getUndoLog } from '../../features/qol/undoStore';
 import QueueBulkBar from './QueueBulkBar';
+import QueueImportExportBar from './QueueImportExportBar';
+import {
+  applyImportInverse,
+} from '../../features/qol/queueImport';
 import { registerUndoApplier, applyUndo } from '../../features/qol/undoApply';
 import type { UndoEvent } from '../../features/qol/undo';
 import type { Dataset } from '../../utils/dashboard';
@@ -236,11 +240,21 @@ export default function LiveDashboardPanel({
     return () => window.clearInterval(id);
   }, [nowMs]);
 
-  // Undo das ações de fila: registra o applier dos 3 kinds enquanto o
+  // Undo das ações de fila: registra o applier dos 4 kinds enquanto o
   // painel vive; Ctrl+Z global (App) resolve via applyUndo → este applier.
   // Re-registra a cada mutação da fila (closure sempre fresca).
   const queueApplier = useCallback(
     (event: UndoEvent): boolean => {
+      if (event.kind === 'import-queue') {
+        // Snapshot: desfazer importação = remover as linhas adicionadas.
+        const imported = (event.payload as { rows?: unknown }).rows;
+        if (!Array.isArray(imported)) return false;
+        const { rows, changed } = applyImportInverse(queueState, {
+          rows: imported as QueueRowLike[],
+        });
+        if (changed) commitQueue(rows);
+        return changed;
+      }
       if (
         event.kind !== 'assign-os' &&
         event.kind !== 'return-os' &&
@@ -259,9 +273,12 @@ export default function LiveDashboardPanel({
     [queueState, commitQueue],
   );
   useEffect(() => {
-    const unregisters = (['assign-os', 'return-os', 'prioritize-os'] as const).map((kind) =>
-      registerUndoApplier(kind, queueApplier),
-    );
+    const unregisters = ([
+      'assign-os',
+      'return-os',
+      'prioritize-os',
+      'import-queue',
+    ] as const).map((kind) => registerUndoApplier(kind, queueApplier));
     return () => unregisters.forEach((un) => un());
   }, [queueApplier]);
 
@@ -270,6 +287,21 @@ export default function LiveDashboardPanel({
     const log = getUndoLog();
     for (let i = log.undoable.length - 1; i >= 0; i--) {
       const e = log.undoable[i];
+      if (e.kind === 'import-queue') {
+        const rows = (e.payload as { rows?: unknown }).rows;
+        if (
+          Array.isArray(rows) &&
+          rows.some(
+            (r) =>
+              r !== null && typeof r === 'object' &&
+              typeof (r as { os_id?: unknown }).os_id === 'string' &&
+              queueState.some((q) => q.os_id === (r as { os_id: string }).os_id),
+          )
+        ) {
+          return e.id;
+        }
+        continue;
+      }
       if (
         (e.kind === 'assign-os' || e.kind === 'return-os' || e.kind === 'prioritize-os') &&
         typeof e.payload.osId === 'string' &&
@@ -315,6 +347,15 @@ export default function LiveDashboardPanel({
     (nextRows: QueueRowLike[], events: QueueActionEvent[]) => {
       commitQueue(nextRows);
       for (const ev of events) getUndoLog().record(ev.kind, ev.label, ev.payload);
+    },
+    [commitQueue],
+  );
+
+  /** Import A3: anexa as linhas novas e grava UM evento snapshot de undo. */
+  const handleImport = useCallback(
+    (nextRows: QueueRowLike[], imported: QueueRowLike[]) => {
+      commitQueue(nextRows);
+      getUndoLog().record('import-queue', `+${imported.length} OSs`, { rows: imported });
     },
     [commitQueue],
   );
@@ -689,6 +730,30 @@ export default function LiveDashboardPanel({
             />
           )}
         </div>
+      )}
+      {/* A3 — import/export da fila FORA do condicional: existe também com
+          fila vazia (importar o primeiro lote é o caso de uso principal). */}
+      {canManage && (
+        <QueueImportExportBar
+          rows={queueState}
+          canManage={canManage}
+          sheetName={t('dash.live.queueSheetName')}
+          labels={{
+            title: t('dash.live.ioTitle'),
+            importFile: t('dash.live.ioImportFile'),
+            exportCsv: t('dash.live.ioExportCsv'),
+            exportXlsx: t('dash.live.ioExportXlsx'),
+            addedN: t('dash.live.ioAdded'),
+            skippedN: t('dash.live.ioSkipped'),
+            reasonMissingOs: t('dash.live.ioReasonMissingOs'),
+            reasonDuplicate: t('dash.live.ioReasonDuplicate'),
+            reasonBadStatus: t('dash.live.ioReasonBadStatus'),
+            reasonBadPriority: t('dash.live.ioReasonBadPriority'),
+            reasonNoOsColumn: t('dash.live.ioReasonNoOsColumn'),
+            readFailed: t('dash.live.ioReadFailed'),
+          }}
+          onImport={handleImport}
+        />
       )}
 
       {/* Gráficos lazy: montam só quando a aba Ao vivo está ativa (este painel) */}
