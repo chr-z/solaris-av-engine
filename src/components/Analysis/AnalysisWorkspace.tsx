@@ -17,6 +17,7 @@ import OverlayControls from '../Monitors/OverlayControls';
 import Dock from '../Layout/Dock';
 import UserAvatar from '../Auth/UserAvatar';
 import Popover from '../Core/Popover';
+import ScoreRing from '../Core/ScoreRing';
 import ShortcutHelpModal from '../Core/ShortcutHelpModal';
 import { SaveIcon, ClipboardCheckIcon, YouTubeIcon, GoogleDriveIcon, XIcon, GridIcon, ClockIcon, PencilIcon, InfoIcon, ColumnsIcon, RowsIcon, RefreshIcon } from '../Core/icons';
 
@@ -32,6 +33,8 @@ import { useLicense } from '../../licensing/LicenseContext';
 import { OverlaySettings, VideoChoice, UserProfile, Timestamp } from '../../types';
 import { useI18n } from '../../i18n/I18nContext';
 import { dropdownFields, inconformityToCategoryMap, resultFields, inconformityScores, categoryMaxScores } from '../../utils/constants';
+import { humanizeSaveError } from '../../utils/humanErrors';
+import { parseScore } from '../../utils/scoreFormat';
 import { getCompareGridClass } from '../../utils/compareMode';
 import { database } from '../../config/firebase';
 import firebase from 'firebase/compat/app';
@@ -455,6 +458,59 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   const [localFilePath, setLocalFilePath] = useState('');
   const [retrievedFilePath, setRetrievedFilePath] = useState<string | null>(null);
 
+  // R3 v3: time markers for the redesigned timeline pins. Same Firebase path
+  // the TimestampModal reads (`timestamps/<os>/<videoId>`) — a light 'value'
+  // listener only for rendering; adding/removing still goes through the modal.
+  const [timelineMarkers, setTimelineMarkers] = useState<Timestamp[]>([]);
+  useEffect(() => {
+    if (!selectedOsIndex || !currentVideoId) {
+      queueMicrotask(() => setTimelineMarkers([]));
+      return;
+    }
+    const ref = database.ref(`timestamps/${selectedOsIndex}/${currentVideoId}`);
+    let active = true;
+    // Em modo guest/demo o Realtime DB não responde: estado fica no vazio sem
+    // erro (pins simplesmente não aparecem).
+    const applySnapshot = (snapshot: any) => {
+      const data = snapshot.val();
+      if (data) {
+        const list: Timestamp[] = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+        list.sort((a, b) => a.time - b.time);
+        setTimelineMarkers(list);
+      } else {
+        setTimelineMarkers([]);
+      }
+    };
+    ref.get().then(snapshot => {
+      if (active) applySnapshot(snapshot);
+    }).catch(() => { /* offline/demo: sem pins */ });
+    const listener = ref.on('value', snapshot => {
+      if (active) applySnapshot(snapshot);
+    }, () => { /* permission/offline: sem pins */ });
+    return () => {
+      active = false;
+      ref.off('value', listener);
+    };
+  }, [selectedOsIndex, currentVideoId]);
+
+  // R3 v3: clicking a pin seeks the leader video to the marker time.
+  const handleMarkerSelect = useCallback((time: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    try {
+      video.currentTime = time;
+    } catch { /* vídeo ainda não pronto */ }
+  }, []);
+
+  // R3 v3: nota final atual (memo) pro ScoreRing do cabeçalho.
+  const finalScoreForRing = useMemo(() => {
+    if (!localRowData || headers.length === 0) return null;
+    const idx = headers.indexOf('FINAL SCORE');
+    if (idx < 0) return null;
+    return parseScore(localRowData[idx]?.value);
+  }, [localRowData, headers]);
+
+
 
   // Fetch stored local file path when OS is selected
   useEffect(() => {
@@ -748,6 +804,8 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                     onClose={onClose}
                     registerPlayerControls={registerPlayerControls}
                     onTransport={compare.publishTransport}
+                    markers={timelineMarkers}
+                    onMarkerSelect={handleMarkerSelect}
                 >
                     {videoChoices.length > 1 && (
                         <VideoSourceChooser
@@ -763,10 +821,24 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                          />
                     )}
                     {!videoSrc && !retrievedFilePath && videoChoices.length <= 1 && !isPickerOpen && (
-                        <div className="flex flex-col items-center justify-center text-center text-gray-400 p-4">
-                            <p className="font-bold text-lg mb-2">{videoTitle}</p>
-                            <p className="mb-4">Select an option below to start analysis.</p>
-                            <div className="w-96">
+                        <div className="flex flex-col items-center justify-center text-center text-ink-secondary p-4">
+                            {/* Empty state ilustrado (momento wow #4) */}
+                            <svg width="72" height="72" viewBox="0 0 72 72" fill="none" aria-hidden="true" className="mb-3 opacity-90">
+                                <rect x="10" y="14" width="52" height="36" rx="6" stroke="var(--color-border-strong)" strokeWidth="1.5" />
+                                <path d="M30 26l12 7-12 7v-14z" fill="url(#solaris-empty-play)" />
+                                <path d="M22 58h28M28 63h16" stroke="var(--color-border-strong)" strokeWidth="1.5" strokeLinecap="round" />
+                                <circle cx="57" cy="20" r="8" fill="var(--color-bg)" stroke="var(--color-border-strong)" strokeWidth="1.5" />
+                                <path d="M53.5 20l2.4 2.4L60.5 17" stroke="var(--color-ok)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                <defs>
+                                    <linearGradient id="solaris-empty-play" x1="30" y1="26" x2="42" y2="40">
+                                        <stop stopColor="var(--color-accent-from)" />
+                                        <stop offset="1" stopColor="var(--color-accent-to)" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <p className="font-bold text-lg mb-2 text-ink">{videoTitle}</p>
+                            <p className="mb-4">Paste a YouTube link or pick a source below to start.</p>
+                            <div className="w-96 max-w-full">
                                 <SourceSelector onSourceSelected={onLoadMedia} />
                             </div>
                             <p className="text-sm mt-4">Or click the <GoogleDriveIcon className="inline-block w-4 h-4 align-text-bottom" /> button next to the "FOLDER" field.</p>
@@ -797,6 +869,8 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                 onClose={onClose}
                 registerPlayerControls={registerPlayerControls}
                 onTransport={compare.publishTransport}
+                markers={timelineMarkers}
+                onMarkerSelect={handleMarkerSelect}
             >
                 {videoChoices.length > 1 && (
                     <VideoSourceChooser
@@ -812,10 +886,24 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                      />
                 )}
                 {!videoSrc && !retrievedFilePath && videoChoices.length <= 1 && !isPickerOpen && (
-                    <div className="flex flex-col items-center justify-center text-center text-gray-400 p-4">
-                        <p className="font-bold text-lg mb-2">{videoTitle}</p>
-                        <p className="mb-4">Select an option below to start analysis.</p>
-                        <div className="w-96">
+                    <div className="flex flex-col items-center justify-center text-center text-ink-secondary p-4">
+                        {/* Empty state ilustrado (momento wow #4) */}
+                        <svg width="72" height="72" viewBox="0 0 72 72" fill="none" aria-hidden="true" className="mb-3 opacity-90">
+                            <rect x="10" y="14" width="52" height="36" rx="6" stroke="var(--color-border-strong)" strokeWidth="1.5" />
+                            <path d="M30 26l12 7-12 7v-14z" fill="url(#solaris-empty-play2)" />
+                            <path d="M22 58h28M28 63h16" stroke="var(--color-border-strong)" strokeWidth="1.5" strokeLinecap="round" />
+                            <circle cx="57" cy="20" r="8" fill="var(--color-bg)" stroke="var(--color-border-strong)" strokeWidth="1.5" />
+                            <path d="M53.5 20l2.4 2.4L60.5 17" stroke="var(--color-ok)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            <defs>
+                                <linearGradient id="solaris-empty-play2" x1="30" y1="26" x2="42" y2="40">
+                                    <stop stopColor="var(--color-accent-from)" />
+                                    <stop offset="1" stopColor="var(--color-accent-to)" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <p className="font-bold text-lg mb-2 text-ink">{videoTitle}</p>
+                        <p className="mb-4">Paste a YouTube link or pick a source below to start.</p>
+                        <div className="w-96 max-w-full">
                             <SourceSelector onSourceSelected={onLoadMedia} />
                         </div>
                         <p className="text-sm mt-4">Or click the <GoogleDriveIcon className="inline-block w-4 h-4 align-text-bottom" /> button next to the "FOLDER" field.</p>
@@ -888,9 +976,27 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
       </div>
       <div className="w-1/3 h-full flex flex-col bg-surface/80 dark:bg-surface/80 backdrop-blur-md rounded-lg shadow-sm border border-hairline overflow-hidden">
           <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-hairline">
-              <h2 className="font-bold">Analysis Sheet</h2>
+              <div className="flex items-center gap-3 min-w-0">
+                  {/* Momento wow #3: anel do score final (0–5), cor semântica */}
+                  {localRowData && headers.includes('FINAL SCORE') && (
+                      <ScoreRing
+                          score={finalScoreForRing}
+                          size={44}
+                          label={t('workspace.finalScore') || 'FINAL'}
+                      />
+                  )}
+                  <h2 className="font-bold">Analysis Sheet</h2>
+              </div>
               <div className="flex items-center gap-2">
-                  {saveStatus === 'error' && <p className="text-sm text-red-400 mr-2">{saveError}</p>}
+                  {saveStatus === 'error' && saveError && (() => {
+                      const he = humanizeSaveError(saveError);
+                      return (
+                          <div className="text-right mr-2 max-w-56" role="alert">
+                              <p className="text-sm text-fail leading-tight">{he.title}</p>
+                              <p className="text-2xs text-ink-secondary leading-tight">{he.hint}</p>
+                          </div>
+                      );
+                  })()}
                   {/* S5.2: enter/exit A/B compare split (also via V). S6.1: Pro-gated — free tier gets the upsell lock. */}
                   {isCompareAllowed ? (
                     <button

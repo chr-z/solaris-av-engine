@@ -101,6 +101,9 @@ export const en = {
   'compare.empty': 'Load the challenger media (side B)',
   'compare.sourcePlaceholder': 'YouTube / Drive / direct URL',
   'compare.load': 'Load side B',
+
+  // R3 v3 — analysis screen finish
+  'workspace.finalScore': 'FINAL',
   'compare.changeSource': 'Change side B source',
   'compare.loadFailed': 'Side B could not be loaded. The link may be private or unsupported.',
   'compare.syncMode': 'Sync',
@@ -353,6 +356,9 @@ export const pt: Record<TranslationKey, string> = {
   'compare.empty': 'Carregue a mídia desafiante (lado B)',
   'compare.sourcePlaceholder': 'URL do YouTube / Drive / direta',
   'compare.load': 'Carregar lado B',
+
+  // R3 v3 — acabamento da tela de análise
+  'workspace.finalScore': 'FINAL',
   'compare.changeSource': 'Trocar a fonte do lado B',
   'compare.loadFailed': 'Não foi possível carregar o lado B. O link pode ser privado ou não suportado.',
   'compare.syncMode': 'Sincronia',
