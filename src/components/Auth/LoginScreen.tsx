@@ -1,6 +1,7 @@
 import React from 'react';
 import { GoogleIcon } from '../Core/icons';
 import { useI18n } from '../../i18n/I18nContext';
+import { isFirebaseConfigured } from '../../config/firebase';
 import LanguageSwitcher from '../../i18n/LanguageSwitcher';
 
 interface LoginScreenProps {
@@ -53,6 +54,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestLogin, isLoad
             >
               {t('login.continueAsGuest')}
             </button>
+        )}
+
+        {/* turbo-web: offline/demo builds carry no Firebase env vars */}
+        {!isFirebaseConfigured() && (
+            <p className="mt-4 text-xs text-gray-400" data-testid="demo-mode-notice">
+              {t('login.demoNotice')}
+            </p>
         )}
 
         {error && (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getDb, getFirebaseCompat, type SnapshotLike } from '../../config/firebase';
+import { getDb, getFirebaseCompat, isFirebaseConfigured, type SnapshotLike } from '../../config/firebase';
 type DbSnapshot = SnapshotLike;
 import { UserProfile } from '../../types';
 import UserAvatar from '../Auth/UserAvatar';
@@ -25,6 +25,8 @@ const OnlineUsers: React.FC = () => {
             setOnlineUsers(currentOnlineUsers);
         };
         let disposed = false;
+        // turbo-web: offline/demo builds have no Firebase config — stay silent.
+        if (!isFirebaseConfigured()) return;
         getFirebaseCompat().then(() => getDb()).then((db) => {
             if (disposed) return;
             presenceRef = db.ref('presence');

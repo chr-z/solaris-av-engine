@@ -3,7 +3,7 @@ import { SearchIcon, LinkIcon, ChevronDownIcon, FilterIcon, RefreshIcon, XIcon, 
 import LoadingIndicator from '../Core/LoadingIndicator';
 import Popover from '../Core/Popover';
 import FilterControls, { FilterState } from './FilterControls';
-import { getDb, getFirebaseCompat, type SnapshotLike } from '../../config/firebase';
+import { getDb, getFirebaseCompat, isFirebaseConfigured, type FbUserLike, type SnapshotLike } from '../../config/firebase';
 type DbSnapshot = SnapshotLike;
 import { UserProfile } from '../../types';
 import UserAvatar from '../Auth/UserAvatar';
@@ -224,6 +224,8 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
         let listener: ((snapshot: DbSnapshot) => void) | null = null;
         let dbRef: ReturnType<Awaited<ReturnType<typeof getDb>>['ref']> | null = null;
         let cancelled = false;
+        // turbo-web: offline/demo builds have no Firebase config — stay silent.
+        if (!isFirebaseConfigured()) return;
         getDb().then((db) => {
             if (cancelled) return;
             dbRef = db.ref('locks');

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { XIcon } from '../Core/icons';
 import { UserProfile } from '../../types';
-import { getDb, type SnapshotLike } from '../../config/firebase';
+import { getDb, isFirebaseConfigured, type SnapshotLike } from '../../config/firebase';
 import { LogEntry } from '../../utils/logCapture';
 import UserAvatar from '../Auth/UserAvatar';
 
@@ -79,7 +79,8 @@ const BugReportViewer: React.FC<BugReportViewerProps> = ({ isOpen, onClose }) =>
         // Structural view of an RTDB Query — enough to attach/detach one listener.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let reportsRef: { on: (...args: any[]) => any; off: (...args: any[]) => void } | null = null;
-        getDb().then((db) => {
+        // turbo-web: offline/demo builds have no Firebase config — stay silent.
+        if (isFirebaseConfigured()) getDb().then((db) => {
             if (disposed) return;
             reportsRef = db.ref('bug_reports').orderByChild('timestamp').limitToLast(100);
             const listener = reportsRef.on('value', (snapshot: SnapshotLike) => {

@@ -15,8 +15,9 @@
   </head>
   <body class="bg-solar-light-bg dark:bg-solar-dark-bg">
     <div id="root"></div>
-    <script src="https://apis.google.com/js/api.js" defer></script>
-    <script src="https://accounts.google.com/gsi/client" defer></script>
+    <!-- turbo-web: Google SDKs (gapi + GSI, ~100KB) are injected on demand
+         from App.tsx ONLY when Firebase env vars exist — demo/local builds
+         never download them. -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

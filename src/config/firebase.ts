@@ -68,12 +68,24 @@ const firebaseConfig = {
 let handlesPromise: Promise<FirebaseHandles> | null = null;
 
 /**
+ * True when the deployment actually carries Firebase env vars. Demo/local
+ * builds without them stay in offline/demo mode: callers must not load the
+ * SDK at all (it would only produce a FIREBASE FATAL ERROR in the console).
+ */
+export function isFirebaseConfigured(): boolean {
+    return Boolean(firebaseConfig.projectId && firebaseConfig.databaseURL);
+}
+
+/**
  * Load the compat SDK once, initialize the app once, and memoize the
  * database/auth handles. Concurrent callers share the same promise.
  */
 export function loadFirebase(): Promise<FirebaseHandles> {
     if (!handlesPromise) {
         handlesPromise = (async () => {
+            if (!isFirebaseConfigured()) {
+                throw new Error('Firebase not configured (offline/demo mode).');
+            }
             const app = (await import('firebase/compat/app')).default;
             await import('firebase/compat/auth');
             await import('firebase/compat/database');

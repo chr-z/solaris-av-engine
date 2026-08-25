@@ -4,7 +4,7 @@
 // Firebase SDK); this module composes it with Firebase auth state.
 
 import { useState, useEffect } from 'react';
-import { getFirebaseCompat } from '../config/firebase';
+import { getFirebaseCompat, isFirebaseConfigured } from '../config/firebase';
 import {
   resolveAdminSource,
   readGuestEmail,
@@ -40,6 +40,17 @@ export function useAdminRole(): AdminRoleState {
     let cancelled = false;
 
     const resolve = async () => {
+      // turbo-web: offline/demo builds have no Firebase config — the local
+      // allowlist decides immediately, the SDK never loads.
+      if (!isFirebaseConfigured()) {
+        const email = readGuestEmail();
+        if (!cancelled && isLocalAdmin(email)) {
+          setState({ isAdmin: true, source: 'local-fallback', loading: false });
+          return;
+        }
+        deny(cancelled, setState);
+        return;
+      }
       const user = (await getFirebaseCompat()).fbAuth.currentUser;
       if (!user) {
         // Guest/demo path: no Firebase user → local allowlist decides.

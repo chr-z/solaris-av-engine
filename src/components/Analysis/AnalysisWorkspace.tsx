@@ -35,7 +35,7 @@ import { OverlaySettings, VideoChoice, UserProfile, Timestamp } from '../../type
 import { useI18n } from '../../i18n/I18nContext';
 import { dropdownFields, inconformityToCategoryMap, resultFields, inconformityScores, categoryMaxScores } from '../../utils/constants';
 import { getCompareGridClass } from '../../utils/compareMode';
-import { getDb, getFirebaseCompat, type UnsubscribeFn } from '../../config/firebase';
+import { getDb, getFirebaseCompat, isFirebaseConfigured, type UnsubscribeFn } from '../../config/firebase';
 
 // Solaris v3: scoring + sheet-sync modules
 import { recalculateScoresWithEngine, isScorableHeader, applyScoreUpdates } from '../../config/engineBridge';
@@ -112,6 +112,8 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
         let disposed = false;
         let timestampsRef: ReturnType<Awaited<ReturnType<typeof getDb>>['ref']> | null = null;
         let unsub: UnsubscribeFn | null = null;
+        // turbo-web: offline/demo builds have no Firebase config — stay silent.
+        if (!isFirebaseConfigured()) { setIsLoading(false); return; }
         getDb().then((db) => {
             if (disposed) return;
             timestampsRef = db.ref(`timestamps/${selectedOsIndex}/${currentVideoId}`);

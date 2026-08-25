@@ -8,7 +8,7 @@ import { OverlaySettings, VideoChoice, UserProfile } from './types';
 import { DRIVE_FILE_REGEX, YOUTUBE_REGEX, DRIVE_FOLDER_REGEX } from './utils/regex';
 // turbo-web: firebase compat SDK is loaded on demand (lazy chunk); consumers
 // await these getters instead of touching eager singletons.
-import { getDb, getFbAuth, getFirebaseCompat, type FbUserLike, type SnapshotLike } from './config/firebase';
+import { getDb, getFbAuth, getFirebaseCompat, isFirebaseConfigured, type FbUserLike, type SnapshotLike } from './config/firebase';
 type FbUser = FbUserLike;
 type DbSnapshot = SnapshotLike;
 import { FilterState } from './components/Analysis/FilterControls';
@@ -551,6 +551,7 @@ const App: React.FC = () => {
     if (authStatus !== 'signedIn' || !userProfile || userProfile.id === 'guest-reviewer-id') {
         // turbo-web: only touch the DB when the lazy SDK is actually loaded;
         // signed-out visitors never pay for it.
+        if (!isFirebaseConfigured()) return;
         void getDb().then((db) => db.goOffline()).catch(() => {});
         return;
     }
@@ -645,7 +646,27 @@ const App: React.FC = () => {
     };
 
     const startTime = Date.now();
+    /** Injects the Google SDK <script> tags once, on demand (turbo-web). */
+    const injectGoogleScripts = () => {
+        if (document.getElementById('gapi-script')) return;
+        const mk = (id: string, src: string) => {
+            const s = document.createElement('script');
+            s.id = id; s.src = src; s.async = true;
+            document.body.appendChild(s);
+        };
+        mk('gapi-script', 'https://apis.google.com/js/api.js');
+        mk('gsi-script', 'https://accounts.google.com/gsi/client');
+    };
     const pollForApis = () => {
+        if (!isFirebaseConfigured()) {
+            // turbo-web: demo/local build without Firebase env vars — skip the
+            // Google SDK polling entirely and land straight in guest mode.
+            handleGuestLogin();
+            return;
+        }
+        if (typeof gapi === 'undefined' || !gapi.load || typeof google === 'undefined' || !google.accounts) {
+            injectGoogleScripts();
+        }
         if (typeof gapi !== 'undefined' && gapi.load && typeof google !== 'undefined' && google.accounts) {
             // turbo-web: auth listener attaches once the lazy SDK resolves.
             getFbAuth().then((fbAuth) => {
@@ -722,6 +743,16 @@ const App: React.FC = () => {
 
   const handleLogout = useCallback(async () => {
     try {
+        // turbo-web: nothing to sign out from in offline/demo builds.
+        if (!isFirebaseConfigured()) {
+            setSelectedOsIndex(null);
+            setVideoSrc(null);
+            clearGuestEmail();
+            setAllRows([]);
+            setHeaders([]);
+            setUserProfile(null);
+            return;
+        }
         const { fbAuth } = await getFirebaseCompat();
         await fbAuth.signOut();
         setSelectedOsIndex(null);
