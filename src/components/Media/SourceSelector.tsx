@@ -3,6 +3,7 @@ import { UploadIcon, GoogleDriveIcon, YouTubeIcon } from '../Core/icons';
 import DriveFilePicker from './DriveFilePicker';
 import { DriveFile } from '../Analysis/AnalysisSheet';
 import { useI18n } from '../../i18n/I18nContext';
+import { isStandalone } from '../../config/runtimeMode';
 
 interface SourceSelectorProps {
   onSourceSelected: (source: File | string, info?: { name?: string; isDriveLink?: boolean; isYoutube?: boolean }) => void;
@@ -13,6 +14,9 @@ type SourceType = 'local' | 'youtube' | 'drive';
 
 const SourceSelector: React.FC<SourceSelectorProps> = ({ onSourceSelected, onClosePopover }) => {
   const { t } = useI18n();
+  // P3 standalone: nenhuma fonte remota (YouTube URL / Google Drive) existe
+  // num build sem nuvem — só o arquivo local do disco do analista.
+  const standalone = isStandalone();
   const [activeTab, setActiveTab] = useState<SourceType>('local');
   const [url, setUrl] = useState('');
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -121,8 +125,12 @@ const SourceSelector: React.FC<SourceSelectorProps> = ({ onSourceSelected, onClo
     <div className="bg-solar-light-content dark:bg-solar-dark-content rounded-lg p-1">
       <div className="flex border-b border-solar-light-border dark:border-solar-dark-border" role="tablist">
         <TabButton id="local" label={t('source.tab.local')} icon={<UploadIcon className="w-5 h-5"/>} activeTab={activeTab} onSelect={setActiveTab} />
-        <TabButton id="youtube" label={t('source.tab.youtube')} icon={<YouTubeIcon className="w-5 h-5"/>} activeTab={activeTab} onSelect={setActiveTab} />
-        <TabButton id="drive" label={t('source.tab.drive')} icon={<GoogleDriveIcon className="w-5 h-5"/>} activeTab={activeTab} onSelect={setActiveTab} />
+        {!standalone && (
+          <>
+            <TabButton id="youtube" label={t('source.tab.youtube')} icon={<YouTubeIcon className="w-5 h-5"/>} activeTab={activeTab} onSelect={setActiveTab} />
+            <TabButton id="drive" label={t('source.tab.drive')} icon={<GoogleDriveIcon className="w-5 h-5"/>} activeTab={activeTab} onSelect={setActiveTab} />
+          </>
+        )}
       </div>
       <div className="p-4">{renderContent()}</div>
     </div>
