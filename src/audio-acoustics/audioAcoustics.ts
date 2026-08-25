@@ -13,7 +13,10 @@
 import { FFT, hannWindow } from './fft';
 import { rmsTime } from './features';
 import { detectClip, estimateTHDFromSpectrum, type ClipResult } from './clipping';
-import { detectHum, estimateNoiseFloorDb, sibilanceRatioDb, percentile } from './noise';
+import {
+  detectHum, estimateNoiseFloorDb, sibilanceRatioDb, percentile,
+  HumSpectrumAccumulator, detectHumFromQuietSpectrum,
+} from './noise';
 import { detectEcho, type EchoResult } from './echo';
 import { analyzeReverb, type ReverbResult } from './reverb';
 
@@ -183,6 +186,7 @@ export function analyzeAudioPcm(
 
   const frameRmsDb: number[] = [];
   const meanPowSpec = new Float64Array(halfBins);
+  const humAcc = new HumSpectrumAccumulator();
   const clipEvents: Array<{ sampleIdx: number; runLen: number }> = [];
   let globalPeakDb = -120;
   let tonalFrames = 0;
@@ -217,6 +221,10 @@ export function analyzeAudioPcm(
       }
     }
     if (sibSamples.length < 800) sibSamples.push(sibilanceRatioDb(mags, sampleRate, fftSize));
+
+    // Hum: acumula espectro por frame p/ pente de banda no espectro silencioso
+    // (p25 temporal) — imune a bin fracionário e a fala. Cap de memória.
+    humAcc.add(mags);
   }
 
   // Pico global.
@@ -288,8 +296,13 @@ export function analyzeAudioPcm(
   const floorMax = opts?.baseline?.noiseFloorDbMax ?? -45;
   const noiseScoreRaw = clamp01_100(noiseScoreFromFloorDb(noiseFloorDb));
 
-  // Hum no espectro médio — hum confirmado penaliza o eixo ruído.
-  const hum = detectHum(avgMags, sampleRate, fftSize);
+  // Hum: preferir o espectro silencioso (p25 temporal por bin) — fala é
+  // transiente e some no p25; hum constante permanece. Fallback: detector
+  // de pico original sobre a média espectral (entradas curtas/1 frame).
+  const quietSpec = humAcc.buildQuietSpectrum();
+  const hum = quietSpec !== null
+    ? detectHumFromQuietSpectrum(quietSpec, sampleRate, fftSize)
+    : detectHum(avgMags, sampleRate, fftSize);
   let humNoisePenalty = 0;
   if (hum.humDetected) {
     humNoisePenalty = hum.severity === 'heavy' ? 40 : hum.severity === 'moderate' ? 22 : 10;
