@@ -459,3 +459,20 @@ P4 (ML ONNX) segue NÃO iniciado — candidatos próximos tick: sutil0.45 (featu
 - Guardrail repo: desktop == origin/desktop (33bfbd6). Fila P1-P3 vazia (escopo
   entregue e auditado as 02h15) - NADA re-executado neste tick por diretriz do dono.
 - Commit desta entrada: somente `solaris_desktop_log.md` (path proprio da lane).
+
+---
+
+## Tick 25/08 ~16h20 — audio-dsp (Yui / cron solaris-audio)
+
+Worktree solaris-audio (branch audio/acoustics); desktop/src-tauri/pitch intocados.
+TEMA: GENERALIZAÇÃO além do fixture canônico — spike varreu ritmo de fala (fast 0.3/0.3, canon 0.4/0.6, slow 0.5/1.0) x nível (0.15/0.5/0.95) nas condições PR e achou 2 bugs reais invisíveis ao fixture único:
+
+- BUG A (CRÍTICO, eixo prioritário): fala RÁPIDA + reverb RT60 0.9 => FN TOTAL (fallback C50 lia sala "dry"). Causa: VAD não acha vão sub-limiar >=180ms porque a cauda preenche o intervalo de 300ms entre palavras — 1 segmento [0,dur], zero janelas Schroeder. FIX duplo: escada 1 ganhou piso -12dB (cauda de RT60 longo fica ~10-12dB abaixo do pico da fala) e nova escada 2 (minSilenceMs {120,90} x pisos {-20,-16,-12}) escolhendo a combinação com MAIS segmentos — parar no primeiro degrau com >=2 capturava janelas curtas enviesadas (medido: -20/120 lia 0.49-0.59 p/ verdade 0.9; -12/90 lia 0.64-0.90).
+- BUG B (eco FP): cadência LENTA seca flagrava "eco 139ms conf 0.09" — pico espúrio de prosódia na ACF passava no threshold absoluto 0.07. Gate de duty-cycle testado e DESCARTADO (não separou). FIX final: gate de significância estatística z = r*sqrt(N_eff) >= 2, N_eff ponderado por |env[i]*env[i+d]| (blocos silenciosos não contam — envelope esparso engana o N nominal), + piso conjuntivo conf > 0.08 (defesa em profundidade). Calibração toda medida: eco real -10dB z=2.08; PIOR FP slow-seco z=1.88 (4 seeds); ecos -6dB z>=3.3; known-answer 12s z=4.4. Sinal verdadeiro escala com sqrt(duração) — áudio real de minutos só ganha margem.
+- BUG C (agregação): superleituras fisicamente impossíveis (est 1.23-1.48 p/ verdade 0.55; truncamento de janela só subestima decay) entravam no p75, que assume viés unidirecional. FIX: mediana-âncora + banda de concordância ±35% antes do p75 (pool completo só se banda <3 estimativas).
+
+RESULTADO SWEEP (27 condições): 100% correto — seco nunca flagra reverb nem eco em nenhum ritmo/nível; RT60 0.9 e 0.55 SEMPRE flagram com estimativa dentro de ±35% (pior: fast 0.9 est 0.83, -8%); hum 60Hz detectado nos 9 pontos; eco real 150ms/-6dB mantido nos 9. PR dataset spec sem regressão: reverb P=1.00 R=0.89 (FN único subtle0.45, banda ambígua documentada), echo/clipping/hum/noise 100%.
+
+NOVO TESTE: generalization-regression.test.ts trava o sweep inteiro com asserts (27 condições: dry ok, dry+noise20 ok, rt0.9 FLAG, rt0.55 FLAG + est ±35%, echo150 FLAG, hum60 detectado).
+TESTES: 40 arquivos / 404 testes VERDES (~104s, fileParallelism:false); tsc --noEmit limpo; probes descartáveis removidos após uso.
+Pendências: subtle0.45 (feature extra tipo flatness pós-pausa), P4 ML ONNX NÃO iniciado.
