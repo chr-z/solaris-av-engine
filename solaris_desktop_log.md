@@ -2,6 +2,39 @@
 
 ## features
 
+### 2026-08-25 ~18h40 — tick features-worker: F2 COMPLETO — bulk actions vivas no painel ao vivo + resgate do commit vermelho do tick anterior
+
+- **Resgate (importante)**: o tick ~17h15 subiu `f281e2b` (bulk core) com
+  **suíte VERMELHA** (1/10 falhando — eventos saíam na ordem da LISTA, teste
+  exigia ordem da SELEÇÃO). Corrigido em `818bbad`: `applyBulk` agora itera a
+  seleção (Set dedup) filtrada pelos elegíveis — undo em lote reverte na
+  ordem em que o usuário escolheu. Lição registrada: gate de testes roda
+  ANTES do push a partir deste tick.
+- **Novo núcleo** (`src/features/qol/queueBulkView.ts`): visão ordenada da
+  fila pra seleção em lote — MESMA prioridade do suggestNext (atrasada >
+  nova 24h > antiga), bandas rotuladas (overdue com horas, new, old),
+  deadline ausente/inválida nunca vira overdue; só `queued` é elegível.
+- **Nova UI** (`src/components/Admin/QueueBulkBar.tsx`, dentro do chunk lazy
+  do painel): checkboxes por OS, "3 urgentes" seleciona o topo da fila,
+  contador selecionadas/aplicáveis/ignoradas via planBulk, ações Atribuir a
+  mim / Devolver / Priorizar P1-P3 em lote; um evento de undo POR linha
+  alterada (mesmos kinds assign-os/return-os/prioritize-os) → applier já
+  registrado reverte linha a linha sem código novo; seleção limpa após
+  aplicar; some quando não há queued; gate canManageQueue (analista não vê).
+- **Wiring**: LiveDashboardPanel monta a barra no card da fila (pos-sugestão)
+  com handleBulkApply (commitQueue + record no UndoLog).
+- **i18n**: 9 chaves novas dash.live.bulk* em paridade EN/PT exata.
+- **Provas**: suíte **586/586** (+14 asserts: queueBulkView 8 — janela exata
+  24h, horas 1 casa, determinismo, exclusão done/in_analysis; queueBulkUi 6 —
+  ordem visual, top-3, lote+undo-UMA provado pelo contrato onQueueChange,
+  prioridade em lote, gate de papel, i18n pt); tsc limpo fora de __tests__;
+  eslint ZERO nos 3 arquivos novos/tocados meus (5 erros pré-existentes do
+  painel provados idênticos via stash antes/depois); e2e-flow **26/26**;
+  build ok — initial gz **~104,9KB** (index 51,0 + react-vendor 45,5 + css
+  8,6; barra nasceu DENTRO do chunk lazy do painel, +~0,3KB gz) — budget
+  <500KB preservado de sobra.
+- Sem Telegram; src-tauri, audio-acoustics, tokens.css e pitch intactos.
+
 ### 2026-08-25 ~16h35 — tick features-worker: A1 scratchpad VIVO na tela de análise + resgate de log triturado + push do backlog
 
 - **Resgate**: cabeçalho deste log estava triturado por edição externa (linhas
