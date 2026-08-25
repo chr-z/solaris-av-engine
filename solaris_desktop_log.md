@@ -2,6 +2,15 @@
 
 ## features
 
+### 2026-08-25 05:20 — tick features-worker: F5 Dashboard ao Vivo no ar + WIP destrutivo revertido (commits b065a95..b739ff5)
+- **Recuperação**: worktree tinha WIP não-commitado do tick anterior que APAGAVA o DashboardPanel funcional (2010 linhas → 268 quebradas, JSX sem fechar, HTML string como children, CDN jsdelivr violando offline-first) e triturava translations.ts (573 → 121 linhas). `git checkout` nos 2 arquivos + remoção dos 4 arquivos novos quebrados; baseline re-provado: tsc limpo, 445/445.
+- **Núcleo puro** (`src/utils/liveDashboard.ts`, +21 asserts em liveDashboard.test.ts): KPIs da spec B1 (hoje/concluídas/em análise com "Nome · Nmin"/fila pendente/média global); throughput DIÁRIO honesto (planilha não tem hora — prometer por-hora dela seria inventar dado) e throughput POR HORA real a partir de eventos com timestamp (fuso -03:00 fixo via SAO_PAULO_CLOCK); presença 🟢🟡⚪ com ocioso >15min exato da spec B2; feed com dedupe por id, ordem desc e cap-50; qualidade cruzada B3 SEM nota inventada (reworkRate fica null até existir fonte real) + filtro por papel via canReadIndividualMetrics.
+- **UI** (`LiveDashboardPanel.tsx` lazy + `EChartsLiveChart.tsx`): KPI cards, 2 gráficos ECharts **modular** (`echarts/core`: só BarChart+Grid+Tooltip+Canvas), cards por analista com drill-down pronto, feed SSE `/api/dashboard-events` com fallback polling e backoff exponencial até 60s, tabela de qualidade respeitando papel (analista vê só a própria linha). ChartFallback p/ Suspense.
+- **Integração**: AdminGate ganha toggle acessível Planilhas/Ao vivo (role=tablist); App repassa viewer (id/name) do userProfile; i18n EN/PT das 31 chaves novas em paridade exata.
+- **Deps/tooling**: echarts npm (nada de CDN); @testing-library react/dom/jest-dom; vitest.config sem plugin-react 3.x (pipeline .tsx quebrado no Vitest 4 — mesma correção provada pelo worker do desktop).
+- **Números**: suíte 472/472 (+27 asserts), tsc limpo, eslint ratchet estável (64/64 antes=depois). Bundle: initial INALTERADO ~102KB gz; painel ao vivo 11,8KB/4,3KB gz lazy; chunk ECharts 1.128KB→491KB min (379→168 gz) após trocar import full→echarts/core. Budget <500KB initial preservado de sobra.
+- Pendências honestas anotadas: "em análise agora" usa snapshot injetável de os_queue (tabela existe na migration 0002; wiring real quando houver backend); retrabalho real aguarda auditoria; hourly chart lê eventos XP locais (offline-first) até o feed SSE estar servido pela API.
+
 ### 2026-08-25 03:00 — tick features-worker: F4 UI de Gamificação — Liga dos Analistas no ar (commit 04e1848)
 - Resgatado WIP do tick anterior (store/hook/toast/painel) e completado o que faltava da spec C2: pódio ao vivo agora tem ABAS Semana/Mês/Ano (radiogroup acessível, navegação por setas, default Semana).
 - Novo núcleo `livePodiumFor(type, …)` em podiumFreeze.ts — pódio corrente de qualquer período; `livePodium` vira alias da semana. +2 testes (três janelas no mesmo instante; ranking separado por senioridade C4). Suíte 445/445, tsc limpo.
