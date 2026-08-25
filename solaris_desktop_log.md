@@ -470,3 +470,38 @@ Lane turbo-web absorvida pelo main @ 30b4b7b (merge ticks #1-#7). Worktree solar
 - Próximo tick: acabamento v3 nos estilos pré-v3 que a main trouxe
   (LiveMonitors portal, TimestampsModal), sem tocar em comportamento.
 - src-tauri/audio-acoustics/pitch intocados.
+
+## redesign (tick 15) — acabamento v3 pós-fusão: zoom dos monitores + Time Markers — 25/08/2026 ~16h45
+
+- Fila do t14 executada: os dois componentes pré-v3 que a main trouxe no merge
+  receberam o kit visual v3, SEM tocar comportamento/anatomia/vocabulário.
+- **Modal de zoom dos monitores** (LiveMonitors): bg-solar-dark-bg/borda dura/
+  shadow-2xl → bg-surface + border-hairline + shadow-pop; close btn legado
+  gray-400/hover-white → ink-secondary com focus-ring accent; ESC fecha via
+  novo hook compartilhado useEscapeToClose (mesmo gesto do ShortcutHelpModal).
+- **Time Markers** (TimestampModal + TimestampDock): loading "Loading..." cru →
+  skeletons desenhados (.skeleton-line + sr-only); textarea → .input do kit;
+  botões → btn-primary/btn-ghost; rodapé hairline canônico.
+- **Dívida de UX morta**: 2 `alert()` crus ("Could not save timestamp...") →
+  banner humano inline role=alert (humanizeMarkerSaveError em humanErrors.ts);
+  comentário digitado permanece no campo (promessa no hint). Payload movido
+  pra dentro do try: em demo/offline o loadFirebase rejeita e cai na mensagem
+  humana (antes virava rejection cru fora do catch).
+- A11y: overlay do modal ganhou role="dialog"+aria-modal+aria-label (paridade
+  com os irmãos). axe-core pós-t15: login 0 / app 0 violações.
+- **Testes de componente estreiam na lane**: vitest.config.ts sem o plugin
+  @vitejs/plugin-react (preamble @react-refresh explode no vitest 4/jsdom;
+  esbuild nativo transforma .tsx — BUILD continua pelo vite.config.ts intacto).
+  Novo timestampModalHumanError.test.tsx com firebase MOCKADO: banner humano,
+  comentário preservado, zero window.alert (a rede real do RTDB-dummy fica
+  enfileirada, não rejeita — prova determinística exige mock na fronteira).
+- Gates FINAIS: tsc limpo · vitest 403/403 (398 + 5 novos) · build verde CSS
+  10,26KB gz (meta <30) initial 83,55KB gz · e2e-flow 21/21 · axe 0/0 ·
+  verify_t15.cjs NO BROWSER REAL 20/20 (protocolo anti-órfão: preview strictPort
+  porta alta + hash do entry conferida vs dist; fluxo guest→fila→OS→YouTube URL
+  pela UI real→zoom modal ESC→marcadores→save pendurado sem alert/crash).
+- Screenshots: redesign_shots/t15_zoom_modal.png + t15_time_markers_human_error.png.
+- Commits e440c6f/6c30928/edbc921/8c76987 @ redesign-premium. src-tauri/
+  audio-acoustics/pitch intocados.
+- Próximo tick: varredura final por classes pré-v3 remanescentes (gray-500/20
+  hover em botões-ícone do Header/workspace) ou diretiva nova do dono.
