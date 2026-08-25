@@ -3,7 +3,9 @@ import { createPortal } from 'react-dom';
 
 // --- IMPORTS CORRIGIDOS (NAVIGATION) ---
 import VideoPlayer from '../Media/VideoPlayer';
-import ComparePane from '../Media/ComparePane';
+// turbo-web: A/B compare pane is lazy — its module (and WaveformTimeline) only
+// downloads when the analyst actually activates compare mode.
+const ComparePane = React.lazy(() => import('../Media/ComparePane'));
 import DriveFilePicker from '../Media/DriveFilePicker';
 import SourceSelector from '../Media/SourceSelector';
 import LocalFileHelper from '../Media/LocalFileHelper';
@@ -788,12 +790,14 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
                 </VideoPlayer>
               </div>
               {compare.isActive && (
+                <React.Suspense fallback={<div className="min-w-0 min-h-0 flex items-center justify-center text-xs text-gray-400">Yui…</div>}>
                 <ComparePane
                   source={compare.slotBSource}
                   onChangeSource={compare.setSlotBSource}
                   subscribeToLeader={compare.subscribeToLeader}
                   syncNonce={compare.syncNonce}
                 />
+                </React.Suspense>
               )}
             </div>
           ) : (
