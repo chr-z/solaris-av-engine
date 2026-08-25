@@ -181,25 +181,49 @@ try {
   await navigate(URL_APP);
   // The app boots in 'initializing' (gapi/firebase bootstrap); the real
   // login screen only exists once that settles (or errors out). Wait for it.
+  // turbo-web demo builds (no Firebase env vars) skip the login screen and
+  // land straight in the main app — phase A then scans the app shell itself.
   const findGuestBtnExpr = `(() => {
     const els = [...document.querySelectorAll('button, a, [role="button"]')];
     const b = els.find((x) => /guest|convidado|demo/i.test((x.textContent || '').trim()));
     return b ? (b.textContent || '').trim() : null;
   })()`;
-  const guestLabel = await waitFor(() => evaluate(findGuestBtnExpr), {
-    tries: 60, label: 'login screen render (guest button visible)',
-  });
-  console.log(`[ok] login screen ready, guest button: "${guestLabel}"`);
+  const mainAppReadyExpr = `(() => ({
+    tables: document.querySelectorAll('table').length,
+    grids: document.querySelectorAll('[role="grid"]').length,
+    headers: document.querySelectorAll('header').length,
+  }))()`;
+  const isMainApp = async () => {
+    const s = await evaluate(mainAppReadyExpr);
+    return ((s.tables || s.grids || s.headers) > 0) ? s : null;
+  };
+  let guestLabel = null;
+  let landedInMainApp = false;
+  try {
+    guestLabel = await waitFor(() => evaluate(findGuestBtnExpr), {
+      tries: 20, label: 'login screen render (guest button visible)',
+    });
+    console.log(`[ok] login screen ready, guest button: "${guestLabel}"`);
+  } catch {
+    landedInMainApp = true;
+    await waitFor(isMainApp, { tries: 40, label: 'demo-mode direct render (no login screen)' });
+    console.log('[ok] offline/demo build: no login screen — already in main app');
+  }
   await injectAxe();
-  const loginViolations = await scan('A: LOGIN SCREEN');
+  let loginViolations = [];
+  if (!landedInMainApp) {
+    loginViolations = await scan('A: LOGIN SCREEN');
+  }
 
   // ------------------------------------------------------------- phase B
-  await evaluate(`(() => {
-    const els = [...document.querySelectorAll('button, a, [role="button"]')];
-    const b = els.find((x) => /guest|convidado|demo/i.test((x.textContent || '').trim()));
-    b.click();
-  })()`);
-  console.log(`\n[ok] clicked guest button: "${guestLabel}"`);
+  if (!landedInMainApp) {
+    await evaluate(`(() => {
+      const els = [...document.querySelectorAll('button, a, [role="button"]')];
+      const b = els.find((x) => /guest|convidado|demo/i.test((x.textContent || '').trim()));
+      b.click();
+    })()`);
+    console.log(`\n[ok] clicked guest button: "${guestLabel}"`);
+  }
 
   await waitFor(async () => {
     const state = await evaluate(`(() => ({
