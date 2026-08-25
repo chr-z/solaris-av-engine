@@ -606,3 +606,48 @@ Lane turbo-web absorvida pelo main @ 30b4b7b (merge ticks #1-#7). Worktree solar
   audio-acoustics/pitch intocados.
 - Próximo tick: varredura final por classes pré-v3 remanescentes (gray-500/20
   hover em botões-ícone do Header/workspace) ou diretiva nova do dono.
+
+## redesign (tick 16) — sweep final dos estados de interação legados + fusão turbo #10–#12 — 25/08/2026 ~18h30
+
+- **Fusão primeiro**: merge f674f6b absorveu origin/main (turbo #10 pins de
+  segurança, #11 guardrail, #12 vite 4→6.4.3 + robots.txt). Conflito do log
+  compartilhado resolvido em ordem cronológica (t14 → turbo #10–12 → t15,
+  append-only); axe-report.json ficou do lado main e foi REGENERADO (0/0).
+  Suite já roda 403/403 no vitest 4 sobre o vite 6 recém-absorvido.
+- **Token novo**: --color-hover-wash rgba(255,255,255,.06) (+ gêmeo .05 no
+  tema claro) — wash de hover da mesma família das bordas hairline.
+- **Kit v3 ampliado (R2 remanescente)**: .icon-btn/.icon-btn-danger,
+  .menu-item/.menu-item-danger, .chip-sort (+.is-active), .wash-hover —
+  transições 140ms só background/color, tudo consumindo tokens; classes no
+  safelist. ZERO mudança de anatomia/DOM/vocabulário/aria-labels.
+- **Migrações**: menu do usuário (trigger .icon-btn, itens .menu-item,
+  Sign out .menu-item-danger), toolbar A/B (sync chip com borda, reset 0,
+  layout), botões-ícone da coluna direita (compare/pro-lock/markers/help/
+  overlay/drive), Time Markers (close, edit, remove-danger, chips Sort by),
+  Cancel da edição inline, Dock compartilhado (zoom ×4 monitores), VuMeter,
+  AnalysisSheet (refresh/filters), tabs do SourceSelector, TypeButton do
+  OverlayControls, presets do PresetSelector, LanguageSwitcher, e a
+  SUPERFÍCIE do Popover (bg-solar-*-content/borda dura/shadow-lg →
+  bg-surface/95 + hairline + shadow-pop) — componente usado por menu,
+  Load Media, filtros e overlays.
+- **Prova em browser real** (protocolo anti-órfão): scripts/verify_t16.cjs
+  20/20 na dist local (preview strictPort + hash do entry conferida):
+  regras :hover do kit conferidas no CSS SERVIDO por serialização
+  (consumem --color-hover-wash/--color-accent-rgb/fail-rgb), zero classe
+  legada no escopo do menu, chips com .is-active migrando por clique real,
+  ESC fecha o modal mesmo com o iframe do YouTube roubando foco (retry com
+  devolução de foco pelo título). Aprendizados de harness registrados:
+  role=dialog não é único (popover do YouTube sombreia o modal no
+  querySelector — localizar diálogo por conteúdo) e keydown global morre
+  sem foco no documento.
+- Screenshots: redesign_shots/t16_user_menu_v3.png +
+  t16_time_markers_chips.png (dono compara MVP vs v3).
+- Gates FINAIS: tsc limpo · vitest 403/403 · build verde CSS 10,17KB gz
+  (meta <30) initial js 37,48KB gz · e2e-flow 21/21 · axe login 0 / app 0
+  (report regenerado) · npm audit prod 10 moderate, 0 high/critical
+  (estável pós-vite6).
+- Próximo tick: resíduo legado restante concentra-se no painel ADMIN
+  (DashboardPanel ~80 ocorrências gray-600/60, BugReport*, AdminRulesPanel,
+  ProUpgradeModal) — telas fora do fluxo principal do analista; ou
+  diretiva nova do dono.
+- src-tauri/audio-acoustics/pitch intocados. Sem Telegram.
