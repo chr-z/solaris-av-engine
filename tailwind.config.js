@@ -9,6 +9,13 @@ export default {
     './src/**/*.{js,ts,jsx,tsx}',
   ],
   darkMode: 'class',
+  // Componentes v3 usados via CSS puro (sem menção literal em .tsx ainda):
+  // sem safelist, o PurgeCSS do Tailwind remove as regras do bundle.
+  safelist: [
+    'badge-pill', 'badge-ok', 'badge-warn', 'badge-fail', 'badge-info',
+    'badge-sparkline', 'skeleton-line', 'skeleton-title', 'skeleton-block',
+    'tooltip-rich', 'checkbox-custom', 'btn-primary', 'btn-ghost',
+  ],
   theme: {
     extend: {
       colors: {

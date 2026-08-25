@@ -134,8 +134,7 @@ const Tooltip: React.FC<TooltipProps> = ({ content, children, className }) => {
           onMouseEnter={handleMouseEnterTooltip}
           onMouseLeave={handleMouseLeaveTooltip}
           role="tooltip"
-          className={`w-72 rounded-lg border border-solar-dark-border bg-solar-dark-bg/95 backdrop-blur-sm 
-                    p-3 text-sm text-gray-300 shadow-xl animate-fade-in-fast
+          className={`tooltip-rich w-72 rounded-lg animate-fade-in-fast
                     ${className}`}
         >
           {content}
@@ -143,8 +142,8 @@ const Tooltip: React.FC<TooltipProps> = ({ content, children, className }) => {
             style={arrowStyle}
             className={`absolute h-0 w-0 -translate-x-1/2 border-x-8 border-x-transparent
               ${isFlipped 
-                ? 'top-[-8px] border-b-8 border-b-solar-dark-bg' 
-                : 'bottom-[-8px] border-t-8 border-t-solar-dark-bg'
+                ? 'top-[-8px] border-b-8 border-b-[var(--color-border-strong)]' 
+                : 'bottom-[-8px] border-t-8 border-t-[var(--color-border-strong)]'
               }`}
           ></div>
         </div>,

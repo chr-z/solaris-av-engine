@@ -60,7 +60,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({ activeFilters, onFilter
 
 
     return (
-        <div className="p-4 bg-solar-light-content dark:bg-solar-dark-content rounded-lg w-96 flex flex-col gap-4">
+        <div className="p-4 bg-surface dark:bg-surface-raised rounded-lg w-96 flex flex-col gap-4">
             <div>
                 <h3 className="text-xs font-bold uppercase text-white mb-2">Filter by Date</h3>
                 <div className="grid grid-cols-2 gap-2">
@@ -71,7 +71,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({ activeFilters, onFilter
                             type="date"
                             value={localFilters.startDate}
                             onChange={(e) => handleFieldChange('startDate', e.target.value)}
-                            className="w-full mt-1 bg-solar-light-bg dark:bg-solar-dark-bg border border-solar-light-border dark:border-solar-dark-border rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-white dark:[color-scheme:dark]"
+                            className="w-full mt-1 bg-surface dark:bg-surface-raised border border-hairline dark:border-surface-raised rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-white dark:[color-scheme:dark]"
                         />
                     </div>
                     <div>
@@ -81,7 +81,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({ activeFilters, onFilter
                             type="date"
                             value={localFilters.endDate}
                             onChange={(e) => handleFieldChange('endDate', e.target.value)}
-                            className="w-full mt-1 bg-solar-light-bg dark:bg-solar-dark-bg border border-solar-light-border dark:border-solar-dark-border rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-white dark:[color-scheme:dark]"
+                            className="w-full mt-1 bg-surface dark:bg-surface-raised border border-hairline dark:border-surface-raised rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-white dark:[color-scheme:dark]"
                         />
                     </div>
                 </div>
@@ -98,7 +98,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({ activeFilters, onFilter
                     id="studio-filter"
                     value={localFilters.studio}
                     onChange={(e) => handleFieldChange('studio', e.target.value)}
-                    className="w-full bg-solar-light-bg dark:bg-solar-dark-bg border border-solar-light-border dark:border-solar-dark-border rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-white"
+                    className="w-full bg-surface dark:bg-surface-raised border border-hairline dark:border-surface-raised rounded-md px-2 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent dark:text-white"
                 >
                     <option value="">All Studios</option>
                     {studioOptions.map(option => (
@@ -116,7 +116,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({ activeFilters, onFilter
                                 type="checkbox"
                                 checked={localFilters.inconformities.includes(option)}
                                 onChange={(e) => handleInconformityChange(option, e.target.checked)}
-                                className="h-4 w-4 rounded border-gray-300 text-solar-accent focus:ring-solar-accent bg-transparent"
+                                className="checkbox-custom"
                             />
                             <span>{option}</span>
                         </label>
@@ -124,7 +124,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({ activeFilters, onFilter
                 </div>
             </div>
 
-            <div className="flex justify-between items-center pt-3 border-t border-solar-dark-border">
+            <div className="flex justify-between items-center pt-3 border-t border-surface-raised">
                 <button onClick={handleClear} className="text-sm text-gray-400 hover:text-white">
                     Clear Filters
                 </button>

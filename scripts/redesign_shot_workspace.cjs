@@ -8,6 +8,7 @@ const path = require('path');
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const OUT = 'C:/Yui/data/saas_factory/redesign_shots';
 const PORT = 9227;
+const PREFIX = process.env.SHOT_PREFIX || 'r2'; // prefixo do arquivo de saída por pacote
 const PROFILE = path.join(process.env.TEMP || '/tmp', 'solaris-shot-' + Date.now());
 
 function httpGetJson(url) {
@@ -96,7 +97,7 @@ async function main() {
         });
         if (r.result.value === true) {
           const s1 = await send('Page.captureScreenshot', { format: 'png' });
-          fs.writeFileSync(path.join(OUT, 'r1_tokens_login.png'), Buffer.from(s1.data, 'base64'));
+          fs.writeFileSync(path.join(OUT, PREFIX + '_login.png'), Buffer.from(s1.data, 'base64'));
           console.log('[4] login shot ok');
           await sleep(500);
           await send('Runtime.evaluate', {
@@ -125,7 +126,7 @@ async function main() {
     }
     await sleep(3000);
     const s2 = await send('Page.captureScreenshot', { format: 'png' });
-    fs.writeFileSync(path.join(OUT, 'r1_tokens_workspace.png'), Buffer.from(s2.data, 'base64'));
+    fs.writeFileSync(path.join(OUT, PREFIX + '_workspace.png'), Buffer.from(s2.data, 'base64'));
     console.log('[6] workspace shot ok, tbody rows =', rows);
     clearTimeout(hardExit);
     ws.close();

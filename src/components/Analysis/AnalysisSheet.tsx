@@ -135,7 +135,7 @@ const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, isSele
     return (
         <li 
             onClick={!isLockedByOther ? () => onClick(rowIndex, row) : undefined} 
-            className={`p-4 border-b border-solar-light-border dark:border-solar-dark-border transition-all duration-200 ${
+            className={`p-4 border-b border-hairline transition-all duration-200 ${
                 isSelected 
                     ? 'bg-solar-accent/20 border-l-4 border-solar-accent' 
                     : isLockedByOther
@@ -170,7 +170,7 @@ const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, isSele
                 </div>
             </div>
             {isLockedByOther && lockInfo && (
-                <div className="mt-3 pt-3 border-t border-solar-dark-border/30 flex items-center justify-between gap-3">
+                <div className="mt-3 pt-3 border-t border-hairline/30 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                         <UserAvatar user={lockInfo.user} className="w-8 h-8 flex-shrink-0" />
                         <div className="min-w-0">
@@ -321,8 +321,8 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
         const hasNoRowsAtAll = filteredPendingRows.length === 0 && filteredCompletedRows.length === 0 && filteredSpecialRows.length === 0;
 
         return (
-            <div className="flex flex-col h-full min-h-0 bg-solar-light-content dark:bg-solar-dark-content border-r border-solar-light-border dark:border-solar-dark-border">
-                <div className="p-2 border-b border-solar-light-border dark:border-solar-dark-border flex items-center gap-2">
+            <div className="flex flex-col h-full min-h-0 bg-surface dark:bg-surface border-r border-hairline">
+                <div className="p-2 border-b border-hairline flex items-center gap-2">
                      <div className="relative flex-grow">
                         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
@@ -330,7 +330,7 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
                             placeholder="Search W.O. or Instructor..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full bg-solar-light-bg dark:bg-solar-dark-bg border border-solar-light-border dark:border-solar-dark-border rounded-md pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200 dark:placeholder-gray-500"
+                            className="w-full bg-surface border border-hairline rounded-md pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200 dark:placeholder-gray-500"
                         />
                     </div>
                     <button
@@ -374,7 +374,7 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
                 
                 <div className="overflow-y-auto flex-1">
                     <div>
-                        <button onClick={() => setIsPendingOpen(!isPendingOpen)} className="sticky top-0 z-10 w-full flex justify-between items-center p-3 bg-solar-light-content dark:bg-solar-dark-content border-b border-solar-light-border dark:border-solar-dark-border">
+                        <button onClick={() => setIsPendingOpen(!isPendingOpen)} className="sticky top-0 z-10 w-full flex justify-between items-center p-3 bg-surface dark:bg-surface border-b border-hairline">
                             <h2 className="font-bold text-sm uppercase text-gray-400">Pending ({filteredPendingRows.length})</h2>
                             <ChevronDownIcon className={`w-5 h-5 text-gray-400 transition-transform ${isPendingOpen ? 'rotate-180' : ''}`} />
                         </button>
@@ -392,7 +392,7 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
                     </div>
 
                     <div>
-                        <button onClick={() => setIsCompletedOpen(!isCompletedOpen)} className="sticky top-0 z-10 w-full flex justify-between items-center p-3 bg-solar-light-content dark:bg-solar-dark-content border-b border-solar-light-border dark:border-solar-dark-border">
+                        <button onClick={() => setIsCompletedOpen(!isCompletedOpen)} className="sticky top-0 z-10 w-full flex justify-between items-center p-3 bg-surface dark:bg-surface border-b border-hairline">
                             <h2 className="font-bold text-sm uppercase text-gray-400">Completed ({filteredCompletedRows.length})</h2>
                             <ChevronDownIcon className={`w-5 h-5 text-gray-400 transition-transform ${isCompletedOpen ? 'rotate-180' : ''}`} />
                         </button>
@@ -410,7 +410,7 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
                     </div>
                     
                     <div>
-                        <button onClick={() => setIsSpecialOpen(!isSpecialOpen)} className="sticky top-0 z-10 w-full flex justify-between items-center p-3 bg-solar-light-content dark:bg-solar-dark-content border-b border-solar-light-border dark:border-solar-dark-border">
+                        <button onClick={() => setIsSpecialOpen(!isSpecialOpen)} className="sticky top-0 z-10 w-full flex justify-between items-center p-3 bg-surface dark:bg-surface border-b border-hairline">
                             <h2 className="font-bold text-sm uppercase text-gray-400">System/Special ({filteredSpecialRows.length})</h2>
                             <ChevronDownIcon className={`w-5 h-5 text-gray-400 transition-transform ${isSpecialOpen ? 'rotate-180' : ''}`} />
                         </button>

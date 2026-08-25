@@ -65,7 +65,7 @@ const VideoSourceChooser: React.FC<VideoSourceChooserProps> = ({ choices, onSele
                             isYoutube: choice.type === 'youtube',
                             isDriveLink: choice.type === 'driveFile'
                         })}
-                        className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-solar-dark-content border border-solar-dark-border hover:bg-solar-accent/20 hover:border-solar-accent transition-colors focus:outline-none focus:ring-2 focus:ring-solar-accent"
+                        className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-surface border border-hairline hover:bg-solar-accent/20 hover:border-solar-accent transition-colors focus:outline-none focus:ring-2 focus:ring-solar-accent"
                     >
                         {choice.type === 'youtube' && <YouTubeIcon className="w-6 h-6 text-red-500" />}
                         {choice.type === 'driveFile' && <GoogleDriveIcon className="w-6 h-6 text-blue-400" />}
@@ -203,16 +203,16 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
             onClick={onClose}
         >
             <div 
-                className="bg-solar-dark-content text-white w-full max-w-2xl h-[70vh] rounded-lg shadow-xl flex flex-col"
+                className="bg-surface text-white w-full max-w-2xl h-[70vh] rounded-lg shadow-xl flex flex-col"
                 onClick={e => e.stopPropagation()}
             >
-                <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-solar-dark-border">
+                <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-hairline">
                     <div className="min-w-0">
                         <h2 className="font-bold text-lg leading-tight">Time Markers</h2>
                         <p className="text-xs text-gray-400 truncate" title={currentVideoName}>{currentVideoName}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <div className="flex items-center gap-1 text-xs bg-solar-dark-bg px-2 py-1 rounded-md">
+                        <div className="flex items-center gap-1 text-xs bg-bg px-2 py-1 rounded-md">
                             <span className="text-gray-400">Sort by:</span>
                             <button onClick={() => setSortOrder('time')} className={`px-2 py-0.5 rounded ${sortOrder === 'time' ? 'bg-solar-accent text-white' : 'hover:bg-gray-500/20'}`}>Time</button>
                             <button onClick={() => setSortOrder('comment')} className={`px-2 py-0.5 rounded ${sortOrder === 'comment' ? 'bg-solar-accent text-white' : 'hover:bg-gray-500/20'}`}>Comment</button>
@@ -233,10 +233,10 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
                      )}
                      <ul ref={listRef} className="space-y-1 p-2">
                         {sortedTimestamps.map(ts => (
-                            <li key={ts.id} className="group bg-solar-dark-bg/50 rounded-lg">
+                            <li key={ts.id} className="group bg-bg/50 rounded-lg">
                                 {editingTimestampId === ts.id ? (
                                     <div className="p-3 space-y-2">
-                                        <textarea value={editingComment} onChange={e => setEditingComment(e.target.value)} rows={2} className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200" autoFocus/>
+                                        <textarea value={editingComment} onChange={e => setEditingComment(e.target.value)} rows={2} className="w-full bg-bg border border-hairline rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200" autoFocus/>
                                         <div className="flex justify-end gap-2">
                                             <button onClick={handleCancelEdit} className="px-3 py-1 text-sm rounded-md hover:bg-gray-500/20">Cancel</button>
                                             <button onClick={handleSaveEdit} disabled={!editingComment.trim()} className="px-3 py-1 text-sm rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover disabled:opacity-50">Save</button>
@@ -268,9 +268,9 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
                         ))}
                      </ul>
                 </div>
-                <div className="flex-shrink-0 p-3 border-t border-solar-dark-border bg-solar-dark-bg/50">
+                <div className="flex-shrink-0 p-3 border-t border-hairline bg-bg/50">
                     <div className="space-y-2">
-                        <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Add a time marker comment..." rows={2} className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200 dark:placeholder-gray-500" onFocus={handleAddClick}/>
+                        <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Add a time marker comment..." rows={2} className="w-full bg-bg border border-hairline rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200 dark:placeholder-gray-500" onFocus={handleAddClick}/>
                         <div className="flex justify-end">
                             <button onClick={handleSaveNew} disabled={!comment.trim()} className="px-4 py-2 text-sm font-semibold rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover disabled:opacity-50">Add Marker</button>
                         </div>
@@ -642,7 +642,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
       <button
         onClick={handleSave}
         disabled={isSaving}
-        className="flex items-center gap-2 px-4 py-2 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50"
+        className="flex items-center gap-2 px-4 py-2 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent disabled:opacity-50"
       >
         {isSaving ? (
            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -670,7 +670,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
         onClick={() => { void handleSyncToSheet(); }}
         disabled={isSyncing || isSaving}
         title="Grava a linha da O.S. na planilha (escrita idempotente com auditoria)"
-        className="flex items-center gap-2 px-4 py-2 rounded-md border border-solar-accent/60 text-solar-accent hover:bg-solar-accent/10 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50"
+        className="flex items-center gap-2 px-4 py-2 rounded-md border border-solar-accent/60 text-solar-accent hover:bg-solar-accent/10 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent disabled:opacity-50"
       >
         {isSyncing ? (
           <div className="w-5 h-5 border-2 border-solar-accent border-t-transparent rounded-full animate-spin"></div>
@@ -706,7 +706,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   };
 
   return (
-    <div className="w-full h-full flex p-4 gap-4 overflow-hidden bg-solar-dark-bg">
+    <div className="w-full h-full flex p-4 gap-4 overflow-hidden bg-bg">
         {isPickerOpen && pickerFolderId && (
             <DriveFilePicker
                 folderId={pickerFolderId}
@@ -826,14 +826,14 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
         </div>
         {compare.isActive && (
           <div
-            className="flex-shrink-0 flex items-center justify-center gap-3 py-1.5 px-4 rounded-lg bg-solar-light-content/80 dark:bg-solar-dark-content/80 backdrop-blur-md border border-solar-light-border dark:border-solar-dark-border text-sm"
+            className="flex-shrink-0 flex items-center justify-center gap-3 py-1.5 px-4 rounded-lg bg-surface/80 dark:bg-surface/80 backdrop-blur-md border border-hairline text-sm"
             role="toolbar"
             aria-label={t('compare.title')}
           >
             <span className="font-bold text-xs uppercase tracking-wide text-solar-accent">{t('compare.title')}</span>
             <button
               onClick={compare.toggleSyncMode}
-              className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent ${compare.syncMode === 'locked' ? 'bg-solar-accent text-white hover:bg-solar-accent-hover' : 'bg-solar-dark-bg border border-solar-dark-border text-gray-300 hover:bg-gray-500/20'}`}
+              className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent ${compare.syncMode === 'locked' ? 'bg-solar-accent text-white hover:bg-solar-accent-hover' : 'bg-bg border border-hairline text-gray-300 hover:bg-gray-500/20'}`}
               title={compare.syncMode === 'locked' ? t('compare.syncLocked') : t('compare.syncFree')}
               aria-label={t('compare.syncMode')}
             >
@@ -847,13 +847,13 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                 value={compare.offsetSeconds}
                 onChange={e => compare.setOffset(parseFloat(e.target.value))}
                 aria-describedby="compare-offset-hint"
-                className="w-20 bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-0.5 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-solar-accent"
+                className="w-20 bg-bg border border-hairline rounded-md px-2 py-0.5 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-solar-accent"
               />
             </label>
             <span id="compare-offset-hint" className="text-[11px] text-gray-500 hidden lg:inline">{t('compare.offsetHint')}</span>
             <button
               onClick={compare.resetOffset}
-              className="px-2 py-0.5 rounded-md text-xs bg-solar-dark-bg border border-solar-dark-border text-gray-300 hover:bg-gray-500/20 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
+              className="px-2 py-0.5 rounded-md text-xs bg-bg border border-hairline text-gray-300 hover:bg-gray-500/20 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
             >
               0
             </button>
@@ -886,8 +886,8 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
             <VuMeter volume={analysisData.volume} isReady={isAudioReady} onZoom={() => setZoomedDock('vuMeter')} />
         </div>
       </div>
-      <div className="w-1/3 h-full flex flex-col bg-solar-light-content/80 dark:bg-solar-dark-content/80 backdrop-blur-md rounded-lg shadow-sm border border-solar-light-border dark:border-solar-dark-border overflow-hidden">
-          <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-solar-light-border dark:border-solar-dark-border">
+      <div className="w-1/3 h-full flex flex-col bg-surface/80 dark:bg-surface/80 backdrop-blur-md rounded-lg shadow-sm border border-hairline overflow-hidden">
+          <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-hairline">
               <h2 className="font-bold">Analysis Sheet</h2>
               <div className="flex items-center gap-2">
                   {saveStatus === 'error' && <p className="text-sm text-red-400 mr-2">{saveError}</p>}
@@ -897,7 +897,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                       onClick={handleToggleCompare}
                       disabled={!videoSrc}
                       aria-pressed={compare.isActive}
-                      className={`p-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed ${compare.isActive ? 'bg-solar-accent/30 text-solar-accent hover:bg-solar-accent/40' : 'text-gray-400 hover:bg-gray-500/20 hover:text-white'}`}
+                      className={`p-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed ${compare.isActive ? 'bg-solar-accent/30 text-solar-accent hover:bg-solar-accent/40' : 'text-gray-400 hover:bg-gray-500/20 hover:text-white'}`}
                       title={t('compare.open')}
                       aria-label={t('compare.open')}
                     >
@@ -908,7 +908,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                       onClick={() => window.dispatchEvent(new CustomEvent('solaris:open-pro-upgrade'))}
                       aria-label={t('pro.lock.openUpgrade', { feature: t('compare.title') })}
                       title={t('pro.lock.description', { feature: t('compare.title') })}
-                      className="relative p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent"
+                      className="relative p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
                     >
                       <ColumnsIcon className="w-5 h-5" />
                       <svg
@@ -924,7 +924,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                   <button
                     onClick={() => setIsTimestampModalOpen(true)}
                     disabled={!currentVideoId}
-                    className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Time Markers"
                     aria-label="Open time markers"
                   >
@@ -933,7 +933,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                   {/* S5.1: keyboard shortcut reference (also via "?"). */}
                   <button
                     onClick={() => setIsShortcutHelpOpen(true)}
-                    className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent"
+                    className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
                     title={t('header.shortcutHelp')}
                     aria-label={t('header.shortcutHelp')}
                   >
@@ -943,7 +943,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                     contentClassName="w-72"
                     trigger={
                       <button
-                        className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent"
+                        className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
                         title="Overlay Settings"
                         aria-label="Open overlay settings"
                       >
@@ -956,7 +956,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                   {pickerFolderId && (
                     <button
                         onClick={() => onOpenPicker(pickerFolderId)}
-                        className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent"
+                        className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
                         title="Open Drive Picker"
                         aria-label="Open Drive Picker"
                     >
@@ -987,10 +987,10 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
           aria-modal="true"
         >
           <div 
-            className="relative w-full h-full max-w-5xl bg-solar-dark-bg border border-solar-dark-border rounded-lg shadow-2xl flex flex-col p-4"
+            className="relative w-full h-full max-w-5xl bg-bg border border-hairline rounded-lg shadow-2xl flex flex-col p-4"
             onClick={e => e.stopPropagation()}
           >
-            <header className="flex-shrink-0 flex justify-between items-center pb-2 mb-2 border-b border-solar-dark-border">
+            <header className="flex-shrink-0 flex justify-between items-center pb-2 mb-2 border-b border-hairline">
                 <h2 className="text-lg font-bold">
                     {zoomedDock === 'rgbParade' && 'RGB Parade'}
                     {zoomedDock === 'waveform' && 'Waveform'}

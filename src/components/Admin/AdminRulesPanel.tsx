@@ -181,14 +181,14 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
 
       {/* Draft editor */}
       {editingId !== null && (
-        <section aria-label="Editor de regra" className="mb-6 p-4 rounded-lg bg-solar-dark-content/70 border border-solar-dark-border space-y-3">
+        <section aria-label="Editor de regra" className="mb-6 p-4 rounded-lg bg-solar-dark-content/70 border border-hairline space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm">
               Nome (coluna na planilha)
               <input
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                className="mt-1 w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1"
+                className="mt-1 w-full bg-surface border border-hairline rounded-md px-2 py-1"
               />
             </label>
             <label className="text-sm">
@@ -196,7 +196,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
               <select
                 value={draft.categoryId}
                 onChange={(e) => setDraft({ ...draft, categoryId: e.target.value })}
-                className="mt-1 w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1"
+                className="mt-1 w-full bg-surface border border-hairline rounded-md px-2 py-1"
               >
                 {config.categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.id}</option>
@@ -208,7 +208,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
               <select
                 value={draft.grade}
                 onChange={(e) => setDraft({ ...draft, grade: Number(e.target.value) })}
-                className="mt-1 w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1"
+                className="mt-1 w-full bg-surface border border-hairline rounded-md px-2 py-1"
               >
                 {[1, 2, 3].map((g) => <option key={g} value={g}>{g}</option>)}
               </select>
@@ -218,7 +218,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
               <select
                 value={String(draft.active)}
                 onChange={(e) => setDraft({ ...draft, active: e.target.value === 'true' })}
-                className="mt-1 w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1"
+                className="mt-1 w-full bg-surface border border-hairline rounded-md px-2 py-1"
               >
                 <option value="true">Sim</option>
                 <option value="false">Não</option>
@@ -234,7 +234,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
                   <input
                     value={year}
                     readOnly
-                    className="w-16 bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1"
+                    className="w-16 bg-surface border border-hairline rounded-md px-2 py-1"
                     title="Ano da vigência"
                   />
                   <input
@@ -248,7 +248,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
                         scoresByYear: { ...draft.scoresByYear, [year]: Number(e.target.value) },
                       })
                     }
-                    className="w-24 bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1"
+                    className="w-24 bg-surface border border-hairline rounded-md px-2 py-1"
                   />
                 </label>
               ))}
@@ -278,7 +278,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
       <section aria-label="Lista de regras">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-gray-400 border-b border-solar-dark-border">
+            <tr className="text-left text-gray-400 border-b border-hairline">
               <th className="py-2 pr-2">Inconformidade</th>
               <th className="py-2 pr-2">Categoria</th>
               <th className="py-2 pr-2">Grau</th>
@@ -290,7 +290,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
           </thead>
           <tbody>
             {config.rules.map((rule) => (
-              <tr key={rule.id} className={`border-b border-solar-dark-border/50 ${rule.active ? '' : 'opacity-50'}`}>
+              <tr key={rule.id} className={`border-b border-hairline/50 ${rule.active ? '' : 'opacity-50'}`}>
                 <td className="py-2 pr-2">{rule.name}</td>
                 <td className="py-2 pr-2">{rule.categoryId}</td>
                 <td className="py-2 pr-2">{rule.grade}</td>
@@ -312,14 +312,14 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
       </section>
 
       {/* Import */}
-      <section aria-label="Importar JSON" className="mt-8 p-4 rounded-lg bg-solar-dark-content/70 border border-solar-dark-border">
+      <section aria-label="Importar JSON" className="mt-8 p-4 rounded-lg bg-solar-dark-content/70 border border-hairline">
         <h2 className="font-semibold mb-2">Importar JSON de regras</h2>
         <textarea
           value={importText}
           onChange={(e) => setImportText(e.target.value)}
           placeholder='{ "version": 2, "effectiveFrom": "...", "categories": [...], "rules": [...] }'
           rows={5}
-          className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1 font-mono text-xs"
+          className="w-full bg-surface border border-hairline rounded-md px-2 py-1 font-mono text-xs"
         />
         <button onClick={importJson} disabled={!importText.trim()} className="mt-2 px-4 py-1.5 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover text-sm disabled:opacity-50">
           Validar e importar
@@ -337,7 +337,7 @@ const AddYearButton: React.FC<{ onAdd: (year: string) => void }> = ({ onAdd }) =
         value={year}
         onChange={(e) => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
         placeholder="ano"
-        className="w-20 bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1"
+        className="w-20 bg-surface border border-hairline rounded-md px-2 py-1"
       />
       <button
         type="button"

@@ -51,7 +51,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                 value={localFilePath}
                 onChange={(e) => onLocalFilePathChange(e.target.value)}
                 placeholder="\\server\share\video.mp4"
-                className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200"
+                className="w-full bg-surface border border-hairline rounded-md px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent dark:text-ink"
             />
              <p className="text-xs text-gray-500 mt-1">Paste the network path to help other analysts locate the raw file.</p>
         </div>
@@ -119,7 +119,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                         type="text"
                                         value={value?.toString() ?? '0.00'}
                                         readOnly
-                                        className="w-full bg-solar-light-bg dark:bg-solar-dark-bg border border-solar-light-border dark:border-solar-dark-border rounded-md px-3 py-1.5 text-sm font-bold text-gray-300 focus:outline-none cursor-default"
+                                        className="w-full bg-surface dark:bg-solar-dark-bg border border-hairline dark:border-surface-raised rounded-md px-3 py-1.5 text-sm text-ink font-bold focus:outline-none focus:ring-2 focus:ring-accent cursor-default dark:text-ink"
                                     />
                                 </div>
                             );
@@ -200,7 +200,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                             id={fieldName}
                                             value={value?.toString() ?? ''}
                                             readOnly
-                                            className="w-full bg-solar-light-bg dark:bg-solar-dark-bg border border-solar-light-border dark:border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent pr-10 cursor-default dark:text-gray-200"
+                                            className="w-full bg-surface dark:bg-solar-dark-bg border border-hairline dark:border-surface-raised rounded-md px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent dark:text-ink cursor-default"
                                         />
                                         <button
                                             onClick={() => folderId && onOpenPicker(folderId)}

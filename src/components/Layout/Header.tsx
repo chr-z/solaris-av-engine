@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { VideoIcon, ArrowLeftIcon } from '../Core/icons';
+import SolarisLogo from '../Core/SolarisLogo';
 import Popover from '../Core/Popover';
 import SourceSelector from '../Media/SourceSelector';
 import { UserProfile } from '../../types';
@@ -55,10 +56,10 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="flex-shrink-0 flex items-center justify-between p-3 h-16 border-b border-solar-light-border dark:border-solar-dark-border bg-solar-light-content/80 dark:bg-solar-dark-content/80 backdrop-blur-sm z-20">
+      <header className="flex-shrink-0 flex items-center justify-between p-3 h-16 border-b border-hairline bg-surface/80 dark:bg-surface/80 backdrop-blur-sm z-20">
         <div className="flex items-center gap-2">
           <div className={`transition-all duration-300 ease-in-out ${isWorkspaceOpen ? 'w-0 opacity-0 -translate-x-2' : 'w-6 opacity-100'}`}>
-            <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full"></div>
+            <SolarisLogo size={24} />
           </div>
           
           <button 
@@ -77,7 +78,7 @@ const Header: React.FC<HeaderProps> = ({
               <Popover 
                 contentClassName="w-96"
                 trigger={
-                  <button className="flex items-center gap-2 px-3 py-2 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-light-content dark:focus:ring-offset-solar-dark-content focus:ring-solar-accent">
+                  <button className="flex items-center gap-2 px-3 py-2 rounded-md bg-gradient-to-br from-accent-from to-accent-to text-[#0b0e14] font-semibold hover:shadow-glow transition-shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-accent">
                     <VideoIcon className="w-5 h-5" />
                     <span>{t('header.loadMedia')}</span>
                   </button>
@@ -87,7 +88,7 @@ const Header: React.FC<HeaderProps> = ({
               </Popover>
           )}
           
-          <div className="h-6 w-px bg-solar-dark-border"></div>
+          <div className="h-6 w-px bg-hairline"></div>
           
           <OfflineIndicator />
 
@@ -140,7 +141,7 @@ const Header: React.FC<HeaderProps> = ({
               >
                 {(close) => (
                   <div className="p-1">
-                    <div className="px-3 py-2 border-b border-solar-dark-border">
+                    <div className="px-3 py-2 border-b border-hairline">
                         <p className="font-bold truncate" title={userProfile.name}>{userProfile.name}</p>
                         <p className="text-xs text-gray-400 truncate" title={userProfile.email}>{userProfile.email}</p>
                     </div>
@@ -182,7 +183,7 @@ const Header: React.FC<HeaderProps> = ({
                     </div>
                     <button 
                       onClick={() => { onLogout(); close(); }} 
-                      className="w-full text-left mt-1 px-3 py-2 text-sm rounded-md text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors border-t border-solar-dark-border"
+                      className="w-full text-left mt-1 px-3 py-2 text-sm rounded-md text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors border-t border-hairline"
                     >
                       {t('header.signOut')}
                     </button>

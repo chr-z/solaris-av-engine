@@ -56,9 +56,9 @@ const SourceSelector: React.FC<SourceSelectorProps> = ({ onSourceSelected, onClo
             onChange={(e) => setUrl(e.target.value)}
             placeholder={t(placeholderKey)}
             aria-label={t(placeholderKey)}
-            className="flex-grow bg-solar-light-bg dark:bg-solar-dark-bg border border-solar-light-border dark:border-solar-dark-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200 dark:placeholder-gray-500"
+            className="flex-grow bg-surface border border-hairline rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200 dark:placeholder-gray-500"
         />
-        <button type="submit" className="px-4 py-2 bg-solar-accent text-white rounded-md hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-light-content dark:focus:ring-offset-solar-dark-content focus:ring-solar-accent">
+        <button type="submit" className="px-4 py-2 bg-gradient-to-br from-accent-from to-accent-to text-[#0b0e14] font-semibold rounded-md hover:shadow-glow transition-shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-accent">
             {t('source.load')}
         </button>
     </form>
@@ -82,9 +82,9 @@ const SourceSelector: React.FC<SourceSelectorProps> = ({ onSourceSelected, onClo
             <div className="space-y-4">
               {renderUrlInput('source.placeholder.drive')}
               <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500">
-                <div className="flex-grow h-px bg-solar-light-border dark:bg-solar-dark-border"></div>
+                <div className="flex-grow h-px bg-hairline"></div>
                 <span className="text-xs">{t('source.or')}</span>
-                <div className="flex-grow h-px bg-solar-light-border dark:bg-solar-dark-border"></div>
+                <div className="flex-grow h-px bg-hairline"></div>
               </div>
               <button
                 onClick={() => setIsPickerOpen(true)}
@@ -99,7 +99,7 @@ const SourceSelector: React.FC<SourceSelectorProps> = ({ onSourceSelected, onClo
       case 'local':
       default:
         return (
-          <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-solar-light-border dark:border-solar-dark-border rounded-lg text-center">
+          <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-hairline rounded-lg text-center">
             <input
               type="file"
               accept="video/*"
@@ -118,8 +118,8 @@ const SourceSelector: React.FC<SourceSelectorProps> = ({ onSourceSelected, onClo
   };
 
   return (
-    <div className="bg-solar-light-content dark:bg-solar-dark-content rounded-lg p-1">
-      <div className="flex border-b border-solar-light-border dark:border-solar-dark-border" role="tablist">
+    <div className="bg-surface dark:bg-surface rounded-lg p-1">
+      <div className="flex border-b border-hairline" role="tablist">
         <TabButton id="local" label={t('source.tab.local')} icon={<UploadIcon className="w-5 h-5"/>} activeTab={activeTab} onSelect={setActiveTab} />
         <TabButton id="youtube" label={t('source.tab.youtube')} icon={<YouTubeIcon className="w-5 h-5"/>} activeTab={activeTab} onSelect={setActiveTab} />
         <TabButton id="drive" label={t('source.tab.drive')} icon={<GoogleDriveIcon className="w-5 h-5"/>} activeTab={activeTab} onSelect={setActiveTab} />
@@ -144,7 +144,7 @@ const TabButton = ({ id, label, icon, activeTab, onSelect }: TabButtonProps) => 
     aria-selected={activeTab === id}
     className={`flex items-center gap-2 px-4 py-2 rounded-t-md transition-colors ${
       activeTab === id
-        ? 'bg-solar-light-content dark:bg-solar-dark-content text-solar-accent border-b-2 border-solar-accent'
+        ? 'bg-surface dark:bg-surface text-solar-accent border-b-2 border-solar-accent'
         : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-500/10'
     }`}
   >

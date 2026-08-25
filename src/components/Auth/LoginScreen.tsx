@@ -1,5 +1,6 @@
 import React from 'react';
 import { GoogleIcon } from '../Core/icons';
+import SolarisLogo from '../Core/SolarisLogo';
 import { useI18n } from '../../i18n/I18nContext';
 import LanguageSwitcher from '../../i18n/LanguageSwitcher';
 
@@ -13,23 +14,23 @@ interface LoginScreenProps {
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestLogin, isLoading, error }) => {
   const { t } = useI18n();
   return (
-    <div className="flex flex-col items-center justify-center h-screen w-screen bg-solar-dark-bg text-gray-200 font-sans relative overflow-hidden">
+    <div className="flex flex-col items-center justify-center h-screen w-screen bg-bg text-gray-200 font-sans relative overflow-hidden">
       {/* Background Elements */}
-      <div className="absolute inset-0 bg-gradient-to-br from-solar-dark-content via-solar-dark-bg to-solar-dark-bg opacity-50"></div>
-      <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-solar-accent/10 rounded-full filter blur-3xl animate-pulse-slow"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-surface via-bg to-bg opacity-50"></div>
+      <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-accent/10 rounded-full filter blur-3xl animate-pulse-slow"></div>
       <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-yellow-400/10 rounded-full filter blur-3xl animate-pulse-slow animation-delay-4000"></div>
 
       {/* Language selector — fixed top-right */}
-      <div className="absolute top-4 right-4 z-20 bg-solar-dark-bg/60 rounded-md backdrop-blur-sm">
+      <div className="absolute top-4 right-4 z-20 bg-bg/60 rounded-md backdrop-blur-sm">
         <LanguageSwitcher />
       </div>
 
-      <div className="relative z-10 flex flex-col items-center text-center p-8 max-w-md w-full bg-solar-dark-content/50 backdrop-blur-md rounded-xl border border-solar-dark-border shadow-2xl">
-        <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full mb-6 shadow-lg"></div>
+      <div className="relative z-10 flex flex-col items-center text-center p-8 max-w-md w-full bg-surface/50 backdrop-blur-md rounded-xl border border-hairline shadow-2xl">
+        <SolarisLogo size={64} alwaysAnimate className="mb-6" />
         <h1 className="text-5xl font-bold text-white tracking-tight">Solaris</h1>
-        <p className="mt-2 text-lg text-gray-400">{t('login.tagline')}</p>
+        <p className="mt-2 text-lg text-ink-secondary">{t('login.tagline')}</p>
 
-        <div className="w-full h-px bg-solar-dark-border my-8"></div>
+        <div className="w-full h-px bg-hairline my-8"></div>
 
         <button
           onClick={onLogin}
