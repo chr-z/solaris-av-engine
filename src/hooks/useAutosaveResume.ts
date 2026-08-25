@@ -4,6 +4,10 @@
 // com o ciclo de vida React. Uma instância por OS aberta (key do workspace
 // garante remontagem). Grava em 200ms debounced; flush em beforeunload,
 // visibilitychange e unmount; markCleaned quando a planilha confirma.
+//
+// Nota de conformidade (react-hooks v7): refs só são lidos/escritos fora do
+// render — o controller nasce preguiçosamente em contexto de evento/efeito,
+// nunca durante o corpo do componente.
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import {
@@ -21,8 +25,10 @@ function storageKey(osId: string): string {
 
 /**
  * @param osId      Identificador estável da OS (W.O. da linha).
- * @param durationSec Duração conhecida do vídeo carregado (null = ainda não).
- * @param onOfficialSave Chame quando a análise for salva na planilha.
+ * @param durationSec Duração conhecida do vídeo carregado (null = ainda não);
+ *                    quando presente, a retomada recusa posição além da mídia.
+ * @param onOfficialSave Disparado quando a análise é confirmada na planilha
+ *                    (markCleaned) — ponto p/ telemetria/pós-processamento.
  */
 export function useAutosaveResume(
   osId: string | null,
@@ -32,8 +38,18 @@ export function useAutosaveResume(
   /** Última gravação confirmada — badge "salvo ✓". */
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
+  // Refs só tocados fora do render (eventos, efeitos, callbacks).
   const controllerRef = useRef<AutosaveController<unknown> | null>(null);
-  if (!controllerRef.current && osId !== null && typeof window !== 'undefined') {
+  const officialSaveRef = useRef(onOfficialSave);
+  useEffect(() => {
+    officialSaveRef.current = onOfficialSave;
+  });
+
+  /** Cria o controller na primeira necessidade (fora do render). */
+  const ensureController = useCallback((): AutosaveController<unknown> | null => {
+    if (controllerRef.current || osId === null || typeof window === 'undefined') {
+      return controllerRef.current;
+    }
     controllerRef.current = new AutosaveController<unknown>({
       read: () => window.localStorage.getItem(storageKey(osId)),
       write: (payload) => window.localStorage.setItem(storageKey(osId), payload),
@@ -41,10 +57,8 @@ export function useAutosaveResume(
       delayMs: 200,
       onSaved: () => setLastSavedAt(Date.now()),
     });
-  }
-
-  const getController = useCallback((): AutosaveController<unknown> | null =>
-    controllerRef.current, []);
+    return controllerRef.current;
+  }, [osId]);
 
   // Retomada: decisão única quando os inputs estabilizam.
   const resumeRef = useRef<ResumeDecision>({ shouldSeek: false, positionSec: 0, overlay: null, reason: 'no-draft' });
@@ -53,11 +67,11 @@ export function useAutosaveResume(
   const planOnce = useCallback((): ResumeDecision => {
     if (!resumePlannedRef.current && osId !== null && typeof window !== 'undefined') {
       const entry = loadAutosave(() => window.localStorage.getItem(storageKey(osId)));
-      resumeRef.current = planResume({ entry, durationSec: null });
+      resumeRef.current = planResume({ entry, durationSec });
       resumePlannedRef.current = true;
     }
     return resumeRef.current;
-  }, [osId]);
+  }, [osId, durationSec]);
 
   const resetResumePlan = useCallback(() => {
     resumePlannedRef.current = false;
@@ -68,19 +82,20 @@ export function useAutosaveResume(
    * Marcação/célula mudou → agenda save. Barato: só atualiza pending.
    */
   const scheduleSave = useCallback((data: unknown, positionSec: number) => {
-    controllerRef.current?.schedule(data, positionSec);
-  }, []);
+    ensureController()?.schedule(data, positionSec);
+  }, [ensureController]);
 
   /** Flush imediato (troca de OS/unload). */
   const flushNow = useCallback(() => {
-    controllerRef.current?.flush();
-  }, []);
+    ensureController()?.flush();
+  }, [ensureController]);
 
-  /** Análise oficialmente salva → limpa rascunho. */
+  /** Análise oficialmente salva → limpa rascunho e avisa o consumidor. */
   const markCleaned = useCallback(() => {
-    controllerRef.current?.markCleaned();
+    ensureController()?.markCleaned();
     setLastSavedAt(null);
-  }, []);
+    officialSaveRef.current?.();
+  }, [ensureController]);
 
   // Flush de emergência ao fechar/aba oculta.
   useEffect(() => {
@@ -93,7 +108,7 @@ export function useAutosaveResume(
     };
   }, []);
 
-  // Unmount da OS: grava o pendente antes de morrer.
+  // Unmount/troca de OS: grava o pendente antes de morrer.
   useEffect(() => () => {
     controllerRef.current?.flush();
   }, [osId]);

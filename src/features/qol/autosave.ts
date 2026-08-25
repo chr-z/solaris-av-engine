@@ -114,7 +114,7 @@ export class AutosaveController<T> {
 
 /** Lê o rascunho persistido; retorna null se ausente/corrompido. */
 export function loadAutosave<T>(read: () => string | null): AutosaveEntry<T> | null {
-  let raw: string | null = null;
+  let raw: string | null;
   try {
     raw = read();
   } catch {
