@@ -237,3 +237,44 @@ Lane turbo-web absorvida pelo main @ 30b4b7b (merge ticks #1-#7). Worktree solar
     TBT 0ms · CLS 0 · SI 1,8s.
 - Push origin/main efetuado (ff 30b4b7b), verificado por ls-remote.
 - src-tauri intocado (lane desktop é de outro worker). Sem Telegram.
+
+## turbo-web tick #10 — dívida de segurança: prod zera high/critical — 25/08/2026 ~15h20
+
+- Estado encontrado: fila 1–6 segue DONE/mergeada (nada a re-auditar); main
+  limpo no worktree, origin/main = main. Trabalho novo escolhido: a dívida de
+  segurança marcada fora-de-escopo no tick #7 (npm audit).
+- ANTES (prod): 30 vulns = 1 critical + 8 high + 20 moderate + 1 low.
+  Critical = websocket-driver <=0.7.4 (GHSA-mp7j-qc5w-4988 /
+  GHSA-xv26-6w52-cph6) via firebase@10 > @firebase/database > faye-websocket.
+- Passo 1 — npm audit fix (só não-breaking): crítico morto com patch bump
+  websocket-driver 0.7.4 -> 0.7.5; 29 pacotes re-resolvidos dentro de range;
+  package.json intocado neste passo. Prod: 30 -> 24 vulns.
+- Passo 2 — pins antigos de overrides viraram o gargalo: protobufjs 7.5.5 e
+  fast-xml-parser 4.5.5 (de ticks anteriores) agora são eles mesmos vulneráveis
+  e travavam a cadeia (@grpc/proto-loader, google-gax, proto3-json-serializer,
+  @google-cloud/firestore). Bump mínimo dos pins:
+  protobufjs 7.5.5 -> 7.6.5 (fix range <=7.6.4), fast-xml-parser 4.5.5 -> 5.7.0
+  (fix range <5.7.0). Prod: 24 -> ~20, highs de gRPC zerados.
+- Passo 3 — undici pin 6.25.0 -> 6.28.0 (vuln range <=6.27.0, fix ainda no
+  próprio 6.x — sem major). PROD FINAL: 10 vulns, TODAS moderate major-gated
+  (firebase 12 / firebase-admin 14 / googleapis 176), 0 high, 0 critical.
+  Árvore completa (incl. dev): 35 -> 13 (resta 1 high = vite <=6.4.2, fix é
+  vite@8 major — dívida documentada p/ tick próprio).
+- Gates na árvore atualizada (worktree solaris-web-turbo @ main):
+  - tsc --noEmit limpo; vitest 31 arquivos · 342/342 verdes;
+  - build vite: initial gz 86,71 KB byte-idêntico ao tick #9 (index 33,67 +
+    react-vendor 45,44 + css 7,60); chunks lazy idem (firebase 97,35,
+    AdminGate 18,93, AnalysisWorkspace 19,71, sheetSync 11,18);
+  - E2E fluxo real: 21/21 asserts ok;
+  - axe-core build servida: 0 login / 0 app principal (report regenerado);
+  - console probe CDP: 0 erros / 0 warnings / 0 exceções (guestClicked:false =
+    esperado, build offline entra direto no demo);
+  - Lighthouse x2 rodadas (--headless=new --disable-gpu): performance 99 ·
+    accessibility 100 · best-practices 100 · seo 100 — FCP 1,4s · LCP 1,6s ·
+    TBT 10ms · CLS 0. Perf 99 vs 100 do tick #9 é ruído de CPU (desktop e
+    áudio lanes em paralelo); bundle inicial idêntico, tempos iguais,
+    confirmado em 2 rodadas.
+- Pendências registradas (major-gated, um tick cada com gates completos):
+  firebase ^10->^12, firebase-admin ^12->^14, googleapis ^140->^176,
+  vite ^4->^8 (high dev).
+- src-tauri intocado. Sem Telegram.

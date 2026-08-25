@@ -42,11 +42,11 @@
     "vitest": "^4.1.11"
   },
   "overrides": {
-    "fast-xml-parser": "4.5.5",
-    "protobufjs": "7.5.5",
+    "fast-xml-parser": "5.7.0",
+    "protobufjs": "7.6.5",
     "node-forge": "1.4.0",
     "rollup": "4.60.2",
-    "undici": "6.25.0",
+    "undici": "6.28.0",
     "picomatch@4.0.3": "4.0.4",
     "chokidar": {
       "readdirp": {
