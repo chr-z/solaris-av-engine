@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { humanizeError, humanizeSaveError, humanizeAuthError } from '../utils/humanErrors';
+import { humanizeError, humanizeSaveError, humanizeAuthError, humanizeMarkerSaveError } from '../utils/humanErrors';
 
 describe('humanizeError', () => {
     it('never returns the raw message', () => {
@@ -48,6 +48,35 @@ describe('humanizeSaveError', () => {
     it('covers the generic failure with a retry hint', () => {
         const out = humanizeSaveError();
         expect(out.hint.toLowerCase()).toContain('save again');
+    });
+});
+
+describe('humanizeMarkerSaveError', () => {
+    it('never exposes the raw failure and keeps the typed comment promise', () => {
+        const raws = [
+            'Missing or insufficient permissions',
+            'permission_denied at /timestamps/1',
+            undefined,
+            '',
+        ];
+        for (const raw of raws) {
+            const out = humanizeMarkerSaveError(raw);
+            expect(out.title.length).toBeGreaterThan(0);
+            expect(out.hint.length).toBeGreaterThan(0);
+            if (raw) {
+                expect(out.title).not.toBe(raw);
+                expect(out.hint).not.toBe(raw);
+                expect((out.title + ' ' + out.hint).toLowerCase()).not.toContain(raw.toLowerCase());
+            }
+            // promessa central: o comentário digitado continua no campo
+            expect(out.hint).toMatch(/still|stays/i);
+        }
+    });
+
+    it('maps permission cases to an access hint without leaking the word', () => {
+        const out = humanizeMarkerSaveError('insufficient permissions');
+        expect(out.title).not.toMatch(/permission|403/i);
+        expect(out.hint).toMatch(/access|again/i);
     });
 });
 

@@ -99,6 +99,25 @@ export function humanizeSaveError(raw?: string): HumanError {
 }
 
 /**
+ * Mensagem humana para falha ao salvar marcador de tempo (Time Markers).
+ * Gêmeo do humanizeSaveError para o fluxo de marcação: promete que o
+ * comentário digitado NÃO se perde (o campo é preservado após a falha).
+ */
+export function humanizeMarkerSaveError(raw?: string): HumanError {
+    const msg = (raw || '').toLowerCase();
+    if (msg.includes('permission') || msg.includes('403') || msg.includes('lock')) {
+        return {
+            title: "The marker didn't stick.",
+            hint: 'Your comment stays in the field — ask an editor to review your access and try again.',
+        };
+    }
+    return {
+        title: "The marker didn't save.",
+        hint: 'Your comment is still here — check the connection and try again.',
+    };
+}
+
+/**
  * Erro humano para a tela de login (popup fechado, rede, popup bloqueado…).
  * Nunca devolve a mensagem crua do provider; sempre oferece um caminho
  * (tentar de novo / entrar como visitante na demo).
