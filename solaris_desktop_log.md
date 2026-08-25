@@ -57,9 +57,21 @@ sabor standalone 243KB inicial sem SDK de nuvem).
 
 ## Pendências conhecidas
 
-- [P3] Flag por ENV/`STANDALONE_MODE` externa ao build: hoje o modo vem do
-  sabor de build (`__SOLARIS_STANDALONE__`), do runtime Tauri ou de override
-  manual em localStorage (`solaris.runtimeMode`). Avaliar se vale expor env var.
-- [UI] Esconder itens de nuvem quando standalone (parcialmente coberto pelo
-  bypass de auth/login; revisar menus que ainda referenciam Drive/Sheets).
+- [P3] Flag por ENV externa ao build — AUDITADO neste tick, desnecessário:
+  `import.meta.env` é compile-time no navegador, então uma "env var" seria
+  equivalente ao sabor de build já existente (`__SOLARIS_STANDALONE__`). Para
+  forçamento por instalação existe o override `localStorage.solaris.runtimeMode`;
+  e o exe Tauri detecta `window.__TAURI_INTERNALS__` em runtime, então fica
+  standalone mesmo se alguém empacotar o sabor cloud (defesa em profundidade).
+- [UI] Esconder itens de nuvem quando standalone — PARCIAL: login nunca aparece
+  (auto-signin local), Header não expõe ações de nuvem. Resta apenas o caso de
+  uma linha com link Drive/YouTube ser clicada (falha com mensagem clara
+  "requires Google Authentication", sem travar). Refinamento futuro: esconder
+  o affordance de link nas linhas quando standalone.
 - Instalador NSIS assinado: fora do escopo desta noite (objetivo = exe rodando).
+- Aviso do linker `.rsrc merge failure: multiple non-default manifests`
+  (winlibs ld + tauri-build): cosmético, exe funciona (smoke OK); investigar
+  versão de binutils se virar erro.
+- WIP untracked fora da branch (`src/audio-acoustics/`, scripts smoke-p1x.mjs):
+  NÃO commitado aqui; suíte dele tem 6 falhas próprias (fixtures sintéticas),
+  fora do escopo desktop.
