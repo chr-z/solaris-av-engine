@@ -164,7 +164,7 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
                         />
                         <div className="flex justify-end gap-2">
                             <button onClick={handleCancel} className="px-3 py-1 text-sm rounded-md hover:bg-gray-500/20 transition-colors">Cancel</button>
-                            <button onClick={handleSave} disabled={!comment.trim()} className="px-3 py-1 text-sm rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover disabled:opacity-50 transition-colors">Save</button>
+                            <button onClick={handleSave} disabled={!comment.trim()} className="px-3 py-1 text-sm rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover disabled:opacity-50 transition-colors">Save</button>
                         </div>
                     </div>
                 ) : (

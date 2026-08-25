@@ -50,7 +50,7 @@ const ProLockOverlay: React.FC<ProLockOverlayProps> = ({ titleKey }) => {
         <p className="text-xs text-gray-400 leading-snug">
           {t('pro.lock.description', { feature: t(titleKey as never) })}
         </p>
-        <span className="inline-block mt-3 px-3 py-1.5 rounded-md bg-solar-accent text-white text-xs font-medium group-hover:bg-solar-accent-hover transition-colors">
+        <span className="inline-block mt-3 px-3 py-1.5 rounded-md bg-solar-accent text-solar-dark-bg text-xs font-medium group-hover:bg-solar-accent-hover transition-colors">
           {t('pro.lock.cta')}
         </span>
       </div>

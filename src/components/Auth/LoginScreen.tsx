@@ -13,7 +13,7 @@ interface LoginScreenProps {
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestLogin, isLoading, error }) => {
   const { t } = useI18n();
   return (
-    <div className="flex flex-col items-center justify-center h-screen w-screen bg-solar-dark-bg text-gray-200 font-sans relative overflow-hidden">
+    <main className="flex flex-col items-center justify-center h-screen w-screen bg-solar-dark-bg text-gray-200 font-sans relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0 bg-gradient-to-br from-solar-dark-content via-solar-dark-bg to-solar-dark-bg opacity-50"></div>
       <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-solar-accent/10 rounded-full filter blur-3xl animate-pulse-slow"></div>
@@ -70,7 +70,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestLogin, isLoad
           animation-delay: -4s;
         }
       `}</style>
-    </div>
+    </main>
   );
 };
 

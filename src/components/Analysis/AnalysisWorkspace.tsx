@@ -222,8 +222,8 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <div className="flex items-center gap-1 text-xs bg-solar-dark-bg px-2 py-1 rounded-md">
                             <span className="text-gray-400">Sort by:</span>
-                            <button onClick={() => setSortOrder('time')} className={`px-2 py-0.5 rounded ${sortOrder === 'time' ? 'bg-solar-accent text-white' : 'hover:bg-gray-500/20'}`}>Time</button>
-                            <button onClick={() => setSortOrder('comment')} className={`px-2 py-0.5 rounded ${sortOrder === 'comment' ? 'bg-solar-accent text-white' : 'hover:bg-gray-500/20'}`}>Comment</button>
+                            <button onClick={() => setSortOrder('time')} className={`px-2 py-0.5 rounded ${sortOrder === 'time' ? 'bg-solar-accent text-solar-dark-bg' : 'hover:bg-gray-500/20'}`}>Time</button>
+                            <button onClick={() => setSortOrder('comment')} className={`px-2 py-0.5 rounded ${sortOrder === 'comment' ? 'bg-solar-accent text-solar-dark-bg' : 'hover:bg-gray-500/20'}`}>Comment</button>
                         </div>
                         <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors" aria-label="Close">
                             <XIcon className="w-5 h-5" />
@@ -247,7 +247,7 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
                                         <textarea value={editingComment} onChange={e => setEditingComment(e.target.value)} rows={2} className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200" autoFocus/>
                                         <div className="flex justify-end gap-2">
                                             <button onClick={handleCancelEdit} className="px-3 py-1 text-sm rounded-md hover:bg-gray-500/20">Cancel</button>
-                                            <button onClick={handleSaveEdit} disabled={!editingComment.trim()} className="px-3 py-1 text-sm rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover disabled:opacity-50">Save</button>
+                                            <button onClick={handleSaveEdit} disabled={!editingComment.trim()} className="px-3 py-1 text-sm rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover disabled:opacity-50">Save</button>
                                         </div>
                                     </div>
                                 ) : (
@@ -280,7 +280,7 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
                     <div className="space-y-2">
                         <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Add a time marker comment..." rows={2} className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200 dark:placeholder-gray-500" onFocus={handleAddClick}/>
                         <div className="flex justify-end">
-                            <button onClick={handleSaveNew} disabled={!comment.trim()} className="px-4 py-2 text-sm font-semibold rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover disabled:opacity-50">Add Marker</button>
+                            <button onClick={handleSaveNew} disabled={!comment.trim()} className="px-4 py-2 text-sm font-semibold rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover disabled:opacity-50">Add Marker</button>
                         </div>
                     </div>
                 </div>
@@ -655,7 +655,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
       <button
         onClick={handleSave}
         disabled={isSaving}
-        className="flex items-center gap-2 px-4 py-2 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50"
+        className="flex items-center gap-2 px-4 py-2 rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50"
       >
         {isSaving ? (
            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -846,7 +846,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
             <span className="font-bold text-xs uppercase tracking-wide text-solar-accent">{t('compare.title')}</span>
             <button
               onClick={compare.toggleSyncMode}
-              className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent ${compare.syncMode === 'locked' ? 'bg-solar-accent text-white hover:bg-solar-accent-hover' : 'bg-solar-dark-bg border border-solar-dark-border text-gray-300 hover:bg-gray-500/20'}`}
+              className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent ${compare.syncMode === 'locked' ? 'bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover' : 'bg-solar-dark-bg border border-solar-dark-border text-gray-300 hover:bg-gray-500/20'}`}
               title={compare.syncMode === 'locked' ? t('compare.syncLocked') : t('compare.syncFree')}
               aria-label={t('compare.syncMode')}
             >
