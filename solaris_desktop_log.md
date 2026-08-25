@@ -65,3 +65,33 @@
   firebase 97.24KB lazy). src-tauri/audio-acoustics/pitch intocados.
 - Residuais axe moderate documentados no tick 6 (region x3 no login,
   heading-order x1 no dialogo QC); zero critical/serious.
+
+## redesign (tick 8) — momento wow #2: contagem dos achados animada — 25/08/2026 ~08h
+
+- Fila R1-R4 estava DONE (ticks 1-7); auditoria fina da spec achou UM residual:
+  wow #2 ("ao concluir análise: contagem dos achados anima de 0 até o total")
+  não existia — grep por useCountUp/countUp vazio. Os outros 3 momentos wow já
+  viviam no código (logo animado LoginScreen:30, ScoreRing workspace:982,
+  empty states fila r3).
+- Implementação (padrão do repo: matemática pura em utils/, hook fino):
+  - src/utils/countUp.ts — easeOutCubic + countFrame com snap EXATO no destino
+    (último frame == texto estático antigo), guards p/ duração<=0 e destino
+    não finito;
+  - src/hooks/useCountUp.ts — rAF + prefers-reduced-motion (estado direto,
+    sem frames);
+  - QCExportButton: AnimatedStat no diálogo de confirmação — rows/avg/errors
+    sobem de 0 ao total (900ms ease-out). Texto final byte-idêntico ao anterior.
+- Testes: src/__tests__/countUp.test.ts 10 novos (clamp, snap exato, interpolação
+  from!=0, guards NaN/Infinity, elapsed negativo). Suite: 365 -> 375/375 verde.
+  tsc --noEmit limpo. npm run build verde: CSS 9.92KB gz (<30KB spec), initial
+  index 36.41 -> 36.77KB gz (+0.36KB), chunks lazy intocados.
+- Prova em browser real (scripts/redesign_shot_t8_countup.cjs, protocolo anti-
+  órfão: preview próprio porta alta + hash servido==dist + profile descartável +
+  chrome headless --disable-gpu):
+  - headless NOVO reporta prefers-reduced-motion:reduce por padrão — app
+    respeitou e foi direto ao estado final (comportamento correto provado);
+  - com Emulation.setEmulatedMedia(no-preference): burst sampling 100ms pegou a
+    contagem viva "2 rows -> 3 rows -> 4 rows -> 5 rows", terminando no formato
+    estático exato. Shots: redesign_shots/t8_qc_final.png (+r3b_* revalidados:
+    fila, empty state, diálogo QC, erro humano login — build pós-tick-8).
+- src-tauri/audio-acoustics/pitch intocados (só worktree redesign-premium).
