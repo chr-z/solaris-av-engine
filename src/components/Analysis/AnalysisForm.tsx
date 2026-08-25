@@ -148,7 +148,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                         id={fieldName}
                                         checked={isChecked}
                                         onChange={onChange}
-                                        className="h-4 w-4 rounded border-gray-500 text-solar-accent focus:ring-solar-accent bg-transparent"
+                                        className="checkbox-custom"
                                     />
                                     <span className="text-sm select-none flex items-center gap-1.5">
                                         {cellData?.link ? (

@@ -1,3 +1,28 @@
+## redesign (tick 10) — R2 remanescente: checklist de inconformidades com kit animado — 25/08/2026 ~10h20
+
+- Auditoria anti-false-done da spec INTEIRA (R1-R4 + momentos wow) antes de
+  qualquer commit: tokens/CSS 9.92KB gz, timeline com pins empilháveis,
+  ScoreRing SVG, sparkline da tendência, contagem animada, print v3 do relatório,
+  favicon kit, empty states ilustrados, erros humanos — tudo DONE nos ticks 1-9.
+  Suíte 385/385 verde na base.
+- **Gap real achado**: os checkboxes do CHECKLIST de inconformidades
+  (AnalysisForm — onde o analista marca, coração do fluxo) ainda usavam o
+  estilo cru do MVP (h-4 w-4 border-gray-500 text-solar-accent focus:ring);
+  o kit .checkbox-custom animado do R2 só tinha sido aplicado no FilterControls.
+- Fix mínimo (1 linha): className -> checkbox-custom. Anatomia, vocabulário e
+  comportamento intactos (mesmo input, mesmo onChange, YES/NO e TRUE/FALSE).
+- Decisão documentada: migração p/ lucide-react fica FORA — dependência nova
+  contra a restrição "zero dependência pesada nova" da spec; kit SVG inline
+  atual já é consistente (stroke-2/currentColor/aria-hidden).
+- Prova no browser real (scripts/verify_t10_checkbox.cjs, protocolo anti-stale:
+  hash do entry servido conferida contra dist local): appearance:none, 16x16px,
+  borda hairline rgba(255,255,255,.12), classe antiga ausente, clique dispara
+  onChange e gradiente accent 135deg #8F6FF7->#F09A52 computado ao marcar.
+  7/7 checks = VERIFY_T10_OK. Screenshots t10_checklist{,_marcado}.png.
+- Validação: tsc limpo; vitest 385/385; build verde; CSS gz 9.92KB inalterado.
+
+---
+
 ## redesign (tick 6) — R4 polimento final — 25/08/2026 ~06h
 - Commits fac4ec3 + 6f1edc3 + 59c30eb + ac7dac8 @ redesign-premium, pushados
   (ls-remote ok, 880f4a0..ac7dac8). Fila R1-R4 da spec agora 100% executada.
