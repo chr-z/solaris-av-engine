@@ -350,3 +350,18 @@ Nada a avançar sem diretiva nova; este tick rodou verificação de ponta a pont
   PENDING(3)/COMPLETED(0)/SPECIAL(0), PT/EN presente, zero rede remota, zero
   console error, zero exceção. BOOT_WINDOW_OK ms=185 WS=19.6MB (sem regressão
   vs série 170-198ms).
+
+---
+
+## Tick 2026-08-25 ~12h35 — Reconciliação do órfão F1 + refresh do instalador
+
+- **Órfão das ~12h reconciliado**: worker anterior morreu após criar `migrations/0002_analista_feliz.sql`
+  e uma entrada de log NÃO commitada que afirmava sincronia com `src/features/db/schema.ts` — caminho
+  que NUNCA existiu nesta árvore desktop (o schema TS vive na lane features/analista-feliz, commitado lá).
+- Prova de integridade: `diff` byte-a-byte entre a cópia órfã e o canônico
+  `solaris-features/migrations/0002_analista_feliz.sql` → idênticos (0 diff). O teste de sincronia
+  (`featuresMigrations.test.ts`, lane features) compara SQL vs MIGRATION_ANALISTA_FELIZ no lado dele.
+- Ação: log fantasma descartado (restaurado pra HEAD); SQL canônico COMMITADO aqui como cópia de
+  distribuição desktop; esta entrada substitui a afirmação incorreta.
+- Suíte oficial verde pré-push: vitest 242/242 (--exclude src/audio-acoustics/** — lane do irmão de
+  áudio, arquivos untracked fora do contrato desta branch).
