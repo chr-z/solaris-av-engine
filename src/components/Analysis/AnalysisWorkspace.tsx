@@ -1,18 +1,19 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 
-// --- IMPORTS CORRIGIDOS (NAVIGATION) ---
+// --- IMPORTS CORRIGIDOS (NAVIGATION) -->
 import VideoPlayer from '../Media/VideoPlayer';
 import ComparePane from '../Media/ComparePane';
 import DriveFilePicker from '../Media/DriveFilePicker';
 import SourceSelector from '../Media/SourceSelector';
 import LocalFileHelper from '../Media/LocalFileHelper';
 
-import RgbParade from '../Monitors/RgbParade';
-import Waveform from '../Monitors/Waveform';
-import VuMeter from '../Monitors/VuMeter';
-import Spectrogram from '../Monitors/Spectrogram';
-import OverlayControls from '../Monitors/OverlayControls';
+// Lazy-loaded monitors (code-splitting) — heavy components loaded on demand
+const RgbParade = lazy(() => import('../Monitors/RgbParade'));
+const Waveform = lazy(() => import('../Monitors/Waveform'));
+const VuMeter = lazy(() => import('../Monitors/VuMeter'));
+const Spectrogram = lazy(() => import('../Monitors/Spectrogram'));
+const OverlayControls = lazy(() => import('../Monitors/OverlayControls'));
 
 import Dock from '../Layout/Dock';
 import UserAvatar from '../Auth/UserAvatar';
@@ -685,22 +686,34 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   const osIdentifier = localRowData ? (localRowData[headers.indexOf('W.O.')]?.value || '') : '';
 
   const renderZoomedContent = () => {
-    switch (zoomedDock) {
-      case 'rgbParade':
-        return <RgbParade pixelData={analysisData.video} isZoomed />;
-      case 'waveform':
-        return <Waveform pixelData={analysisData.video} isZoomed />;
-      case 'spectrogram':
-        return <Spectrogram frequencyData={analysisData.frequency} isReady={isAudioReady} />;
-      case 'vuMeter':
-        return (
-          <div className="w-full h-full flex justify-center items-center p-4">
-            <div className="h-full w-40">
-              <VuMeter volume={analysisData.volume} isReady={isAudioReady} />
-            </div>
-          </div>
-        );
-      default:
+      switch (zoomedDock) {
+        case 'rgbParade':
+          return (
+            <Suspense fallback={<div className="h-64 w-full flex items-center justify-center text-gray-400">Loading RgbParade...</div>}>
+              <RgbParade pixelData={analysisData.video} isZoomed />
+            </Suspense>
+          );
+        case 'waveform':
+          return (
+            <Suspense fallback={<div className="h-64 w-full flex items-center justify-center text-gray-400">Loading Waveform...</div>}>
+              <Waveform pixelData={analysisData.video} isZoomed />
+            </Suspense>
+          );
+        case 'spectrogram':
+          return (
+            <Suspense fallback={<div className="h-64 w-full flex items-center justify-center text-gray-400">Loading Spectrogram...</div>}>
+              <Spectrogram frequencyData={analysisData.frequency} isReady={isAudioReady} />
+            </Suspense>
+          );
+        case 'vuMeter':
+          return (
+            <Suspense fallback={<div className="h-64 w-full flex items-center justify-center text-gray-400">Loading VuMeter...</div>}>
+              <div className="w-40 h-full flex justify-center items-center">
+                <VuMeter volume={analysisData.volume} isReady={isAudioReady} />
+              </div>
+            </Suspense>
+          );
+        default:
         return null;
     }
   };
@@ -870,20 +883,20 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
         <div className="h-32 flex-shrink-0 flex gap-4">
             <div className="flex-1">
                 <Dock title="RGB Parade" onZoom={() => setZoomedDock('rgbParade')}>
-                  <RgbParade pixelData={analysisData.video} />
+                  <Suspense fallback={<div className="h-24 w-full flex items-center justify-center text-gray-400">Loading RGB Parade...</div>}> <RgbParade pixelData={analysisData.video} /></Suspense>
                 </Dock>
             </div>
             <div className="flex-1">
                 <Dock title="Waveform" onZoom={() => setZoomedDock('waveform')}>
-                  <Waveform pixelData={analysisData.video} />
+                  <Suspense fallback={<div className="h-24 w-full flex items-center justify-center text-gray-400">Loading Waveform...</div>}> <Waveform pixelData={analysisData.video} /></Suspense>
                 </Dock>
             </div>
             <div className="flex-1">
                 <Dock title="Spectrogram" onZoom={() => setZoomedDock('spectrogram')}>
-                    <Spectrogram frequencyData={analysisData.frequency} isReady={isAudioReady} />
+                    <Suspense fallback={<div className="h-24 w-full flex items-center justify-center text-gray-400">Loading Spectrogram...</div>}> <Spectrogram frequencyData={analysisData.frequency} isReady={isAudioReady} /></Suspense>
                 </Dock>
             </div>
-            <VuMeter volume={analysisData.volume} isReady={isAudioReady} onZoom={() => setZoomedDock('vuMeter')} />
+            <Suspense fallback={<div className="h-24 w-full flex items-center justify-center text-gray-400">Loading VuMeter...</div>}> <VuMeter volume={analysisData.volume} isReady={isAudioReady} onZoom={() => setZoomedDock("vuMeter")} /></Suspense>
         </div>
       </div>
       <div className="w-1/3 h-full flex flex-col bg-solar-light-content/80 dark:bg-solar-dark-content/80 backdrop-blur-md rounded-lg shadow-sm border border-solar-light-border dark:border-solar-dark-border overflow-hidden">
@@ -951,7 +964,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                       </button>
                     }
                   >
-                    <OverlayControls settings={overlaySettings} setSettings={setOverlaySettings} />
+                    <Suspense fallback={<div className="h-24 w-full flex items-center justify-center text-gray-400">Loading OverlayControls...</div>}> <OverlayControls settings={overlaySettings} setSettings={setOverlaySettings} /></Suspense>
                   </Popover>
                   {pickerFolderId && (
                     <button
