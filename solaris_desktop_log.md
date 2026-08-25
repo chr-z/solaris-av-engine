@@ -442,3 +442,31 @@ Lane turbo-web absorvida pelo main @ 30b4b7b (merge ticks #1-#7). Worktree solar
 - src-tauri intocado (lane desktop é de outro worker). Sem Telegram.
 
 
+
+## redesign (tick 14) — fusão turbo-web: main absorvida com zero perda visual — 25/08/2026 ~15h
+
+- A main tinha 22 commits novos (lane turbo-web inteira: lazy firebase, ilha
+  LiveMonitors, perf de render, axe/e2e/lighthouse). redesign-premium ficou 22
+  atrás; sincronizado AGORA pra não acumular inferno de merge.
+- Merge origin/main → redesign-premium (1de9d5d): 16 arquivos em conflito,
+  resolvidos um a um com as DUAS intenções:
+  - Kit visual v3 mantido em todos os botões/badges onde a main só renomeava
+    text-bg→text-solar-dark-bg (12 hunks take-HEAD);
+  - Funções da main preservadas: <main> landmark no login, aviso demo-mode,
+    imports waveformRowStatus, modal de zoom VIVE na ilha LiveMonitors agora
+    (bloco antigo do workspace removido de verdade);
+  - AnáliseSheet: união real dos imports (useMemo + useI18n;
+    scoreFormat/waveformRowStatus);
+  - Login/VideoPlayer: compostos fundidos (landmark+demoNotice + erro humano v3).
+- Migração pós-merge: listener de pins da timeline R3 usava o global `database`
+  extinto — reescrito com getDb()/isFirebaseConfigured() (offline/demo fica
+  silencioso, sem pins, igual ao resto).
+- E2E turbo (21 asserts) falhava no blob QC porque esperava `<h2>Metrics</h2>`
+  do formato PRÉ-v3; contrato atualizado pro documento v3
+  (aria-label="Metrics" + <h2>Headers</h2>) — 21/21 verde.
+- Gates NA ÁRVORE MESCLADA: tsc limpo; vitest 398/398 (união das suítes);
+  build verde (CSS 10.19KB gz << 30KB spec; initial index 38.05 + react-vendor
+  45.44 ≈ 83.5KB gz); e2e-flow 21/21; axe-core login 0 / app 0.
+- Próximo tick: acabamento v3 nos estilos pré-v3 que a main trouxe
+  (LiveMonitors portal, TimestampsModal), sem tocar em comportamento.
+- src-tauri/audio-acoustics/pitch intocados.
