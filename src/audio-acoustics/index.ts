@@ -38,3 +38,43 @@ export {
   type ReverbResult as ReverbResultType,
 } from './reverb';
 export * from './fixtures';
+export {
+  analyzeAudioPcm,
+  analyzeAudio,
+  type AcousticReport,
+  type AcousticOptions,
+  type AxisResult,
+  type TimelineMark,
+  type Severity,
+  type StudioBaseline,
+} from './audioAcoustics';
+export {
+  getStudioBaseline,
+  saveStudioBaseline,
+  clearStudioBaseline,
+  resolveBaselineOptions,
+  type StudioAcousticBaseline,
+} from './baselineStore';
+export {
+  buildAcousticQCSection,
+  acousticSheetColumns,
+  renderAcousticQCSectionHtml,
+  SHEET_COLUMNS_HEADERS,
+  ACOUSTIC_AXIS_KEYS,
+  type AcousticQCSection,
+  type AcousticSheetColumns,
+} from './qcIntegration';
+export {
+  buildPanelRows,
+  buildTimelineMarks,
+  overallVerdict,
+  formatClock,
+  canMarkReference,
+  referenceFromReport,
+  SEVERITY_BAR_CLASS,
+  SEVERITY_DOT_CLASS,
+  AXIS_LABEL_PT,
+  AXIS_LABEL_EN,
+  type PanelAxisRow,
+  type PanelTimelineMark,
+} from './panelModel';
