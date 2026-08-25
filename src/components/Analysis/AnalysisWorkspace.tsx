@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
 
 // --- IMPORTS CORRIGIDOS (NAVIGATION) ---
@@ -363,7 +363,10 @@ const recalculateScores = (currentRowData: RowData, headers: string[]): RowData 
     return updatedData;
 };
 
-const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
+// Memoized: this subtree embeds the video player + 4 canvas monitors. App-level
+// state churn (debounced search typing, auth ticks) must not re-render it when
+// its own props are unchanged; all callbacks it receives have stable identity.
+const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
   selectedRow,
   headers,
   videoSrc,
@@ -1023,6 +1026,6 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
       )}
     </div>
   );
-};
+});
 
 export default AnalysisWorkspace;

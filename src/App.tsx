@@ -17,6 +17,7 @@ import { logCaptureService } from './utils/logCapture';
 import { DEMO_HEADERS, DEMO_ROWS } from './utils/demoData';
 import { useI18n } from './i18n/I18nContext';
 import { computeFilteredRows } from './utils/rowFiltering';
+import { useDebounce } from './hooks/useDebounce';
 import { isAdminHash, isDashboardsHash } from './utils/adminRoute';
 import { persistGuestEmail, clearGuestEmail } from './hooks/useAdminRole';
 
@@ -122,15 +123,20 @@ const App: React.FC = () => {
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<FilterState>({ ...getInitialDateRange(), inconformities: [], studio: '' });
-  
+
+  // Typing fires one keystroke per char; filtering runs over ALL rows and rebuilds
+  // the 3 row arrays that feed the list. Debounce so the expensive pipeline only
+  // runs when typing settles, not on every keystroke.
+  const debouncedSearchTerm = useDebounce(searchTerm, 200);
+
   const selectedOsIndexRef = useRef(selectedOsIndex);
   useEffect(() => { selectedOsIndexRef.current = selectedOsIndex; }, [selectedOsIndex]);
 
   // --- Filtering Logic (pure pipeline, memoized) ---
   const { pending: filteredPendingRows, completed: filteredCompletedRows, special: filteredSpecialRows } =
     useMemo(
-      () => computeFilteredRows(allRows, headers, filters, searchTerm, userProfile?.id === 'guest-reviewer-id'),
-      [allRows, headers, filters, searchTerm, userProfile]
+      () => computeFilteredRows(allRows, headers, filters, debouncedSearchTerm, userProfile?.id === 'guest-reviewer-id'),
+      [allRows, headers, filters, debouncedSearchTerm, userProfile]
     );
 
 
@@ -446,11 +452,15 @@ const App: React.FC = () => {
     if (lastMediaSource) handleSourceSelected(lastMediaSource.source, lastMediaSource.info);
   }, [lastMediaSource, handleSourceSelected]);
 
-  const handleSaveSuccess = (savedRow: RowData) => {
+  // Stable identity: the workspace subtree is heavily memoized, so an inline
+  // function here would defeat React.memo on every App render (e.g. each
+  // debounced search update). Reads the already-synced ref for the selected OS.
+  const handleSaveSuccess = useCallback((savedRow: RowData) => {
     setAllRows(prevRows => {
         const newRows = [...prevRows];
-        if (selectedOsIndex !== null) {
-            const arrayIndexToUpdate = newRows.findIndex(item => item.rowIndex === selectedOsIndex);
+        const currentSelectedOsIndex = selectedOsIndexRef.current;
+        if (currentSelectedOsIndex !== null) {
+            const arrayIndexToUpdate = newRows.findIndex(item => item.rowIndex === currentSelectedOsIndex);
             
             if (arrayIndexToUpdate === -1) return newRows;
 
@@ -467,7 +477,7 @@ const App: React.FC = () => {
         }
         return newRows;
     });
-  };
+  }, []);
 
   const handleCloseWorkspace = useCallback(() => {
     if (selectedOsIndex !== null && userProfile?.id !== 'guest-reviewer-id') {
