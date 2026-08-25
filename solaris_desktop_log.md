@@ -337,3 +337,43 @@ Lane turbo-web absorvida pelo main @ 30b4b7b (merge ticks #1-#7). Worktree solar
   vite preview da lane redesign (outras pastas) FORA do meu escopo por
   politica do script — alertado aqui pro worker responsavel limpar.
 - src-tauri intocado. Sem Telegram.
+
+---
+
+## turbo-web tick #13 — guardrail noturno + due diligence de deps pesadas — 25/08/2026 ~18h20
+
+Worktree solaris-web-turbo @ main == origin/main (88108e3), arvore limpa.
+Fila original (1-6) segue DONE desde o tick #5; nenhum delta de codigo desde
+o tick #12. Este tick: re-prova dos gates com numeros frescos + investigacao
+de ganho barato restante.
+
+GATES (arvore limpa, build fresca):
+- npm run build (vite 6.4.3): initial = index 33,86 + react-vendor 45,79 +
+  css 7,60 = 87,25 KB gz — byte-estavel vs tick #12. Chunks lazy intactos
+  (firebase 97,38 / AdminGate 18,99 / AnalysisWorkspace 20,04 / sheetSync
+  11,19 / ComparePane 1,37).
+- tsc --noEmit limpo; vitest 31 arquivos / 342/342 (~30s);
+- e2e fluxo real: 21/21 asserts ok;
+- axe-core scan: 0 violacoes login+main app, entry servido PROVADO igual ao
+  dist local (index-C1mX7UAW.js) antes de confiar no resultado;
+- Lighthouse x2 limpas (--headless=new --disable-gpu): R1 99/100/100/100,
+  R3 99/100/100/100. (R2 descartada: rodei `npm audit` em paralelo por
+  engano durante a medicao — contencao de CPU derrubou perf p/ 96; benchmark
+  tem que rodar sozinho, licao registrada.)
+- npm audit prod: estavel em 10 moderate, 0 high/critical (mesmo patamar do
+  tick #12).
+
+DUE DILIGENCE de ganho barato (sem codigo alterado):
+- Deps pesadas do package.json (googleapis, firebase-admin, fluent-ffmpeg/
+  ffmpeg-static/ffprobe-static, ytdl-core): ZERO imports em src/. Sao usadas
+  apenas pelas funcoes serverless em api/*.ts (proxies Drive/Sheets/YouTube)
+  — dependencias de backend legitimas, nao inflam o bundle cliente. NAO
+  remover do package.json.
+- Audits LH de otimizacao (unused-javascript, bootup-time,
+  mainthread-work-breakdown) todas score 1.0 com savings ~0 — nao sobra
+  fruta ao alcance da fila; proximos passos reais seriam features novas ou
+  migracao de stack (fora do escopo turbo-web).
+- Preview deste tick subiu em porta alta fixa 4777 e foi morto no fim
+  (protocolo anti-orfao mantido).
+
+src-tauri intocado. Sem Telegram.
