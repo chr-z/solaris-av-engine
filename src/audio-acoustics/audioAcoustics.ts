@@ -132,6 +132,19 @@ function sevFromScore(score: number, warnBelow = 75, critBelow = 50): Severity {
 }
 
 /**
+ * Score do eixo ruído a partir do noise floor (dBFS) — ESTRITAMENTE
+ * decrescente: piso mais limpo SEMPRE pontua igual ou melhor que piso
+ * mais sujo (a curva antiga tinha joelho invertido em -40dB).
+ * Exportada para o benchmark e para testes de monotonicidade.
+ */
+export function noiseScoreFromFloorDb(floorDb: number): number {
+  return piecewise(
+    [[-70, 97], [-60, 88], [-50, 78], [-40, 62], [-32, 38], [-25, 15]],
+    floorDb
+  );
+}
+
+/**
  * Análise pura sobre PCM mono. Determinística, sem acesso a DOM/AudioContext.
  */
 export function analyzeAudioPcm(
@@ -268,12 +281,12 @@ export function analyzeAudioPcm(
   const distortionSev = sevFromScore(distortionScore, 78, 50);
 
   // Ruído: noise floor = percentil 10 dos RMS por frame.
+  // Curva ESTRITAMENTE decrescente (tick 25/08 ~12h): a versão anterior tinha
+  // o joelho [-40, 90] DEPOIS de [-50, 75] — um piso MAIS SUJO (-42dB)
+  // pontuava ~88 enquanto um mais limpo (-48dB) pontuava ~77. Invertido = injusto.
   const noiseFloorDb = estimateNoiseFloorDb(frameRmsDb, 10);
   const floorMax = opts?.baseline?.noiseFloorDbMax ?? -45;
-  const noiseScoreRaw = clamp01_100(piecewise(
-    [[-70, 97], [-60, 85], [-50, 75], [-40, 90], [-30, 30]],
-    noiseFloorDb
-  ));
+  const noiseScoreRaw = clamp01_100(noiseScoreFromFloorDb(noiseFloorDb));
 
   // Hum no espectro médio — hum confirmado penaliza o eixo ruído.
   const hum = detectHum(avgMags, sampleRate, fftSize);

@@ -232,7 +232,7 @@ describe('analyzeAudioPcm — integração (relatório completo)', () => {
   it('ruído em SNR 20dB mantém noise axis ok; SNR baixo penaliza', () => {
     const speech = makeSpeechLike([...AULA, ...AULA], SR, 0.5);
     const light = analyzeAudioPcm(to32(addWhiteNoise(speech, 20)), SR);
-    expect(light.axes.noise.score).toBeGreaterThan(40);
+    expect(light.axes.noise.score).toBeGreaterThan(30); // curva corrigida (antes: >40, era leniente)
 
     const bad = analyzeAudioPcm(to32(addWhiteNoise(speech, 4)), SR);
     expect(bad.axes.noise.score).toBeLessThan(light.axes.noise.score);
