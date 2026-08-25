@@ -400,3 +400,27 @@ P1 (DSP) e P2 (fixtures) já completos no tick 9dc223d anterior. Este tick = VAL
 - install_smoke.ps1 PASS ponta-a-ponta no instalador NOVO: INSTALLER_EXIT=0, INSTALL_OK
   files=3/6.77MB, app instalado vivo 5s (27.8MB), UNINSTALLER_EXIT=0, limpeza manual ok.
 - Bundle inicial: ~104KB brutos / ~31KB gz (13 assets). Métricas P2 mantidas (boot série 185ms).
+
+---
+
+## Tick 25/08 ~14h35 — desktop worker: guardrail + PUSH DO AUDIO RETIDO (prova de estado commitado)
+
+- Guardrail: desktop == origin/desktop (33bfbd6); fila P1-P3 vazia (nada re-auditado).
+  Artefatos conferidos vivos: NSIS pos-P3 13h45 (2.452.035B), exe canonico 13h45 com
+  os assets do dist-desktop embutidos (grep 3/3).
+- Thread achada: audio/acoustics ahead-1 (2ee01ba; relatorio final deles: "push nao
+  feito por credenciais interativas"). Eu TENHO o caminho gh pra destravar, MAS:
+- **Novo padrao aplicado — provar o ESTADO COMMITADO antes de push de terceiros**:
+  `git archive 2ee01ba | tar -x` em tmp fora do repo + junction PowerShell do
+  node_modules -> suite no snapshot limpo: 401/403. Falham NO COMMITADO:
+  precision-recall FP reverb seco 2/2 (> <=1 tolerado; fixtures mulberry32 =
+  deterministico, bug real) e perf benchmark 4,3s > 3s.
+- Causa raiz: o verde "validado" 13h15 deles rodou na ARVORE SUJA (+173 linhas de WIP
+  em noise.ts/reverb.ts = cura em voo; o MESMO teste passa la, provado isolado agora).
+- Decisao: PUSH RETIDO ate existir commit com acura (verde-antes-de-push >
+  destravar credencial). Irmao de audio: ao commitar a cura, o push destrava
+  (incantation gh ja validado — skills rust-wasm-windows / saas-factory-ops).
+- Infra: junction de node_modules so via PowerShell `New-Item -ItemType Junction`
+  (`mklink //J` do bash falha em silencio); tar -C exige path Windows c/ barra normal.
+  Temp verify dir ficou em %TEMP%/audio_push_verify (cleanup recursivo preso em
+  aprovacao headless; junction ja removida, node_modules real intocado).
