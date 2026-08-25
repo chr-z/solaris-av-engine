@@ -2,6 +2,36 @@
 
 ## features
 
+### 2026-08-25 ~11h20 — tick features-worker: F6 troca #3 — Intl/fuso fixo na forma honesta (date-fns REJEITADO com prova)
+
+- **Decisão da troca D #3 (date-fns+Intl)**: o CÁLCULO de calendário já era
+  pura/testada em `features/gamification/periods.ts` (fuso fixo -03:00, reset
+  segunda 00h) — reintroduzi-lo via date-fns (~70KB min) seria dependência que
+  resolve problema inexistente. O GAP real era FORMATAÇÃO: chaves cruas
+  `week · 2026-08-24` vazavam pro histórico da Liga (spec C2 pede "Março/2026
+  — quem ganhou?") e `toLocale*()` dependia do relógio DO HOST (jsdom,
+  desktop e nuvem discordam). Fechado com **Intl nativo = zero bytes de
+  bundle**.
+- **Novo** (`src/features/i18n/format.ts`): formatadores cacheados por
+  (tag+opções) SEMPRE `timeZone:'UTC'` sobre instante deslocado pelo offset
+  do PodiumClockConfig (mesma técnica do localParts); formatClockInTz /
+  formatDateInTz / formatTimestampInTz / formatPeriodLabel ('2026-03' →
+  'março de 2026' | 'March 2026'; week com prefixo 'Semana de'/'Week of') /
+  currentMonthLabel. Inválido → '—', nunca lança. **Bug pego pelo teste**:
+  chave malformada '2026-13-99' passava no regex e o rollover do Date.UTC
+  INVENTAVA 'setembro/2027' — corrigido com validação de faixa + round-trip
+  (`utcDateFromKeyParts`; 30-de-fev também rejeitado).
+- **Wiring**: histórico da Liga renderiza rótulo i18n via `lang` do useI18n;
+  badge de auto-save (AnalysisWorkspace) e viewer de bug reports agora em
+  fuso FIXO (zero `toLocale*()` sem locale no app).
+- **Descoberta ICU**: `hour12:false` no ICU moderno força 24h mesmo em en-US
+  ('23:30', não '11:30 PM') — desejado pra QC; testes ajustados pra cravar o
+  contrato.
+- **Gates**: vitest **527/527** (+12), tsc limpo, e2e-flow 21/21, build ok —
+  initial gz inalterado (index 50,17 + react-vendor 45,49 + css 8,30 =
+  ~104KB; troca custou ZERO). Lint dos arquivos novos zero (48 erros
+  pré-existentes provados via stash antes/depois).
+
 ### 2026-08-25 ~09h55 — tick features-worker: F6 troca #2 — pdfmake no QC Report (recuperação de WIP + bug de render caçado por smoke)
 
 - **Recuperação**: worktree tinha WIP não-commitado do tick anterior (~08h56,

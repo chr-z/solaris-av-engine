@@ -37,6 +37,9 @@ import { useAutosaveResume, autosaveKeyFor } from '../../hooks/useAutosaveResume
 import { focusLayout, applyFocusPreferences } from '../../features/qol/focusMode';
 import { registerUndoApplier } from '../../features/qol/undoApply';
 import { getUndoLog, resetUndoLog } from '../../features/qol/undoStore';
+// Troca D #3: horário do auto-save em fuso FIXO (não o do host).
+import { formatTimestampInTz } from '../../features/i18n/format';
+import { SAO_PAULO_CLOCK } from '../../features/gamification/periods';
 import { getCompareGridClass } from '../../utils/compareMode';
 import { database } from '../../config/firebase';
 import firebase from 'firebase/compat/app';
@@ -395,7 +398,8 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   focusKeepMonitors = false,
   onClose,
 }) => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const lang = locale === 'pt' ? 'pt' : 'en';
   const videoRef = useRef<HTMLVideoElement>(null);
   const { analysisData, isAudioReady } = useAVAnalysis(videoRef, videoSrc);
   const [localRowData, setLocalRowData] = useState<RowData | null>(null);
@@ -1010,7 +1014,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                   {lastSavedAt && (
                     <span
                       className="text-[11px] text-emerald-400/90 mr-1"
-                      title={new Date(lastSavedAt).toLocaleTimeString()}
+                      title={formatTimestampInTz(lastSavedAt, lang, SAO_PAULO_CLOCK)}
                       aria-live="polite"
                     >
                         ✓ {t('qol.autosave.saved')}

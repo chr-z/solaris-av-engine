@@ -11,6 +11,8 @@
 
 import React, { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useI18n } from '../../i18n/I18nContext';
+// Troca D #3: rótulo i18n de chaves de período ('2026-03' → 'março de 2026').
+import { formatPeriodLabel } from '../../features/i18n/format';
 import { useAdminRole } from '../../hooks/useAdminRole';
 import {
   LEVELS,
@@ -351,7 +353,7 @@ const LeaguePanel: React.FC<LeaguePanelProps> = ({ userProfile }) => {
                   className="rounded-lg border border-solar-dark-border px-3 py-2"
                 >
                   <p className="text-sm font-semibold text-gray-200">
-                    {type} · {key}
+                    {formatPeriodLabel(type, key, lang)}
                   </p>
                   <p className="tnum mt-1 text-xs text-gray-400">
                     {rows
