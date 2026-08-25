@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, v2-upgrade]
+    # desktop: a lane Tauri/desktop agora também é verificada em CI remoto
+    # (antes só tinha validação local; ratchet de lint já cobre o diff vs main).
+    branches: [main, v2-upgrade, desktop]
   pull_request:
     branches: [main]
 

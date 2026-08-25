@@ -551,3 +551,68 @@ virou ASSERTIVO em toda a banda 0.45–0.55).
   conhecidas estao FORA desta lane (audio/acoustics: P4 ML ONNX, aguardando dono).
 - Sem commit de codigo nesta entrada (apendice somente neste log compartilhado,
   via append no disco conforme protocolo do cabecalho).
+
+## Tick 25/08 ~19h10 — audio-dsp (Yui / cron solaris-audio)
+
+Worktree solaris-audio (branch audio/acoustics); desktop/src-tauri/pitch intocados.
+TEMA: ROBUSTEZ MUNDO-REAL — o que os sintéticos limpos não cobriam: taxas de
+amostragem, entradas degeneradas e round-trip codec lossy REAL (mp3/aac via
+ffmpeg-static). 3 bugs reais achados e corrigidos (commit e8e28e2, push
+verificado 80cd516..e8e28e2):
+
+- BUG 1 (FN total no produto): clipping real some após mp3 — codec apaga os
+  plateaus de valor idêntico (exactSat/flatTop morrem; ratio cai a 0.0098%,
+  score ficava 98). Fix: evidência por CREST FACTOR (peak/RMS, janelas 50ms)
+  que sobrevive ao codec. Calibração medida: limpo ≤0.31 de janelas com
+  crest<9dB mesmo quente a -0.5dBFS; saturado ≥0.59 pós-codec; corte 0.45,
+  mínimo 40 janelas elegíveis; janela sem movimento ≥10% do pico é excluída
+  (canal DC tem crest 0dB e não é áudio dinâmico).
+- BUG 2: hum 48kHz elegia 50Hz p/ tom verdadeiro de 60Hz — dente cai no bin
+  58.6Hz que está DENTRO das duas bandas candidatas; comparação de energia
+  normalizada elegia a banda mais estreita por 0.6dB (probe do acumulador
+  p25 mediu tudo). Fix: identidade pela POSIÇÃO do pico (interpolação
+  quadrática log 40-70Hz → vizinho {50,60}); energia vira só gate. Em 44.1k
+  acertava por sorte do alinhamento de bins.
+- BUG 3: entradas sub-janela (<93ms @44.1k) => zero frames STFT =>
+  percentile([])=NaN contaminava noiseFloorDb/relatório (JSON do sheet-sync
+  quebraria). Fix: piso neutro -120dBFS quando não há frames.
+
+TESTES: novo robustness-realworld.test.ts (7 casos): invariância 16k/22.05k/
+32k/48k (seco ok; rt0.9 flag + est ±35%; eco150 flag; hum60 fundamental
+correta); degenerados (vazio/sub-janela sem NaN, DC sem FP de clip, sinal
+quente limpo sem FP); round-trip codec REAL (mp3 96k: limpo limpo,
+rt0.9/eco150/hum60/clip-1 mantêm decisão; aac 128k idem reverb).
+SUÍTE: 45 arquivos / 414 testes VERDES (~151s); tsc --noEmit limpo; eslint
+do módulo = baseline (2 erros pré-existentes, zero novo). Probes descartáveis
+removidos. Pendências mantidas: P4 ONNX NÃO iniciado; rótulo "reverb crítico"
+em sinal congelado DC documentado no teste (patologia fora de gravação real).
+
+---
+
+## Tick 25/08 ~20h30 — desktop worker (Yui / cron turbo): CI remoto pra lane desktop + higiene de lint/tsc
+
+Diretriz re-lida: fila P1-P3 literal VAZIA (P1/P2/P3 confirmados em disco e no
+HEAD, artefato canônico provado sem drift: exe 13:45 embute os 3 hashes exatos
+do dist-desktop 13:43, posterior ao último commit de código 11:37). Avanço real
+deste tick = buraco que ninguém tinha fechado: **a branch desktop nunca rodou
+CI remoto nenhum** (workflow só disparava em main/v2-upgrade).
+
+- Lint ratchet vs main FALHAVA na branch (3 erros, 5 warnings) — corrigido em
+  035d4ff: SourcesAdmin early-return depois dos hooks (rules-of-hooks);
+  AnalysisSheet.hasCachedWaveform derivado via useMemo (sem setState-in-effect,
+  menos um render por item), listener RTDB e catch tipados; runtimeMode disable
+  obsoleto fora. Ratchet local: 0/0.
+- Descoberta extra: a ÁRVORE COMMITADA não passava em tsc --noEmit (o repo não
+  tem esse gate nem local nem CI — nunca tinha sido medido). Causa raiz:
+  applyScoreUpdates degradava CellData p/ {value?: string}|undefined. Fix
+  genérico <T> em engineBridge + tipagens nos 3 arquivos de teste (76ec007).
+- ci.yml: push triggers agora incluem 'desktop' (PRs pra main continuam igual).
+- Prova pré-push na árvore EXATA que o GitHub vai buildar (git archive HEAD +
+  patch aplicado em dir limpo, node_modules via junction — módulo untracked da
+  lane audio/acoustics NÃO entra): vitest 24/24 arquivos / 242/242 VERDES
+  (~27s), tsc --noEmit LIMPO, ratchet eslint OK.
+- Commit 3: ci.yml + esta entrada. Push com incantation gh-credential +
+  verificação ls-remote; run do Actions observado até concluir.
+- Nota p/ lanes irmãs: src/audio-acoustics/ untracked NO DIR PRINCIPAL está
+  inconsistente com o worktree delas (quebra tsc/vitest se commitado assim) —
+  intocado por mim, sinalizado aqui.
