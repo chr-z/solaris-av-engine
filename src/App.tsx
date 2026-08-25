@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import Header from './components/Layout/Header';
 import AnalysisSheetList from './components/Analysis/AnalysisSheet';
 import { RowWithSheetIndex, DriveFile, RowData } from './components/Analysis/AnalysisSheet';
+import { StandaloneRowError } from './components/Analysis/AnalysisSheet';
 import LoginScreen from './components/Auth/LoginScreen';
 import LoadingIndicator from './components/Core/LoadingIndicator';
 import { OverlaySettings, VideoChoice, UserProfile } from './types';
@@ -262,7 +263,8 @@ const App: React.FC = () => {
     }
 
     // GUEST MODE: Skip locking and API fetching. Load Mock Data.
-    if (userProfile.id === 'guest-reviewer-id') {
+    // STANDALONE: mesmo caminho local do guest (sem lock RTDB, sem /api).
+    if (isStandalone() || userProfile.id === 'guest-reviewer-id') {
         setSelectedOsIndex(rowIndex);
         // Find row in existing demo data instead of fetching
         const demoRow = allRows.find(r => r.rowIndex === rowIndex);
@@ -341,6 +343,55 @@ const App: React.FC = () => {
 
     // Fetch Full Row Data (Admin Mode)
     try {
+      // STANDALONE: resolve a linha completa localmente (já está em allRows);
+      // StandaloneRowError é o mecanismo — nunca rede, nunca token.
+      if (isStandalone()) {
+        const local = allRows.find(r => r.rowIndex === rowIndex)?.row;
+        if (!local) throw new StandaloneRowError(rowIndex);
+        setFullRowData(local);
+
+        const localChoices = findVideoUrlsInData(local, headers);
+        const driveFolderChoice = localChoices.find(c => c.type === 'driveFolder');
+        if (driveFolderChoice) {
+            const match = driveFolderChoice.url.match(DRIVE_FOLDER_REGEX);
+            if (match && match[1]) {
+                setPickerFolderId(match[1]);
+                setIsPickerOpen(true);
+                setVideoTitle('Select video from Drive folder');
+                setIsMediaLoading(false);
+                return;
+            }
+        }
+
+        const fileChoices = localChoices.filter(c => c.type !== 'driveFolder');
+        if (fileChoices.length === 1) {
+            const choice = fileChoices[0];
+            const woValue = local[headers.indexOf(COLS.WO)]?.value || 'Video';
+
+            let source = choice.url;
+            if (choice.type === 'driveFile') {
+                const match = choice.url.match(DRIVE_FILE_REGEX);
+                source = match ? match[1] : choice.url;
+            }
+
+            handleSourceSelected(source, {
+                name: `W.O. ${woValue} Video (${choice.sourceName})`,
+                isYoutube: choice.type === 'youtube',
+                isDriveLink: choice.type === 'driveFile'
+            });
+        } else if (fileChoices.length > 1) {
+            setVideoChoices(fileChoices);
+            setVideoSrc(null);
+            setVideoTitle('Multiple videos found');
+            setIsMediaLoading(false);
+        } else {
+            setVideoSrc(null);
+            setVideoTitle('No video found');
+            setIsMediaLoading(false);
+        }
+        return;
+      }
+
       const idToken = await auth.currentUser?.getIdToken();
       if (!idToken) throw new Error('Session expired. Please sign in again.');
 
@@ -410,6 +461,13 @@ const App: React.FC = () => {
           setIsMediaLoading(false);
       }
     } catch (error: any) {
+        if (error instanceof StandaloneRowError) {
+            // STANDALONE: linha ausente no estado local (não deve ocorrer —
+            // o App injeta todas as linhas). Mensagem humana, sem "Sync".
+            setVideoTitle('No video found');
+            setIsMediaLoading(false);
+            return;
+        }
         console.error(`Row Processing Error:`, error);
         setErrorMessage(`Error: ${error.message}`);
         setVideoTitle('Sync Error');

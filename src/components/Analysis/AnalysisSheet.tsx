@@ -8,6 +8,7 @@ import { UserProfile } from '../../types';
 import UserAvatar from '../Auth/UserAvatar';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
 import { getVideoIdFromUrl } from '../../utils/videoUtils';
+import { isStandalone } from '../../config/runtimeMode';
 
 declare const gapi: any;
 
@@ -46,7 +47,25 @@ interface AnalysisSheetListProps {
   setFilters: (filters: FilterState) => void;
 }
 
+/**
+ * Erro interno de fluxo: em modo STANDALONE nenhuma linha deve ser buscada
+ * na nuvem. O consumidor (App.handleOsSelect) captura e resolve localmente.
+ */
+export class StandaloneRowError extends Error {
+    rowIndex: number;
+    constructor(rowIndex: number) {
+        super('standalone-row-local');
+        this.name = 'StandaloneRowError';
+        this.rowIndex = rowIndex;
+    }
+}
+
 export const fetchFullRowData = async (rowIndex: number): Promise<RowData> => {
+    // STANDALONE: sem nuvem — a linha completa já vive no estado local
+    // (App injeta DEMO_ROWS no boot); nada de token/API aqui.
+    if (isStandalone()) {
+        throw new StandaloneRowError(rowIndex);
+    }
     const idToken = await auth.currentUser?.getIdToken();
     if (!idToken) {
         throw new Error('Not authenticated. Please sign in again.');
@@ -225,7 +244,9 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
       }, []);
 
     const fetchData = useCallback(async (currentFilters: FilterState, forceRefresh = false) => {
-        if (userProfile?.id === 'guest-reviewer-id') {
+        // STANDALONE (desktop/on-premise): os dados já foram injetados no App
+        // (DEMO_ROWS). Nada de sync de nuvem — lista nasce pronta, sem erro.
+        if (isStandalone() || userProfile?.id === 'guest-reviewer-id') {
             setIsLoading(false);
             setLoadingMessage('Ready');
             setError(null);
