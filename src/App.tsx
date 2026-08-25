@@ -965,7 +965,14 @@ const App: React.FC = () => {
                     <LoadingIndicator statusText={t('loading.generic')} />
                   </div>
                 }>
-                  <AdminGate dashboards={isDashboardsRoute} />
+                  <AdminGate
+                    dashboards={isDashboardsRoute}
+                    viewer={
+                      userProfile
+                        ? { id: userProfile.id, name: userProfile.name }
+                        : null
+                    }
+                  />
                 </React.Suspense>
                 {f2Overlays}
                 {f4Overlays}
