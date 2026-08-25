@@ -156,3 +156,23 @@ Nada a avançar sem diretiva nova; este tick rodou verificação de ponta a pont
   nuvem, 0 affordances de cloud) ✅ — pendências restantes são só as
   conhecidas (NSIS assinado fora de escopo hoje; `.rsrc` cosmético).
 - Próximos ticks: só com diretiva nova do dono ou lane redesign (R3).
+## desktop (tick turbo) — instalador NSIS gerado e provado ponta a ponta — 25/08/2026 ~03:15
+- Fila P1-P3 ja DONE em ticks anteriores (ate 8ddef16); este tick fechou o ultimo
+  gap concreto da lane desktop: artefato DISTRIBUIVEL (instalador nao-assinado;
+  assinatura de codigo continua fora de escopo — exige certificado do dono).
+- `cargo tauri build` COMPLETO (bundle ativo): vite standalone + release gnu +
+  download automatico NSIS 3.11 + nsis_tauri_utils.dll -> OK em ~2m30s.
+- Artefatos: bundle/nsis/Solaris_3.0.0_x64-setup.exe = 2.448.333 B; exe canonico
+  D:/cargo-target/release/solaris-av-engine.exe = 6.525.952 B (RE-PATCHADO pelo
+  bundler com bundle type info nsis -> smoke REFEITO pos-patch: SMOKE_OK pid=39432
+  vivo 5s mem=23,6MB, kill limpo).
+- NOVO scripts/install_smoke.ps1: instalacao silenciosa (/S /D=dir de teste),
+  conferencia dos arquivos, boot do app INSTALADO (5s vivo) e desinstalacao
+  silenciosa (_?= sincrona) com verificacao de limpeza.
+- Resultado INSTALLSMOKE_PASS: installer exit=0; 3 arquivos / 6.765.482 B
+  instalados; exe instalado identico ao canonico; APP_SMOKE_OK pid=13616 mem=28,4MB;
+  uninstaller exit=0; diretorio removido (com _?= o auto-delete nao roda — limpeza
+  manual prevista no proprio script).
+- Suites: vitest 233/233 (--exclude src/audio-acoustics/**, WIP de outra frente);
+  cargo test stable-gnu verde. Push desktop -> origin/desktop verificado por
+  ls-remote.
