@@ -170,3 +170,24 @@ componente pesado fora de lazy, nenhum setState quente fora da ilha
 LiveMonitors, lista de 1036 linhas já memoizada com render único.
 Commit desta entrada em origin/turbo/web-opt.
 
+
+---
+
+## turbo-web (tick #6) — higiene: upstream da branch + orfaos de preview — 25/08/2026 ~09h40
+
+- Fila 1-6 do turbo-web segue DONE (ticks #1-#5); este tick NAO re-auditou nada,
+  so fechou dividas de infraestrutura do worker.
+- Upstream corrigido: branch turbo/web-opt apontava origin/main (lia "ahead 14"
+  como trabalho nao-pushado, risco de outro worker descartar a lane). A branch
+  remota EXISTE em 4183037 = HEAD local; ls-remote provou; --set-upstream-to=
+  origin/turbo/web-opt aplicado. Estado real: em dia com o remoto.
+- axe-report.json revertido: diff era so timestamp de re-run (11:14->11:55Z),
+  zero mudanca de conteudo.
+- Orfaos vite preview mortos: 4 no total — dir principal solaris-av-engine
+  ports 4199 (22h vazando) e 4173 (20.4h) + deste worktree ports 4297 e 4207.
+  Lane redesign intocada (worker vivo la as 09:35:33, spawnou redesign_axe_t9).
+  kill_turbo_orphans.ps1 reescrito: auto-descoberta por cmdline com filtro de
+  idade (-MaxAgeHours 3), skip duro da lane redesign, skip de processos frescos;
+  fim dos PIDs hardcoded. Protocolo de prova anti-auto-deteccao mantido:
+  processos da propria checagem se listam (bash/powershell criados no mesmo
+  segundo) — filtrar por CreationDate antes de concluir "restou algo".
