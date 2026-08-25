@@ -308,6 +308,10 @@ export const en = {
   'qol.focus.toggle': 'Focus mode (player + timeline only)',
   'qol.focus.monitors': 'Keep monitors in focus mode',
   'qol.autosave.saved': 'saved',
+  'qol.scratch.title': 'Scratchpad (private notes)',
+  'qol.scratch.placeholder': 'Quick notes about this W.O.…',
+  'qol.scratch.hint': 'Local draft — never sent to the sheet.',
+  'qol.scratch.truncated': 'Note truncated to the 20k limit.',
   'qol.undo.editCell': 'Edited {column}',
 
   'header.league': 'Analyst League',
@@ -636,6 +640,10 @@ export const pt: Record<TranslationKey, string> = {
   'qol.focus.toggle': 'Modo foco (apenas player + timeline)',
   'qol.focus.monitors': 'Manter monitores no modo foco',
   'qol.autosave.saved': 'salvo',
+  'qol.scratch.title': 'Rascunho (notas privadas)',
+  'qol.scratch.placeholder': 'Notas rápidas sobre esta W.O.…',
+  'qol.scratch.hint': 'Rascunho local — nunca vai pra planilha.',
+  'qol.scratch.truncated': 'Nota truncada no limite de 20 mil caracteres.',
   'qol.undo.editCell': 'Editou {column}',
 
   'header.league': 'Liga dos Analistas',

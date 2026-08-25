@@ -33,6 +33,8 @@ export interface ScratchDeps {
   delayMs?: number;
   /** Agendador injetável; padrão setTimeout global. */
   schedule?: (fn: () => void, ms: number) => () => void;
+  /** Disparado após cada gravação confirmada (badge "salvo ✓", telemetria). */
+  onSaved?: (entry: ScratchEntry) => void;
 }
 
 const DEFAULT_DELAY_MS = 200;
@@ -108,6 +110,7 @@ export class ScratchpadController {
     this.pending = null;
     try {
       this.deps.write(JSON.stringify(entry));
+      this.deps.onSaved?.(entry);
     } catch {
       /* quota/privacidade: best-effort, nunca derruba a análise */
     }

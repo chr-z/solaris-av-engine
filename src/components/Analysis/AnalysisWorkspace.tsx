@@ -23,6 +23,7 @@ import { SaveIcon, ClipboardCheckIcon, YouTubeIcon, GoogleDriveIcon, XIcon, Grid
 // Imports locais (mesma pasta Analysis)
 import AnalysisForm from './AnalysisForm';
 import { RowData, updateSheetRow, DriveFile } from './AnalysisSheet';
+import { ScratchpadPanel } from './ScratchpadPanel';
 
 // Imports de Lógica (Hooks/Utils/Config)
 import { useAVAnalysis } from '../../hooks/useAVAnalysis';
@@ -665,6 +666,8 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
       onSaveSuccess(localRowData);
       // F2: análise oficial na planilha → rascunho do auto-save sai do storage.
       markCleaned();
+      // A1 scratchpad: nota pessoal também sai (mesmo contrato de "oficial").
+      window.dispatchEvent(new CustomEvent('solaris:scratch-cleaned'));
 
       if (isLocalVideo && localFilePath.trim()) {
         await database.ref(`analysisMetadata/${selectedOsIndex}/localFilePath`).set(localFilePath.trim());
@@ -1107,6 +1110,8 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                   {renderSyncButton()}
               </div>
           </header>
+          {/* F2 QoL A1: scratchpad pessoal por OS — modo foco esconde, estado vive. */}
+          <ScratchpadPanel osId={osId} visible={!isFocusMode} />
           <div className="flex-1 overflow-y-auto">
              <AnalysisForm
                 selectedRow={localRowData}
