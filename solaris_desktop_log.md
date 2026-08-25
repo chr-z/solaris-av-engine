@@ -214,3 +214,26 @@ Commit desta entrada em origin/turbo/web-opt.
 
 ### 2026-08-25 (madrugada) — tick turbo-web pós-merge #8 (worktree no main)
 Lane turbo-web absorvida pelo main @ 30b4b7b (merge ticks #1-#7). Worktree solaris-web-turbo movido para main, pull ff-only ok, árvore limpa. Gates reprovados na árvore final mesclada: build determinística, initial gz 86,7 KB (index 33,67 + react-vendor 45,44 + css 7,60) <500KB alvo; chunks lazy idem (firebase 97,35, AdminGate 18,93, AnalysisWorkspace 19,68 gz); vitest/tsc limpar; E2E 21/21; axe 0; Lighthouse 100/100/100 (FCP 1,4/LCP 1,5/TBT 0/CLS 0). src-tauri intocado. Sem Telegram.
+
+## turbo-web tick #9 — push do main + gates re-provados na árvore final — 25/08/2026 ~13h45
+
+- Estado encontrado: fila turbo-web 100% DONE e mergeada no main local
+  (30b4b7b), mas o push tinha ficado preso: main local = origin/main + 2
+  commits (30b4b7b merge + eb90c8f lint-ratchet) que só existiam localmente.
+- Este tick fechou a dívida de publicação + re-provou todos os gates na árvore
+  mesclada final (solaris-web-turbo @ main):
+  - build vite: initial gz 86,71 KB (index 33,67 + react-vendor 45,44 +
+    css 7,60) — alvo <500KB mantido com folga (5,8x); chunks lazy idem:
+    firebase 97,35 / AdminGate 18,93 / AnalysisWorkspace 19,71 /
+    sheetSync 11,18 / ComparePane+BugReport* ~1-2 gz cada.
+  - tsc --noEmit limpo; vitest 31 arquivos · 342/342 verdes;
+  - E2E fluxo real (scripts/e2e-flow.mjs): 21/21 asserts ok;
+  - axe-core na build servida (vite preview + headless Chrome --disable-gpu):
+    0 violações login, 0 no app principal (criticalOrSerious=0);
+  - console probe CDP: 0 erros / 0 warnings / 0 exceções (build offline entra
+    direto no app demo, sem botão visitante);
+  - Lighthouse 13.4.1 (--headless=new --disable-gpu): 100 performance ·
+    100 accessibility · 100 best-practices · 100 seo — FCP 1,4s · LCP 1,5s ·
+    TBT 0ms · CLS 0 · SI 1,8s.
+- Push origin/main efetuado (ff 30b4b7b), verificado por ls-remote.
+- src-tauri intocado (lane desktop é de outro worker). Sem Telegram.
