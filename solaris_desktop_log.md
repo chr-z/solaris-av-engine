@@ -377,3 +377,38 @@ DUE DILIGENCE de ganho barato (sem codigo alterado):
   (protocolo anti-orfao mantido).
 
 src-tauri intocado. Sem Telegram.
+
+## turbo-web tick #14 — guardrail noturno + higiene de orfaos — 25/08/2026 ~19h05
+
+Estado encontrado: worktree @ main == origin/main (88108e3), untracked nenhum;
+`scripts/axe-report.json` sujo era so o artefato REGENERADO pelo proprio tick
+#13 (timestamp/porta novas, 0 violacoes dentro) — superado por re-scan fresco
+deste tick. Fila original (1-6) segue DONE desde o tick #5.
+
+GATES (arvore limpa, build fresca):
+- npm run build (vite 6.4.3): initial = index 33,86 + react-vendor 45,79 +
+  css 7,60 = 87,25 KB gz — BYTE-ESTAVEL vs ticks #12/#13 (mesmo hash de entry
+  index-C1mX7UAW.js). Chunks lazy intactos (firebase 97,38 / AdminGate 18,99 /
+  AnalysisWorkspace 20,04 / sheetSync 11,19 / ComparePane 1,37).
+- tsc --noEmit limpo; vitest 31 arquivos / 342/342 (~52s);
+- e2e fluxo real: 21/21 asserts ok;
+- axe-core scan: 0 violacoes main app (build offline/demo sem login), preview
+  PROVADO nosso antes do scan (entry index-C1mX7UAW.js na porta 4425);
+- Lighthouse x3 (--headless=new --disable-gpu): R1 99/100/100/100 (FCP 1,5 /
+  LCP 1,6 / CLS 0,000 / TBT 27ms); R2 e R3 perf 97 (TBT 185/155ms, FCP/LCP/
+  CLS identicos). Diagnostico: build byte-idêntica não regride — CPU ambiente
+  medida a ~40% durante R2/R3 (enxame de workers/preview de outras lanes ativo
+  hoje); ruído documentado como veio, sem re-run até "pegar" score.
+- npm audit prod: 10 moderate, 0 high/critical — mesmo patamar estável de
+  #12/#13.
+
+HIGIENE (achado novo, SEM acao fora da lane):
+- Enxame de `vite preview` orfaos de OUTRAS lanes vivo agora: ~30 trios
+  npx/cmd/node da lane redesign (03:54–14:03 de hoje, portas 43xx–48xx),
+  + work_ck_repo porta 4179 (24/08) e Hein-Esthetics porta 4188 (24/08).
+  Regra de lane mantida: NAO matei processo de outra lane — registrado para o
+  dono decidir varredura global.
+- Preview deste tick subiu na porta alta 4761 (strictPort), entry provado
+  igual ao dist local antes de qualquer medicao e foi morto no fim.
+
+src-tauri intocado. Sem Telegram.
