@@ -160,6 +160,17 @@ export class StubReference {
     return p;
   }
 
+  /**
+   * Leitura one-shot (compat: firebase/compat/database Reference.get).
+   * Usado pelo workspace (localFilePath), locks do App e fluxos admin.
+   * Sem isto o painel de análise crashava com "ref(...).get is not a
+   * function" na seleção de W.O. em standalone (achado pelo probe E2E
+   * dentro do exe, 25/08).
+   */
+  get(): Promise<StubDataSnapshot> {
+    return this.once('value');
+  }
+
   set(value: unknown): Promise<void> {
     setIn(this.path, value);
     this.emit();

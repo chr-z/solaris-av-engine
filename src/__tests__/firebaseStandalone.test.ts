@@ -7,13 +7,30 @@ import firebaseStandalone, {
 } from '../config/firebaseStandalone';
 
 describe('firebaseStandalone — stub offline p/ builds desktop', () => {
-  it('set + once(value) retorna o valor gravado (store em memória)', async () => {
+  it('set + get()/once(value) retorna o valor gravado (store em memória)', async () => {
     const ref = getRef('teste/set-basico');
     await ref.set({ a: 1 });
     const snap = await ref.once('value');
     expect(snap.exists()).toBe(true);
     expect(snap.val()).toEqual({ a: 1 });
     expect(ref.key).toBe('set-basico');
+  });
+
+  it('get() é leitura one-shot compat (regressão do crash ref(...).get no exe)', async () => {
+    const ref = getRef('teste/get-oneshot');
+    // caminho inexistente: snapshot vazio, sem throw
+    const empty = await ref.get();
+    expect(empty.exists()).toBe(false);
+    expect(empty.val()).toBeNull();
+    // após write, get() vê o valor
+    await ref.set({ user: { id: 'local-reviewer' } });
+    const snap = await ref.get();
+    expect(snap.exists()).toBe(true);
+    expect((snap.val() as { user: { id: string } }).user.id).toBe('local-reviewer');
+    // get() NÃO registra listener (leitura one-shot de verdade)
+    const again = getRef('teste/get-oneshot');
+    await again.get();
+    expect(again.on('value', () => undefined)).toBeTypeOf('function');
   });
 
   it('refs com o mesmo caminho compartilham identidade e dados', async () => {
