@@ -159,7 +159,7 @@ export function classifyReverb(rt60: number): 'dry' | 'moderate' | 'high' | 'cri
 export function rt60Schroeder(
   samples: Float64Array,
   sampleRate: number,
-  opts?: { startDb?: number; endDb?: number; maxRt60Sec?: number; minSpanDb?: number }
+  opts?: { startDb?: number; endDb?: number; maxRt60Sec?: number; minSpanDb?: number; subtractNoiseFloor?: boolean }
 ): number | null {
   const startDb = opts?.startDb ?? -5;
   const endDb = opts?.endDb ?? -35;
@@ -168,6 +168,15 @@ export function rt60Schroeder(
   const n = samples.length;
   if (n < Math.floor(sampleRate * 0.06)) return null;
 
+  // ---------- Porta de decaimento sobre piso de ruído ----------
+  // Janela que contém só ruído de fundo (pausa em sala com piso elétrico/
+  // ar-condicionado) produz na integral reversa uma curva logarítmica CRESCENTE
+  // que a regressão lê como decay lento → RT60 falso de >1s em sala SECA.
+  // A porta vive em analyzeReverb (compara o início da janela contra o PISO
+  // GLOBAL da gravação); aqui dentro nenhuma subtração/gate adicional:
+  // piso estimado da própria janela confunde fim-de-cauda-legítima com ruído
+  // e corroe decays reais (medido: RT60 0.9 → 0.51, FN em caso forte).
+
   const dbr = new Float64Array(n);
   let acc = 0;
   for (let i = n - 1; i >= 0; i--) {
@@ -175,7 +184,7 @@ export function rt60Schroeder(
     dbr[i] = acc > 0 ? 10 * Math.log10(acc) : -120;
   }
   const ref = dbr[0];
-  if (ref <= -119) return null;
+  if (ref <= -119) return null; // janela sem energia acima do piso => descartada
   for (let i = 0; i < n; i++) dbr[i] -= ref;
 
   const idxStart = findCrossingDesc(dbr, startDb);
@@ -249,7 +258,14 @@ export function analyzeReverb(
   const guard = Math.max(2, Math.floor(0.005 * sr)); // 5ms antes da próxima onset
   const minWin = Math.floor(0.08 * sr);              // janela mínima de 80ms
 
+  // Piso GLOBAL removido: o referencial correto é a FORMA da janela —
+  // cauda genuína DECAI dentro da janela; ruído de fundo é PLANO.
+  // (Piso global confunde: em RT60 longo toda a gravação flutua perto do
+  // próprio piso e janelas legítimas morrem no gate.)
+
   const estimates: Array<{ rt60: number; r2: number }> = [];
+
+  const bLen = Math.max(16, Math.floor(0.05 * sr)); // bloco de 50ms
 
   for (let si = 0; si < speech.length; si++) {
     const seg = speech[si];
@@ -258,6 +274,23 @@ export function analyzeReverb(
     const winEnd = Math.min(sig.length, nextOnset - guard);
     const winLen = winEnd - usableStart;
     if (winLen < minWin) continue;
+
+    // PORTA anti-ruído-puro pela forma: primeiro vs último bloco de 50ms.
+    // Decay real: último bloco ≥5dB abaixo do primeiro (RT60 1.2 em pausa de
+    // 0.6s cai ~30dB). Ruído constante: ~0dB (variância de bloco ≈0.1dB).
+    // Janela curtíssima sem 2 blocos: deixa passar (curta demais p/ fabricar
+    // rampa convincente na regressão).
+    const nBlkWin = Math.floor(winLen / bLen);
+    if (nBlkWin >= 2) {
+      const blkMean = (b: number): number => {
+        let e = 0;
+        const s0 = usableStart + b * bLen;
+        for (let i = s0; i < s0 + bLen; i++) e += sig[i] * sig[i];
+        return Math.max(e / bLen, 1e-30);
+      };
+      const dropDb = 10 * Math.log10(blkMean(0) / blkMean(nBlkWin - 1));
+      if (dropDb < 5) continue; // plano => ruído de fundo, não cauda
+    }
 
     const win = sig.subarray(usableStart, winEnd);
     const est = rt60Schroeder(win, sr, { minSpanDb, maxRt60Sec: maxRt60 });
