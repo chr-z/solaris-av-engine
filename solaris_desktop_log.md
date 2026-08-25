@@ -2,6 +2,52 @@
 
 ## features
 
+### 2026-08-25 ~09h55 — tick features-worker: F6 troca #2 — pdfmake no QC Report (recuperação de WIP + bug de render caçado por smoke)
+
+- **Recuperação**: worktree tinha WIP não-commitado do tick anterior (~08h56,
+  sessão morreu antes do commit): `qcPdf.ts` + teste + botão modificado +
+  pdfmake no package.json — e o log tinha sido TRITURADO (histórico "##
+  features" apagado). Log restaurado do HEAD; entrada reescrita com números
+  REPRODUZIDOS neste tick.
+- **Tech swap (spec seção D)**: `pdfmake` client-side substitui o blob HTML do
+  S4.1 como caminho primário do relatório QC. Import 100% lazy: chunks
+  `pdfmake` 1.009,5KB min/**362,2KB gz** e `vfs_fonts` 855,1KB min/**465,5KB gz**
+  nascem fora do initial e só baixam quando o analista pede o relatório.
+- **API** (`src/utils/qcPdf.ts`): `buildQCReportDocDefinition` puro
+  (A4/Roboto, grid 3×2 de KPIs, tabela de colunas, rodapé com página),
+  `exportQCReportPdf` (dynamic import + vfs + createPdf), helpers
+  EN/PT (`qcReportLabels`, `formatReportDate` Intl, `formatAnalysisSeconds`,
+  `suggestedQCFileName`). Zero CDN — Roboto embutida no vfs_fonts.
+- **Bug real caçado pelo smoke**: o WIP crasheava no render REAL do pdfmake —
+  `hLineWidth(i, node)` usava `node.body.length`, mas na API de layout o 2º
+  argumento é a TABELA (`node.table.body`). Os testes jsdom não pegavam porque
+  nunca renderizam; o novo `scripts/qc-pdf-smoke.ts` (tsx, gera PDF binário em
+  Node) pegou na primeira execução. Fix: `node.table?.body?.length ?? 0`.
+- **UX corrigida no botão**: diálogo abria ANTES do await, então o estado
+  "Generating…"/disabled era código morto (o sumário substituía o botão na
+  hora). Agora o diálogo abre DEPOIS que o artefato existe; enquanto gera, o
+  botão mostra "Generating…" desabilitado (anti duplo clique).
+- **Fallback endurecido**: se o chunk falhar (cache corrompido, navegador
+  velho), baixa o relatório HTML RICO do S4.1 (`exportQCReportBlob`) — não um
+  template mínimo — com aviso visível "PDF engine unavailable"; "Download
+  again" funciona nos dois modos (`lastFileName` guarda o nome do artefato).
+- **Provas**: suíte **515/515** (+21 asserts: qcPdf 17, qcPdfButton 4 — inclui
+  fallback rejeitado → HTML baixado, aviso visível, again re-baixando);
+  tsc limpo fora de __tests__; eslint ratchet estável (65=65 antes=depois,
+  meus 4 arquivos zerados); e2e-flow **21/21**;
+  `scripts/qc-pdf-smoke.mjs` (CDP contra Chrome headless REAL, --disable-gpu):
+  BTN_MOUNTED, clique confiável (Input.dispatchMouseEvent) → download em disco
+  **solar-qc-report-2026-08-25.pdf 21.449B, header %PDF- + %%EOF válidos**,
+  diálogo sem aviso de fallback, wiring do "Download again" provado (anchor
+  blob:+nome .pdf interceptado; o bloqueio do 2º download automático é
+  artefato conhecido do headless, não da lógica), console/exceções ZERO —
+  QCPDF_SMOKE_PASS. Smoke Node adicional: PDF 28.730B com subset Roboto
+  embutido e labels pt-BR ("Relatório QC Solar").
+- **Bundle ANTES→DEPOIS**: initial **103,3 → 104,7KB gz** (html 0,79 + css 8,3
+  + react-vendor 45,5 + index 48,8→50,1; +1,4KB = wrapper+labels) — budget
+  <500KB preservado de sobra. Firebase/ECharts/wavesurfer seguem lazy como
+  estavam. Deps: +pdfmake 0.3.11, +@types/pdfmake (dev).
+
 ### 2026-08-25 ~08h00 — tick features-worker: F6 troca #1 — wavesurfer.js v7 lazy no timeline (fallback legado preservado)
 - **Escopo**: só a camada de render. `useAudioWaveform` (decode WebAudio + cache localStorage + Firebase distribuído) e `WaveformCacheContext` INTACTOS — offline-first e o badge de cache da lista continuam iguais.
 - **Novo** (`src/features/wavesurfer/`): `waveformRender.ts` núcleo puro (tiers dB idênticos ao legado: clip ≥0dB/hot ≥-2/nominal ≥-7/floor; max-pooling determinístico que PRESERVA transientes — clip de 20ms não some no zoom out, média apagaria; geometria de barras espelhada do centro em device px; paintBars p/ renderFunction) + `WaveSurferCanvas.tsx` chunk LAZY (import() dinâmico dentro do componente).
