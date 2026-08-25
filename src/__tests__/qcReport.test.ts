@@ -105,6 +105,22 @@ describe('QC Report Utils — S4.1', () => {
       const text = await blob.text();
       expect(text).toMatch(/\d{4}-\d{2}-\d{2}/);
     });
+
+    it('is a complete styled document with its own print stylesheet', async () => {
+      const blob = exportQCReportBlob(sampleReport);
+      const text = await blob.text();
+      expect(text).toContain('<!doctype html>');
+      expect(text).toContain('<meta charset="utf-8">');
+      expect(text).toContain('@media print');
+      expect(text).toContain('@page');
+    });
+
+    it('escapes user-derived strings before interpolating into HTML', async () => {
+      const hostile = { ...sampleReport, title: '<script>alert(1)</script>' };
+      const text = await (exportQCReportBlob(hostile)).text();
+      expect(text).not.toContain('<script>alert(1)</script>');
+      expect(text).toContain('&lt;script&gt;');
+    });
   });
 
   describe('getQCReportDataURI', () => {
