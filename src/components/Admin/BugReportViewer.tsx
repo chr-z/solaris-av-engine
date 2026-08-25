@@ -52,7 +52,7 @@ const LogLine: React.FC<{ log: LogEntry }> = ({ log }) => {
     }
     return (
         <div className={`font-mono text-xs flex gap-3 ${color} border-b border-white/5 pb-1`}>
-            <span className="flex-shrink-0 text-gray-500">{time}</span>
+            <span className="flex-shrink-0 text-ink-secondary">{time}</span>
             <span className={`px-1.5 py-0.5 text-[10px] rounded-sm font-bold ${badgeColor}`}>{levelBadge}</span>
             <pre className="whitespace-pre-wrap break-all flex-1">{log.message}</pre>
         </div>
@@ -118,7 +118,7 @@ const BugReportViewer: React.FC<BugReportViewerProps> = ({ isOpen, onClose }) =>
                     
                     <ul className="p-2 space-y-2">
                         {reports.map(report => (
-                            <li key={report.id} className="bg-solar-dark-bg/50 rounded-lg transition-all duration-300">
+                            <li key={report.id} className="bg-solar-dark-bg/50 rounded-lg transition-all duration-150">
                                 <button onClick={() => setSelectedReportId(selectedReportId === report.id ? null : report.id)} className="w-full text-left p-3 flex justify-between items-center">
                                     <div className="flex-1 min-w-0">
                                         <p className="truncate font-semibold">{report.description}</p>
@@ -129,10 +129,10 @@ const BugReportViewer: React.FC<BugReportViewerProps> = ({ isOpen, onClose }) =>
                                             <span>{new Date(report.timestamp).toLocaleString()}</span>
                                         </div>
                                     </div>
-                                    <span className="text-gray-500 ml-4">{report.logs?.length || 0} logs</span>
+                                    <span className="text-ink-secondary ml-4">{report.logs?.length || 0} logs</span>
                                 </button>
 
-                                <div className={`transition-height duration-300 ease-in-out overflow-hidden ${selectedReportId === report.id ? 'h-auto' : 'h-0'}`}>
+                                <div className={`transition-height duration-150 ease-in-out overflow-hidden ${selectedReportId === report.id ? 'h-auto' : 'h-0'}`}>
                                     <div className="border-t border-solar-dark-border p-4 space-y-4">
                                         <div>
                                             <h4 className="font-bold text-sm mb-2 text-gray-300">User Description:</h4>
@@ -142,15 +142,15 @@ const BugReportViewer: React.FC<BugReportViewerProps> = ({ isOpen, onClose }) =>
                                         <div>
                                             <h4 className="font-bold text-sm mb-2 text-gray-300">Session Info:</h4>
                                             <div className="text-xs text-gray-400 bg-solar-dark-bg p-3 rounded-md font-mono space-y-1">
-                                                <p><span className="font-semibold text-gray-500">URL:</span> {report.url}</p>
-                                                <p><span className="font-semibold text-gray-500">User Agent:</span> {report.userAgent}</p>
+                                                <p><span className="font-semibold text-ink-secondary">URL:</span> {report.url}</p>
+                                                <p><span className="font-semibold text-ink-secondary">User Agent:</span> {report.userAgent}</p>
                                             </div>
                                         </div>
 
                                         <div>
                                             <h4 className="font-bold text-sm mb-2 text-gray-300">Console Logs:</h4>
                                             <div className="bg-solar-dark-bg p-3 rounded-md max-h-80 overflow-y-auto space-y-2">
-                                                {report.logs?.length > 0 ? report.logs.map((log, i) => <LogLine key={i} log={log} />) : <p className="text-xs text-gray-500">No logs captured.</p>}
+                                                {report.logs?.length > 0 ? report.logs.map((log, i) => <LogLine key={i} log={log} />) : <p className="text-xs text-ink-secondary">No logs captured.</p>}
                                             </div>
                                         </div>
                                     </div>

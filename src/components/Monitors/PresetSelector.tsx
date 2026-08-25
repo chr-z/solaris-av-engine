@@ -37,7 +37,7 @@ const PresetSelector: React.FC<PresetSelectorProps> = ({ settings, setSettings }
       aria-label={t('preset.title')}
     >
       <p className="text-xs font-bold uppercase text-white px-2 mb-1">{t('preset.title')}</p>
-      <p className="text-[11px] leading-tight text-gray-500 dark:text-gray-400 px-2 mb-2">
+      <p className="text-[11px] leading-tight text-ink-secondary dark:text-gray-400 px-2 mb-2">
         {t('preset.select')}
       </p>
       <div className="grid grid-cols-3 gap-1">

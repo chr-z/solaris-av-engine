@@ -29,7 +29,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
 
     if (!selectedRow) {
         return (
-            <div className="flex items-center justify-center h-full text-gray-500 p-4 text-center">
+            <div className="flex items-center justify-center h-full text-ink-secondary p-4 text-center">
                 <p>Select a Work Order from the list to view details and start grading.</p>
             </div>
         );
@@ -53,7 +53,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                 placeholder="\\server\share\video.mp4"
                 className="w-full bg-surface border border-hairline rounded-md px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent dark:text-ink"
             />
-             <p className="text-xs text-gray-500 mt-1">Paste the network path to help other analysts locate the raw file.</p>
+             <p className="text-xs text-ink-secondary mt-1">Paste the network path to help other analysts locate the raw file.</p>
         </div>
     );
 
@@ -176,7 +176,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                                     </div>
                                                 }
                                             >
-                                                <InfoIcon className="w-4 h-4 text-gray-500 cursor-help" />
+                                                <InfoIcon className="w-4 h-4 text-ink-secondary cursor-help" />
                                             </Tooltip>
                                         )}
                                     </span>

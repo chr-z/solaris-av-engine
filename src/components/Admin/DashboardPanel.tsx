@@ -158,7 +158,7 @@ const DIMENSIONS: GroupDimension[] = ["studio", "instructor", "analyst"];
  * tiers 1..4 deepen the solar accent. Same count → same tint, always.
  */
 const HEAT_TIER_CLASS = [
-  "bg-gray-800/40 text-gray-500 border border-gray-600/40",
+  "bg-gray-800/40 text-ink-secondary border border-gray-600/40",
   "bg-solar-accent/15 text-orange-100",
   "bg-solar-accent/35 text-white",
   "bg-solar-accent/60 text-white",
@@ -259,7 +259,7 @@ const Card: React.FC<{
   >
     <p className="text-xs uppercase tracking-wide text-gray-400">{label}</p>
     <p className="text-2xl font-semibold text-gray-100 mt-1">{value}</p>
-    {sub !== undefined && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
+    {sub !== undefined && <p className="text-xs text-ink-secondary mt-0.5">{sub}</p>}
   </div>
 );
 
@@ -310,7 +310,7 @@ const TrendChart: React.FC<{
         {points.map((p) => (
           <span
             key={p.month}
-            className="w-8 text-center text-[10px] text-gray-500"
+            className="w-8 text-center text-[10px] text-ink-secondary"
           >
             {p.month.slice(5)}/{p.month.slice(2, 4)}
           </span>
@@ -452,7 +452,7 @@ const MonthHubView: React.FC<{
             {t("dash.drill.monthScope", { month })}
           </h2>
           <p
-            className="text-xs text-gray-500 mt-0.5"
+            className="text-xs text-ink-secondary mt-0.5"
             data-testid="dash-month-hub-count"
           >
             {t("dash.drill.count", {
@@ -634,7 +634,7 @@ const DrillDownView: React.FC<{
             {t("dash.drill.title", { group: label })}
           </h2>
           <p
-            className="text-xs text-gray-500 mt-0.5"
+            className="text-xs text-ink-secondary mt-0.5"
             data-testid="dash-drill-count"
           >
             {t("dash.drill.count", {
@@ -1426,7 +1426,7 @@ const DashboardPanel: React.FC = () => {
 
           {!pinned ? (
             <p
-              className="mt-2 text-xs text-gray-500"
+              className="mt-2 text-xs text-ink-secondary"
               data-testid="dash-compare-empty"
             >
               {sideA.dimension !== sideB.dimension &&
@@ -1438,7 +1438,7 @@ const DashboardPanel: React.FC = () => {
                   })}
             </p>
           ) : comparison === null ? (
-            <p className="mt-2 text-xs text-gray-500" data-testid="dash-compare-empty">
+            <p className="mt-2 text-xs text-ink-secondary" data-testid="dash-compare-empty">
               {t("dash.empty")}
             </p>
           ) : (
@@ -1750,7 +1750,7 @@ const DashboardPanel: React.FC = () => {
                           key={stat.ruleId}
                           className="border-b border-gray-700/40 last:border-b-0"
                         >
-                          <td className="py-2 pr-4 tabular-nums text-gray-500">
+                          <td className="py-2 pr-4 tabular-nums text-ink-secondary">
                             {index + 1}
                           </td>
                           <td className="py-2 pr-4 font-medium text-gray-200">
@@ -1776,7 +1776,7 @@ const DashboardPanel: React.FC = () => {
                     </tbody>
                   </table>
                   <p
-                    className="text-xs text-gray-500 mt-2"
+                    className="text-xs text-ink-secondary mt-2"
                     data-testid="dash-ranking-hint"
                   >
                     {t("dash.rank.hint")}
@@ -1889,7 +1889,7 @@ const DashboardPanel: React.FC = () => {
                         </table>
                       </div>
                       <p
-                        className="text-xs text-gray-500 mt-2"
+                        className="text-xs text-ink-secondary mt-2"
                         data-testid="dash-heatmap-hint"
                       >
                         {t("dash.heat.hint")}
@@ -1974,7 +1974,7 @@ const DashboardPanel: React.FC = () => {
 
       {/* v3 P10: trend month buttons open the second-level hub now. */}
       {section === "trend" && !drillDown && (
-        <p className="text-xs text-gray-500 mt-2" data-testid="dash-trend-hint">
+        <p className="text-xs text-ink-secondary mt-2" data-testid="dash-trend-hint">
           {t("dash.drill.monthHint")}
         </p>
       )}

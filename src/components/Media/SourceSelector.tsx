@@ -81,7 +81,7 @@ const SourceSelector: React.FC<SourceSelectorProps> = ({ onSourceSelected, onClo
             )}
             <div className="space-y-4">
               {renderUrlInput('source.placeholder.drive')}
-              <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500">
+              <div className="flex items-center gap-2 text-gray-400 dark:text-ink-secondary">
                 <div className="flex-grow h-px bg-hairline"></div>
                 <span className="text-xs">{t('source.or')}</span>
                 <div className="flex-grow h-px bg-hairline"></div>
@@ -107,11 +107,11 @@ const SourceSelector: React.FC<SourceSelectorProps> = ({ onSourceSelected, onClo
               className="hidden"
               ref={fileInputRef}
             />
-            <button onClick={handleButtonClick} className="px-4 py-2 bg-solar-accent text-white rounded-md hover:bg-solar-accent-hover transition-colors flex items-center gap-2">
+            <button onClick={handleButtonClick} className="px-4 py-2 bg-solar-accent text-bg rounded-md hover:bg-solar-accent-hover transition-colors flex items-center gap-2">
                 <UploadIcon className="w-5 h-5" />
                 <span>{t('source.selectLocalFile')}</span>
             </button>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{t('source.dragDropHint')}</p>
+            <p className="text-xs text-ink-secondary dark:text-gray-400 mt-2">{t('source.dragDropHint')}</p>
           </div>
         );
     }
@@ -145,7 +145,7 @@ const TabButton = ({ id, label, icon, activeTab, onSelect }: TabButtonProps) => 
     className={`flex items-center gap-2 px-4 py-2 rounded-t-md transition-colors ${
       activeTab === id
         ? 'bg-surface dark:bg-surface text-solar-accent border-b-2 border-solar-accent'
-        : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-500/10'
+        : 'bg-transparent text-ink-secondary dark:text-gray-400 hover:bg-gray-500/10'
     }`}
   >
     {icon}

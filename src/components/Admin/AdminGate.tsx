@@ -55,7 +55,7 @@ const AdminGate: React.FC<{ dashboards?: boolean }> = ({ dashboards = false }) =
     <main className="min-h-screen bg-solar-dark-bg">
       <div className="max-w-5xl mx-auto pt-4 flex items-center justify-between gap-2">
         {backLink}
-        <span className="text-xs text-gray-500" title={t('admin.roleSourceTitle')}>
+        <span className="text-xs text-ink-secondary" title={t('admin.roleSourceTitle')}>
           {source === 'firebase-claim' ? t('admin.roleViaClaim') : t('admin.roleViaLocal')}
         </span>
       </div>

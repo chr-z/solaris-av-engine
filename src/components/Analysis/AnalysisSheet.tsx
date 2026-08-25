@@ -136,7 +136,7 @@ const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, isSele
     return (
         <li 
             onClick={!isLockedByOther ? () => onClick(rowIndex, row) : undefined} 
-            className={`p-4 border-b border-hairline transition-all duration-200 ${
+            className={`p-4 border-b border-hairline transition-all duration-150 ${
                 isSelected 
                     ? 'bg-solar-accent/20 border-l-4 border-solar-accent' 
                     : isLockedByOther
@@ -156,7 +156,7 @@ const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, isSele
                 </div>
                 <div className="text-right flex-shrink-0 ml-2 flex flex-col items-end">
                     {infoParts.length > 0 && (
-                        <p className="text-xs text-gray-500 truncate">
+                        <p className={`text-xs truncate ${isSelected ? 'text-ink' : 'text-ink-secondary'}`}>
                             {infoParts.join(' • ')}
                         </p>
                     )}
@@ -394,7 +394,7 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
                             >
                                 <FilterIcon className="w-5 h-5" />
                                 { activeFilterCount > 0 &&
-                                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-solar-accent text-white text-xs rounded-full flex items-center justify-center font-mono">
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-solar-accent text-bg text-xs rounded-full flex items-center justify-center font-mono">
                                         {activeFilterCount}
                                     </span>
                                 }

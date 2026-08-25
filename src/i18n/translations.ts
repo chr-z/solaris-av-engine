@@ -50,6 +50,7 @@ export const en = {
   'dock.expandMonitor': 'Expand monitor {monitor}',
   'users.activeCount': '{count} active user(s)',
   'workspace.noVideo': 'No video loaded',
+  'workspace.volume': 'Volume',
 
   // Content presets (S5.1)
   'preset.title': 'Content Presets',
@@ -319,6 +320,7 @@ export const pt: Record<TranslationKey, string> = {
   'dock.expandMonitor': 'Expandir monitor {monitor}',
   'users.activeCount': '{count} usuário(s) ativo(s)',
   'workspace.noVideo': 'Nenhum vídeo carregado',
+  'workspace.volume': 'Volume',
 
   // Content presets (S5.1)
   'preset.title': 'Presets de Conteúdo',

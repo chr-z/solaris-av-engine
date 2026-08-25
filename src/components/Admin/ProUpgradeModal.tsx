@@ -116,12 +116,12 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
               <button
                 onClick={handleActivate}
                 disabled={!keyInput.trim() || isActivating}
-                className="w-full px-3 py-2 rounded-md bg-solar-accent text-white font-medium hover:bg-solar-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-solar-accent"
+                className="btn btn-primary w-full px-3 py-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isActivating ? t('solaris.pro.activating') : t('solaris.pro.activate')}
               </button>
               {source === 'env-override' && (
-                <p className="text-xs text-gray-500">{t('solaris.pro.envOverrideNote')}</p>
+                <p className="text-xs text-ink-secondary">{t('solaris.pro.envOverrideNote')}</p>
               )}
             </div>
           )}

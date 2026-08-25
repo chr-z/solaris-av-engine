@@ -123,7 +123,7 @@ const ComparePane: React.FC<ComparePaneProps> = ({
               <button
                 onClick={handleSubmitDraft}
                 disabled={!urlDraft.trim()}
-                className="flex-shrink-0 p-2 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover disabled:opacity-50 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
+                className="flex-shrink-0 p-2 rounded-md bg-solar-accent text-bg hover:bg-solar-accent-hover disabled:opacity-50 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
                 aria-label={t('compare.load')}
                 title={t('compare.load')}
               >

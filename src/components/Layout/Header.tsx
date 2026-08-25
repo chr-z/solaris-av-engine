@@ -58,13 +58,13 @@ const Header: React.FC<HeaderProps> = ({
     <>
       <header className="flex-shrink-0 flex items-center justify-between p-3 h-16 border-b border-hairline bg-surface/80 dark:bg-surface/80 backdrop-blur-sm z-20">
         <div className="flex items-center gap-2">
-          <div className={`transition-all duration-300 ease-in-out ${isWorkspaceOpen ? 'w-0 opacity-0 -translate-x-2' : 'w-6 opacity-100'}`}>
+          <div className={`transition-all duration-150 ease-in-out ${isWorkspaceOpen ? 'w-0 opacity-0 -translate-x-2' : 'w-6 opacity-100'}`}>
             <SolarisLogo size={24} />
           </div>
           
           <button 
             onClick={onCloseWorkspace}
-            className={`transition-all duration-300 ease-in-out flex items-center gap-2 ${isWorkspaceOpen ? 'w-auto opacity-100' : 'w-0 opacity-0 -translate-x-2'}`}
+            className={`transition-all duration-150 ease-in-out flex items-center gap-2 ${isWorkspaceOpen ? 'w-auto opacity-100' : 'w-0 opacity-0 -translate-x-2'}`}
             disabled={!isWorkspaceOpen}
             aria-label={t('header.backToList')}
           >

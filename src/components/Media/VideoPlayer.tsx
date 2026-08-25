@@ -437,7 +437,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         />
 
         {/* Custom Controls UI */}
-        <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-4 text-white transition-opacity duration-300 ${isControlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-4 text-white transition-opacity duration-150 ${isControlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             <WaveformTimeline
                 duration={duration}
                 currentTime={currentTime}
@@ -467,7 +467,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
                             step="0.05"
                             value={isMuted ? 0 : volume}
                             onChange={handleVolumeChange}
-                            className="w-0 sm:w-24 h-1 accent-white cursor-pointer opacity-0 group-hover/volume:opacity-100 group-hover/volume:w-24 transition-all duration-300"
+                            aria-label={t('workspace.volume')} className="w-0 sm:w-24 h-1 accent-white cursor-pointer opacity-0 group-hover/volume:opacity-100 group-hover/volume:w-24 transition-all duration-150"
                          />
                     </div>
                     <span className="font-mono text-sm">{formatTime(currentTime)} / {formatTime(duration)}</span>

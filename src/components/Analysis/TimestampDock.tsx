@@ -128,7 +128,7 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
                                         {userProfile?.id === ts.analyst.id && (
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); handleDelete(ts.id); }}
-                                                className="p-1 rounded-full text-gray-500 hover:bg-red-500/20 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                className="p-1 rounded-full text-ink-secondary hover:bg-red-500/20 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
                                                 aria-label="Remove"
                                             >
                                                 <XIcon className="w-3 h-3" />
@@ -155,7 +155,7 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
                         />
                         <div className="flex justify-end gap-2">
                             <button onClick={handleCancel} className="px-3 py-1 text-sm rounded-md hover:bg-gray-500/20 transition-colors">Cancel</button>
-                            <button onClick={handleSave} disabled={!comment.trim()} className="px-3 py-1 text-sm rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover disabled:opacity-50 transition-colors">Save</button>
+                            <button onClick={handleSave} disabled={!comment.trim()} className="px-3 py-1 text-sm rounded-md bg-solar-accent text-bg hover:bg-solar-accent-hover disabled:opacity-50 transition-colors">Save</button>
                         </div>
                     </div>
                 ) : (

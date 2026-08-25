@@ -53,7 +53,7 @@ const OverlayControls: React.FC<OverlayControlsProps> = ({ settings, setSettings
       </div>
       {settings.type !== 'none' && (
         <div className="p-2 mt-2">
-          <label htmlFor="opacity" className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label htmlFor="opacity" className="block text-xs font-medium text-ink-secondary dark:text-gray-400 mb-1">
             Opacity
           </label>
           <input

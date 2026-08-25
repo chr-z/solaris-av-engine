@@ -26,7 +26,7 @@ const LocalFileHelper: React.FC<LocalFileHelperProps> = ({ filePath, onLoadMedia
             <p className="max-w-md mb-4">This analysis references a file stored on the local network. Copy the path below to locate it on the server.</p>
             
             <div className="w-full max-w-xl bg-solar-dark-bg p-3 rounded-md border border-solar-dark-border mb-4">
-                <p className="text-xs text-gray-500 text-left mb-1">Network Path:</p>
+                <p className="text-xs text-ink-secondary text-left mb-1">Network Path:</p>
                 <div className="flex items-center gap-2">
                     <input 
                         type="text"
@@ -36,7 +36,7 @@ const LocalFileHelper: React.FC<LocalFileHelperProps> = ({ filePath, onLoadMedia
                     />
                     <button 
                         onClick={handleCopy}
-                        className="flex-shrink-0 px-3 py-1.5 rounded-md bg-solar-accent text-white text-sm hover:bg-solar-accent-hover transition-colors flex items-center gap-2"
+                        className="flex-shrink-0 px-3 py-1.5 rounded-md bg-solar-accent text-bg text-sm hover:bg-solar-accent-hover transition-colors flex items-center gap-2"
                     >
                         {copied ? (
                            <>
@@ -50,7 +50,7 @@ const LocalFileHelper: React.FC<LocalFileHelperProps> = ({ filePath, onLoadMedia
                 </div>
             </div>
 
-            <div className="flex items-center gap-4 text-gray-500 my-4 w-full max-w-md">
+            <div className="flex items-center gap-4 text-ink-secondary my-4 w-full max-w-md">
                 <div className="flex-grow h-px bg-solar-dark-border"></div>
                 <span>OR</span>
                 <div className="flex-grow h-px bg-solar-dark-border"></div>
