@@ -265,6 +265,25 @@ export const en = {
   'qol.focus.monitors': 'Keep monitors in focus mode',
   'qol.autosave.saved': 'saved',
   'qol.undo.editCell': 'Edited {column}',
+
+  'header.league': 'Analyst League',
+  'league.title': 'Analyst League',
+  'league.xpBar': 'XP progress in current level',
+  'league.podiumLive': 'Live podium',
+  'league.podiumPeriod': 'Podium period',
+  'league.period.week': 'Week',
+  'league.period.month': 'Month',
+  'league.period.year': 'Year',
+  'league.podiumEmpty': 'No XP recorded in this period yet.',
+  'league.achievements': 'Achievements',
+  'league.history': 'Past podiums',
+  'league.historyEmpty': 'Closed podiums will appear here.',
+  'league.offTitle': 'Gamification is off',
+  'league.offBody': 'The league, podiums and achievements are disabled for this team.',
+  'league.reenable': 'Re-enable gamification',
+  'league.disable': 'Disable gamification',
+  'league.toastUnlocked': 'Achievement unlocked!',
+  'league.levelUp': 'Level up: {level}!',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -530,6 +549,25 @@ export const pt: Record<TranslationKey, string> = {
   'qol.focus.monitors': 'Manter monitores no modo foco',
   'qol.autosave.saved': 'salvo',
   'qol.undo.editCell': 'Editou {column}',
+
+  'header.league': 'Liga dos Analistas',
+  'league.title': 'Liga dos Analistas',
+  'league.xpBar': 'Progresso de XP no nível atual',
+  'league.podiumLive': 'Pódio ao vivo',
+  'league.podiumPeriod': 'Período do pódio',
+  'league.period.week': 'Semana',
+  'league.period.month': 'Mês',
+  'league.period.year': 'Ano',
+  'league.podiumEmpty': 'Sem XP registrado neste período ainda.',
+  'league.achievements': 'Conquistas',
+  'league.history': 'Pódios anteriores',
+  'league.historyEmpty': 'Pódios fechados aparecerão aqui.',
+  'league.offTitle': 'Gamificação desligada',
+  'league.offBody': 'A liga, os pódios e as conquistas estão desativados para este time.',
+  'league.reenable': 'Reativar gamificação',
+  'league.disable': 'Desligar gamificação',
+  'league.toastUnlocked': 'Conquista desbloqueada!',
+  'league.levelUp': 'Subiu de nível: {level}!',
 };
 
 export const dictionaries = { en, pt } as const;

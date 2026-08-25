@@ -151,6 +151,14 @@ const Header: React.FC<HeaderProps> = ({
                         >
                           {t('header.reportIssue')}
                         </button>
+                        {/* F4: Liga dos Analistas (#/liga) — todos os autenticados. */}
+                        <a
+                          href="#/liga"
+                          data-testid="header-league-link"
+                          className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
+                        >
+                          {t('header.league')}
+                        </a>
                         {/* v3: Scoring Rules console (#/admin) — same RBAC decision as the gate. */}
                         {isAdminUser && (
                           <a

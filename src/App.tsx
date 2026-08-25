@@ -15,6 +15,7 @@ import { DEMO_HEADERS, DEMO_ROWS } from './utils/demoData';
 import { useI18n } from './i18n/I18nContext';
 import { computeFilteredRows } from './utils/rowFiltering';
 import { isAdminHash, isDashboardsHash } from './utils/adminRoute';
+import { isLeagueHash } from './utils/leagueRoute';
 import { persistGuestEmail, clearGuestEmail } from './hooks/useAdminRole';
 // F2 QoL Core: busca universal, modo foco e undo global 24h.
 import { isCommandPaletteCombo, isUndoCombo } from './utils/shortcuts';
@@ -27,6 +28,13 @@ import {
 } from './features/qol/focusMode';
 import { applyUndo, registerUndoApplier, clearUndoAppliers } from './features/qol/undoApply';
 import { getUndoLog } from './features/qol/undoStore';
+// F4 Gamificação: premiação de conclusões e celebrações.
+import { classifyRow } from './utils/rowFiltering';
+import { useGamification } from './hooks/useGamification';
+import { achievementDef } from './features/gamification/achievements';
+import { DEFAULT_MARKABLE_RULES } from './utils/ruleMarks';
+import { LEVELS, type LevelId } from './features/gamification/levels';
+import type { Celebration } from './components/Gamification/AchievementToast';
 
 // Code splitting (S3.1): the heavy analysis workspace (player + monitors + form)
 // is only fetched when an OS row is opened for the first time.
@@ -41,6 +49,10 @@ const AdminGate = React.lazy(() => import('./components/Admin/AdminGate'));
 const CommandPaletteModal = React.lazy(
   () => import(/* webpackChunkName: "command-palette" */ './components/Core/CommandPaletteModal'),
 );
+
+// F4: Liga dos Analistas + toasts — chunks separados (initial bundle intacto).
+const LeaguePanel = React.lazy(() => import('./components/Gamification/LeaguePanel'));
+const AchievementToast = React.lazy(() => import('./components/Gamification/AchievementToast'));
 
 // Initialize log capture service
 logCaptureService.init();
@@ -92,8 +104,23 @@ const getInitialDateRange = (): { startDate: string; endDate: string } => {
     };
 };
 
+/** F4: marcações da linha (regras ativas com célula 'TRUE') -> XP complexidade. */
+function countMarkedRules(headers: string[], row: RowData): number {
+  const indexByHeader = new Map<string, number>();
+  headers.forEach((h, idx) => {
+    const key = typeof h === 'string' ? h.trim() : '';
+    if (key && !indexByHeader.has(key)) indexByHeader.set(key, idx);
+  });
+  let count = 0;
+  for (const rule of DEFAULT_MARKABLE_RULES) {
+    const idx = indexByHeader.get(rule.header);
+    if (idx !== undefined && row[idx]?.value === 'TRUE') count += 1;
+  }
+  return count;
+}
+
 const App: React.FC = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // Media State
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState<string | null>(null);
@@ -127,6 +154,8 @@ const App: React.FC = () => {
   const [isAdminRoute, setIsAdminRoute] = useState(() => isAdminHash(window.location.hash));
   // P5 dashboards sub-route (#/admin/dashboards) — same RBAC gate, own panel.
   const [isDashboardsRoute, setIsDashboardsRoute] = useState(() => isDashboardsHash(window.location.hash));
+  // F4 rota da Liga (#/liga): acessível a qualquer usuário autenticado.
+  const [isLeagueRoute, setIsLeagueRoute] = useState(() => isLeagueHash(window.location.hash));
 
   // ── F2 QoL Core ──────────────────────────────────────────────────────
   // Ctrl+K busca universal (modal lazy).
@@ -168,6 +197,7 @@ const App: React.FC = () => {
     const onHashChange = () => {
       setIsAdminRoute(isAdminHash(window.location.hash));
       setIsDashboardsRoute(isDashboardsHash(window.location.hash));
+      setIsLeagueRoute(isLeagueHash(window.location.hash));
     };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
@@ -178,6 +208,44 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  // ── F4 Gamificação ──────────────────────────────────────────────
+  const gamificationStorage = useMemo(() => ({
+    getItem: (k: string) => window.localStorage.getItem(k),
+    setItem: (k: string, v: string) => window.localStorage.setItem(k, v),
+    removeItem: (k: string) => window.localStorage.removeItem(k),
+  }), []);
+  const gam = useGamification(gamificationStorage, userProfile?.id ?? null);
+  // Fila de celebração: um toast por vez (conquista OU level-up).
+  const [celebration, setCelebration] = useState<Celebration | null>(null);
+  useEffect(() => {
+    if (celebration || gam.freshAchievements.length === 0) return;
+    const key = gam.freshAchievements[0];
+    const def = achievementDef(key as Parameters<typeof achievementDef>[0]);
+    if (!def) { gam.consumeFresh(); return; }
+    setCelebration({
+      kind: 'achievement',
+      id: 'ach:' + key,
+      icon: def.iconPt,
+      title: locale === 'pt' ? def.namePt : def.nameEn,
+      subtitle: t('league.toastUnlocked'),
+    });
+    gam.consumeFresh();
+  }, [gam, celebration, locale, t]);
+  const clearCelebration = useCallback(() => setCelebration(null), []);
+
+  /** Level-up -> celebração dedicada (confete discreto, reduced-motion safe). */
+  const announceLevelUp = useCallback((levelId: LevelId) => {
+    const lvl = LEVELS.find((l) => l.id === levelId);
+    if (!lvl) return;
+    setCelebration({
+      kind: 'levelup',
+      id: 'lvl:' + levelId + ':' + Date.now(),
+      icon: '🏆',
+      title: t('league.levelUp', { level: locale === 'pt' ? lvl.namePt : lvl.nameEn }),
+    });
+  }, [locale, t]);
+
   const [initialLoadingMessage, setInitialLoadingMessage] = useState(t('loading.initializing'));
 
   // Filters
@@ -526,6 +594,26 @@ const App: React.FC = () => {
         }
         return newRows;
     });
+
+    // F4: análise concluída (EVENT+UNIFORM+ANALYST) -> XP idempotente.
+    if (!userProfile || userProfile.id === 'guest-reviewer-id') return;
+    const woIdx = headers.indexOf(COLS.WO);
+    const osId = savedRow[woIdx]?.value?.trim() || String(selectedOsIndex ?? '');
+    if (!osId) return;
+    const colIndex = {
+      WO: woIdx,
+      EVENT: headers.indexOf(COLS.EVENT),
+      UNIFORM: headers.indexOf(COLS.UNIFORM),
+      ANALYST: headers.indexOf(COLS.ANALYST),
+      OPERATOR: headers.indexOf(COLS.OPERATOR),
+      ANALYSIS_TIME: headers.indexOf(COLS.ANALYSIS_TIME),
+      INSTRUCTOR: -1,
+      STUDIO: -1,
+    } as Record<keyof typeof COLS, number>;
+    if (classifyRow({ rowIndex: selectedOsIndex ?? -1, row: savedRow }, colIndex) !== 'completed') return;
+    const markedCount = countMarkedRules(headers, savedRow);
+    const decision = gam.completeOs({ osId, validInconformities: markedCount });
+    if (decision?.leveledUpTo) announceLevelUp(decision.leveledUpTo);
   };
 
   const handleCloseWorkspace = useCallback(() => {
@@ -813,6 +901,11 @@ const App: React.FC = () => {
       )}
     </React.Suspense>
   );
+  const f4Overlays = (
+    <React.Suspense fallback={null}>
+      <AchievementToast celebration={celebration} onDone={clearCelebration} />
+    </React.Suspense>
+  );
 
   const renderContent = () => {
     switch(authStatus) {
@@ -833,6 +926,23 @@ const App: React.FC = () => {
           />
         );
       case 'signedIn':
+        // F4 Liga dos Analistas (#/liga): rota própria, qualquer autenticado.
+        if (isLeagueRoute && userProfile) {
+          return (
+            <WaveformCacheProvider>
+              <div className="flex flex-col h-screen font-sans text-sm bg-solar-light-bg dark:bg-solar-dark-bg text-gray-800 dark:text-gray-200 overflow-hidden">
+                <a href="#main-workspace" className="skip-link">{t('a11y.skipToContent')}</a>
+                <React.Suspense fallback={
+                  <div className="flex items-center justify-center h-screen bg-solar-dark-bg">
+                    <LoadingIndicator statusText={t('loading.generic')} />
+                  </div>
+                }>
+                  <LeaguePanel userProfile={{ id: userProfile.id, name: userProfile.name }} />
+                </React.Suspense>
+              </div>
+            </WaveformCacheProvider>
+          );
+        }
         // v3 admin console: replaces <main> while the app shell (Header) stays mounted.
         if (isAdminRoute) {
           return (
@@ -858,6 +968,7 @@ const App: React.FC = () => {
                   <AdminGate dashboards={isDashboardsRoute} />
                 </React.Suspense>
                 {f2Overlays}
+                {f4Overlays}
               </div>
             </WaveformCacheProvider>
           );
@@ -945,6 +1056,7 @@ const App: React.FC = () => {
                 </div>
               </main>
               {f2Overlays}
+              {f4Overlays}
             </div>
           </WaveformCacheProvider>
         );
