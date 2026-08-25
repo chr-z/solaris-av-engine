@@ -229,3 +229,30 @@ Nada a avançar sem diretiva nova; este tick rodou verificação de ponta a pont
   (prova de conteúdo grep pick_folder = 2) e instalador
   bundle/nsis/Solaris_3.0.0_x64-setup.exe 2.448.333 B.
 - Push desktop -> origin/desktop verificado por ls-remote.
+
+---
+
+## desktop (tick turbo) — endurecimento zero-nuvem: avatar local + CSP restritiva — 25/08/2026 ~05h
+
+- Fila P1-P3 permanece DONE; este tick fechou o último gap real de rede remota
+  que sobrava no entregável desktop (auditado contra o bundle, não contra docs).
+- **Avatar Guest agora é data URI** (SVG inline 64x64 "GR"): App.tsx apontava
+  picture para https://ui-avatars.com/api/... — a única URL remota buscada em
+  runtime pelo sabor standalone (42e3de6). Nenhum teste dependia dela.
+- **CSP restritiva zero-nuvem** (tauri.conf.json): removidas TODAS as origens
+  Google/Firebase (apis.google, accounts.google, *.googleusercontent,
+  ui-avatars, *.googleapis.com, *.firebaseio.com, identitytoolkit,
+  securetoken, frame-src accounts.google) + form-action 'self' adicionado.
+  Policy final: self + data:/blob: p/ img/font/media/worker + ipc:. Sobra ZERO
+  origem remota permitida no desktop on-premise (2fafb29).
+- Bundle standalone re-medido: inicial 245KB brutos (~77KB gzip) = index
+  103KB + react-vendor 142KB; AnalysisWorkspace 99KB é lazy chunk. Meta
+  <500KB mantida com folga. Strings cloud restantes no bundle são constantes
+  inertes (discovery doc do gapi + links demo) — nunca buscadas, e a CSP
+  bloqueia por princípio.
+- Validação ponta a ponta: vitest 233/233 (--exclude src/audio-acoustics/**);
+  cargo tauri build --no-bundle stable-gnu 2m07s verde; exe canônico fresco
+  D:/cargo-target/release/solaris-av-engine.exe 6.525.952 B (grep pick_folder=2
+  — prova anti-bin-stale); SMOKE_OK pid=40520 vivo após 5s mem=23,7MB;
+  BOOT_WINDOW_OK ms=170 WS 19,6MB (sem regressão).
+- Push origin/desktop verificado por ls-remote (f1bf877..2fafb29).
