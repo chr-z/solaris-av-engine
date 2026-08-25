@@ -1,6 +1,22 @@
 # SOLARIS — log de trabalho
 
 ## turbo-web
+### 2026-08-25 ~20h30 - tick #16: guardrail noturno - fila DONE, zero deltas, gates re-provados
+
+- Fila bundle/split/e2e/a11y/lighthouse segue 100% DONE (ticks #1-#15); sem diretiva nova.
+- Upstream auditado: origin/main sem delta (fd281fc == local); v2-upgrade contida em main;
+  develop avançou só README (bd3a560, fora do escopo da lane). Nada a sincronizar.
+- Gates na main @ fd281fc:
+  vitest **342/342** (+tsc clean), e2e fluxo real **21/21**, axe **0/0** violacoes,
+  console probe **0 eventos**, build byte-estavel `index-C1mX7UAW.js` -
+  initial gz **79,65KB core** (index 33,86 + react-vendor 45,79; +CSS 7,60 = 87,25KB) vs alvo <500KB.
+- Lighthouse x2 (headless --disable-gpu): R1 **99/100/100/100**, R2 **99/100/100/100**
+  (FCP 1.5s / LCP 1.6s / TBT 20 e 0ms / CLS 0; perf 99 = ruido CPU ambiente documentado).
+- Preview em porta alta aleatoria (4540) com PROVA de hash (entry servido == dist local);
+  encerrado apos o gate. Background preview passou a esbarrar no guard de foreground do
+  terminal - protocolo: background=true + probe/porta em chamada separada.
+
+
 ### 2026-08-25 ~21h40 - tick #15: guardrail noturno - fila DONE, zero deltas, gates re-provados
 
 - Fila bundle/split/e2e/a11y/lighthouse segue 100% DONE (ticks #1-#14); sem diretiva nova.
