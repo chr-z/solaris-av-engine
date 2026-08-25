@@ -10,11 +10,23 @@ import {
   saveSourcesConfig,
   validateSourcesConfig,
 } from '../../services/sourcesConfig';
+import {
+  DesktopBridgeReport,
+  isDesktopBridgeAvailable,
+  pickDesktopFolder,
+  scanAlfredDesktop,
+} from '../../services/desktopBridge';
 
 interface SourcesAdminProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+type ScanState =
+  | { status: 'idle' }
+  | { status: 'scanning' }
+  | { status: 'done'; report: DesktopBridgeReport }
+  | { status: 'error'; message: string };
 
 const inputCls =
   'w-full px-3 py-2 rounded-md bg-solar-dark-bg/60 border border-solar-light-border dark:border-solar-dark-border text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-solar-accent';
@@ -33,6 +45,9 @@ const SourcesAdmin: React.FC<SourcesAdminProps> = ({ isOpen, onClose }) => {
   const [cfg, setCfg] = useState<SourcesConfig>(() => loadSourcesConfig());
   const [apiKeyDraft, setApiKeyDraft] = useState('');
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [scan, setScan] = useState<ScanState>({ status: 'idle' });
+
+  const desktopBridge = isDesktopBridgeAvailable();
 
   const problems = useMemo(() => validateSourcesConfig(cfg), [cfg]);
   const canSave = problems.length === 0;
@@ -50,6 +65,51 @@ const SourcesAdmin: React.FC<SourcesAdminProps> = ({ isOpen, onClose }) => {
     setSavedAt(new Date().toLocaleTimeString());
     setApiKeyDraft('');
   };
+
+  /** Botão Procurar…: diálogo nativo de pastas via core Tauri. */
+  const handleBrowse = async () => {
+    if (!desktopBridge) return;
+    const picked = await pickDesktopFolder(
+      t('admin.sources.alfred.browseTitle'),
+      cfg.alfred.root || undefined,
+    );
+    if (picked) {
+      setCfg((c) => ({ ...c, alfred: { ...c.alfred, root: picked } }));
+    }
+  };
+
+  /** Escanear agora: roda o scan_alfred em Rust sobre a raiz configurada. */
+  const handleScan = async () => {
+    if (!desktopBridge) return;
+    const root = cfg.alfred.root.trim();
+    if (!root) {
+      setScan({ status: 'error', message: t('admin.sources.scan.noRoot') });
+      return;
+    }
+    setScan({ status: 'scanning' });
+    const report = await scanAlfredDesktop(root, {
+      maxDepth: cfg.alfred.maxDepth,
+    });
+    if (report === null) {
+      setScan({
+        status: 'error',
+        message: t('admin.sources.scan.failed'),
+      });
+      return;
+    }
+    setScan({ status: 'done', report });
+  };
+
+  const scanSummary = useMemo(() => {
+    if (scan.status !== 'done') return null;
+    const r = scan.report;
+    const blocksInOss = r.oss.reduce((acc, os) => acc + os.blocks.length, 0);
+    const orphanBlocks = r.orphan_groups.reduce(
+      (acc, g) => acc + g.blocks.length,
+      0,
+    );
+    return { oss: r.oss.length, orphans: r.orphan_groups.length, blocksInOss, orphanBlocks };
+  }, [scan]);
 
   return (
     <div
@@ -203,18 +263,29 @@ const SourcesAdmin: React.FC<SourcesAdminProps> = ({ isOpen, onClose }) => {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className={labelCls}>{t('admin.sources.alfred.root')}</label>
-              <input
-                type="text"
-                className={inputCls}
-                placeholder={'\\\\ALFRED\\Producao  ou  D:\\Alfred'}
-                value={cfg.alfred.root}
-                onChange={(e) =>
-                  setCfg((c) => ({
-                    ...c,
-                    alfred: { ...c.alfred, root: e.target.value },
-                  }))
-                }
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className={inputCls}
+                  placeholder={'\\\\ALFRED\\\\Producao  ou  D:\\\\Alfred'}
+                  value={cfg.alfred.root}
+                  onChange={(e) =>
+                    setCfg((c) => ({
+                      ...c,
+                      alfred: { ...c.alfred, root: e.target.value },
+                    }))
+                  }
+                />
+                {desktopBridge && (
+                  <button
+                    type="button"
+                    onClick={handleBrowse}
+                    className="shrink-0 whitespace-nowrap rounded-md border border-solar-dark-border px-3 py-2 text-sm font-medium text-gray-200 transition-colors hover:bg-gray-500/20"
+                  >
+                    {t('admin.sources.alfred.browse')}
+                  </button>
+                )}
+              </div>
             </div>
             <div>
               <label className={labelCls}>{t('admin.sources.alfred.maxDepth')}</label>
@@ -247,6 +318,74 @@ const SourcesAdmin: React.FC<SourcesAdminProps> = ({ isOpen, onClose }) => {
                 }
               />
             </div>
+
+            {desktopBridge && (
+              <>
+                <div className="sm:col-span-2 mt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleScan}
+                    disabled={scan.status === 'scanning'}
+                    className="rounded-md bg-solar-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-solar-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t('admin.sources.scan.run')}
+                  </button>
+                  {scan.status === 'scanning' && (
+                    <span className="text-sm text-gray-400">
+                      {t('admin.sources.scan.running')}
+                    </span>
+                  )}
+                </div>
+
+                {scan.status === 'error' && (
+                  <p
+                    role="alert"
+                    className="sm:col-span-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+                  >
+                    {scan.message}
+                  </p>
+                )}
+
+                {scan.status === 'done' && scanSummary && (
+                  <div className="sm:col-span-2 space-y-2">
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      {([
+                        { v: scan.report.scanned_dirs, k: 'admin.sources.scan.metric.dirs' },
+                        { v: scanSummary.oss, k: 'admin.sources.scan.metric.oss' },
+                        { v: scanSummary.blocksInOss, k: 'admin.sources.scan.metric.blocks' },
+                        { v: scanSummary.orphans, k: 'admin.sources.scan.metric.orphans' },
+                      ] as const).map((m) => (
+                        <div
+                          key={m.k}
+                          className="rounded-md border border-solar-dark-border bg-black/20 px-2 py-2"
+                        >
+                          <div className="font-mono text-lg font-bold text-solar-accent">
+                            {m.v}
+                          </div>
+                          <div className="text-[11px] uppercase tracking-wide text-gray-500">
+                            {t(m.k)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {scanSummary.orphanBlocks > 0 && (
+                      <p className="text-xs text-yellow-300/90">
+                        {t('admin.sources.scan.orphanHint', {
+                          n: String(scanSummary.orphanBlocks),
+                        })}
+                      </p>
+                    )}
+                    {scan.report.skipped_permission_errors > 0 && (
+                      <p className="text-xs text-gray-500">
+                        {t('admin.sources.scan.skipped', {
+                          n: String(scan.report.skipped_permission_errors),
+                        })}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </section>
 
