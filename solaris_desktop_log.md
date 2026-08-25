@@ -2,6 +2,51 @@
 
 ## features
 
+### 2026-08-25 ~20h25 — tick features-worker: A3 FECHADO — importação CSV/XLSX da fila + exportação + undo snapshot (commits 70803e4..461bd9e)
+
+- **Escopo**: spec A3 (anti-fricção administrativa) na superfície que ainda
+  não tinha nada — a FILA do painel ao vivo. Zero dependência nova;
+  offline-first; src-tauri/audio-acoustics/tokens.css/pitch intocados.
+- **Núcleo** (`src/features/qol/queueImport.ts`): parseCsv RFC 4180 (BOM,
+  CRLF, aspas dobradas, campo multilinha); mapeamento tolerante EN/PT
+  (`os_id|OS|WO|ORDEM DE SERVIÇO`, `prazo`, `situação`…); normalização
+  HONESTA — `FILA→queued`, `ALTA→P1`, mas status/prioridade inválidos
+  explícitos PULAM a linha com motivo (typo nunca vira P2 silencioso);
+  duplicata dentro do arquivo OU contra a fila viva reportada com número
+  da linha; linha mais curta que o header é paddingada ('' ≠ crash).
+- **Leitor XLSX zero-dep** (`queueImportXlsx.ts`): espelho do writer P12 —
+  ZIP STORE+DEFLATE via `DecompressionStream('deflate-raw')` nativa
+  (ReadableStream puro: Blob do jsdom não tem .stream()), EOCD→central
+  directory (com data-descriptor via header local), workbook→rels→folha
+  (Target relativo/absoluto), sharedStrings/inlineStr/número/fórmula,
+  buracos de grade preservados. Arquivo corrupto lança mensagem clara.
+- **UI** (`QueueImportExportBar.tsx`, chunk LAZY do painel): file input
+  nativo acessível (sr-only + label), reset por key p/ reenvio do mesmo
+  arquivo, resumo aria-live "{n} adicionadas · {n} puladas (motivos)";
+  exportação CSV + XLSX REAL (aba "Fila", scores como célula numérica) na
+  MESMA forma que o importador lê. Nasce FORA do condicional da fila —
+  importar o primeiro lote é o caso primário. Gate canManageQueue.
+- **Undo**: kind novo `'import-queue'` em undo.ts — SNAPSHOT (linhas novas
+  não têm estado anterior): um evento carrega o lote; applier registrado
+  junto aos 3 existentes no painel; botão Desfazer enxerga importações.
+- **Provas**: suíte **619/619** (+33: queueImport 16, queueImportXlsx 9 —
+  fixtures ZIP STORE e DEFLATE montados byte a byte, CRC32 clássico
+  0xcbf43926 validado — e UI jsdom 8); **tsc 100% limpo INCLUSIVE
+  __tests__** (bônus: import quebrado de 1 linha no queueBulk.test.ts
+  corrigido); eslint ZERO nos 6 arquivos meus, ratchet 5=5 nos
+  compartilhados (provado via stash antes=depois); **e2e-flow 34/34**
+  (+8 asserts: seção [6/6] — importar CSV com sinônimos PT → duplicata e
+  bad-status pulados → undo snapshot restaura → exportar XLSX real →
+  reimportar round-trip os_id/priority/status intactos); build ok —
+  initial gz **~106,4KB** (index 51,43 + react-vendor 45,49 + css 8,67 +
+  html ~0,8) vs ~104,9 anterior (+1,5KB = wiring/i18n/chunk-wrapper),
+  barra dentro do chunk lazy LiveDashboardPanel 12,57KB gz — budget
+  <500KB preservado; chunks pesados (firebase 97,2 / ECharts 167,5 /
+  pdfmake 362,2 / vfs_fonts 465,5) inalterados e fora do initial.
+- Push confirmado por ls-remote: `51bf70e..461bd9e`.
+- **Restante da spec**: A1 duplicar-análise-similar + atalhos
+  configuráveis; A2 Pomodoro (pular-silêncio/volume = lane audio-dsp).
+
 ### 2026-08-25 ~18h40 — tick features-worker: F2 COMPLETO — bulk actions vivas no painel ao vivo + resgate do commit vermelho do tick anterior
 
 - **Resgate (importante)**: o tick ~17h15 subiu `f281e2b` (bulk core) com
