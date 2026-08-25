@@ -29,10 +29,12 @@ import {
   makeAssign,
   makeReturn,
   makePrioritize,
+  type QueueActionEvent,
   applyInverse,
   QUEUE_PRIORITIES,
 } from '../../features/qol/queueActions';
 import { getUndoLog } from '../../features/qol/undoStore';
+import QueueBulkBar from './QueueBulkBar';
 import { registerUndoApplier, applyUndo } from '../../features/qol/undoApply';
 import type { UndoEvent } from '../../features/qol/undo';
 import type { Dataset } from '../../utils/dashboard';
@@ -307,6 +309,15 @@ export default function LiveDashboardPanel({
   const handleUndoClick = useCallback(() => {
     applyUndo(getUndoLog());
   }, []);
+
+  /** Bulk: aplica linhas novas e grava um evento de undo por linha alterada. */
+  const handleBulkApply = useCallback(
+    (nextRows: QueueRowLike[], events: QueueActionEvent[]) => {
+      commitQueue(nextRows);
+      for (const ev of events) getUndoLog().record(ev.kind, ev.label, ev.payload);
+    },
+    [commitQueue],
+  );
 
   const todayKey = useMemo(
     () => localDayKey(tickNow, SAO_PAULO_CLOCK),
@@ -656,6 +667,26 @@ export default function LiveDashboardPanel({
             </div>
           ) : (
             <p className="mt-2 text-xs text-gray-500">{t('dash.live.queueEmpty')}</p>
+          )}
+          {canManage && (
+            <QueueBulkBar
+              rows={queueState}
+              now={tickNow}
+              canManage={canManage}
+              viewerId={viewer?.id ?? ''}
+              labels={{
+                title: t('dash.live.bulkTitle'),
+                selectAllTop: t('dash.live.bulkSelectTop'),
+                clear: t('dash.live.bulkClear'),
+                selectedN: t('dash.live.bulkSelected'),
+                applicableN: t('dash.live.bulkApplicable'),
+                skippedN: t('dash.live.bulkSkipped'),
+                assignMe: t('dash.live.bulkAssignMe'),
+                returnToQueue: t('dash.live.bulkReturn'),
+                priority: t('dash.live.bulkPriority'),
+              }}
+              onApply={handleBulkApply}
+            />
           )}
         </div>
       )}
