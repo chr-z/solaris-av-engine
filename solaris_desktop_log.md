@@ -731,3 +731,51 @@ src-tauri intocado. Sem Telegram.
 - Proximo tick: residuo legado do painel ADMIN (DashboardPanel ~80 gray-*,
   BugReport*, AdminRulesPanel, ProUpgradeModal) ou diretiva nova do dono.
 - src-tauri/audio-acoustics/pitch intocados. Sem Telegram.
+
+## redesign (tick 18) — resíduo legado do painel ADMIN zerado — 25/08/2026 ~20h45
+
+- **Fila do t17 executada**: os 6 componentes de src/components/Admin/ migrados
+  pro acabamento v3 com ZERO mudança de anatomia/DOM/vocabulário/aria-labels
+  (DashboardPanel, AdminGate, AdminRulesPanel, BugReportModal,
+  BugReportViewer, ProUpgradeModal + ProLockOverlay).
+- **Fase 1 estrutural** (~62 ocorrências, scripts/t18_migrate_admin.py com
+  replaces exatos e contagem esperada por padrão; abort atômico pegou uma
+  expectativa errada minha antes de gravar qualquer byte):
+  - KPI cards e barras de período: bordas duras border-gray-600/60 +
+    bg-gray-800/50 → .card (hairline + sombra card); toast QC → .card-raised.
+  - Inputs/selects: bg-gray-900/70 → bg-surface-raised + border-hairline.
+  - Tabelas: cabeçalhos/linhas border-gray-600|700 → hairline (+150ms de
+    transition-colors nas linhas); chips de copiar código ganham wash-hover.
+  - Toggles/chips/botões ghost inativos: hover cru gray-500/10 → .wash-hover;
+    hovers accent crus → tokens (hover:text-accent/hover:border-accent).
+  - BugReportModal: botão ENVIAR verde cru bg-green-600/text-white (3.0:1)
+    → bg-ok/text-bg (AA, mesmo precedente do Salvar do AdminRulesPanel).
+  - Modais Viewer/Upgrade: shadow-xl cru + bg-gray-900/95 → shadow-pop +
+    superfícies v3; closes crus → kit .icon-btn (t16).
+- **Fase 2 aliases MVP** (scripts/t18b_aliases.py, padrão Popover do t16):
+  solar-dark-bg/content/border + shadow-2xl → bg-bg/surface/surface-raised +
+  hairline + shadow-pop — 16 ocorrências nos mesmos 6 arquivos, zero aliases
+  restantes no Admin (prova no fim do script). NOTA p/ próximo tick: ~34 usos
+  de aliases permanecem FORA do Admin (AnalysisForm 6, LocalFileHelper 4,
+  ComparePane 4, DriveFilePicker 3, ShortcutHelpModal 3, resto ≤2).
+- **Gates FINAIS**: tsc limpo · vitest 403/403 · build verde CSS 10,31KB gz
+  (meta <30 intacta) initial js 38,36KB gz · e2e-flow 21/21 · axe-core 0/0
+  (login+app, report regenerado na build final index-CBxxbsT5.js) · npm audit
+  prod 10 moderates major-gated, 0 high/critical (estável).
+- **Shots pro aceite** (scripts/t18_admin_shot.mjs, esqueleto axe-scan:
+  preview strictPort + prova de hash do entry + chrome headless --disable-gpu):
+  redesign_shots/t18_{admin_login,workspace,dashboards_v3,admin_rules_v3,
+  bug_report_modal_v3}.png. PIL confirma não-vazias, base escura da spec,
+  accent roxo presente; modal verificado sob o overlay (crop central com
+  texto claro). Aprendizados de harness: (1) navegar mudando só o fragmento
+  NÃO recarrega o SPA — hop via about:blank antes de voltar; (2) reload pode
+  derrubar a sessão guest → re-checar login após recarga; (3) caminho real do
+  BugReport é popover do usuário → menu-item "Report an Issue" (não há botão
+  dedicado no header); (4) testid do painel de dashboards é dash-summary-cards.
+- **Higiene**: 43 processos vite preview ÓRFÃOS da própria lane (todos >1h,
+  filtro cmdline solaris-redesign) mortos via filtro Win32_Process por idade —
+  nenhum processo de outra lane tocado. src-tauri/audio-acoustics/pitch
+  intocados. Sem Telegram.
+
+- Próximo tick: aliases MVP remanescentes fora do Admin (~34) ou diretiva nova
+  do dono.
