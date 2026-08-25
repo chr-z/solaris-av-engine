@@ -32,3 +32,36 @@
 - Validação: tsc limpo; vitest 365/365; build verde; CSS gz 9.85KB (meta <30KB);
   screenshots redesign_shots/r4_{login,fila,analysis,qc_dialog,qc_report}.png
   + r4_axe_summary.json (números do scan) + r4_qc_report.html (documento real).
+
+---
+
+## redesign (tick 7) — aceite visual MVP vs v3 + consolidacao anti-false-done — 25/08/2026 ~07h
+
+- Fila R1-R4 permanece DONE (ticks 1-6); este tick fechou o unico item que
+  faltava na spec (SOLARIS_REDESIGN.md, secao Aceite visual): composites
+  side-by-side MVP vs v3 das 4 telas para o dono aprovar.
+- Baselines MVP capturados do build REAL da main: worktree de prova
+  (%TEMP%/probe-solaris-mvp @ origin/main 5353d1d) + .env.local copiado do
+  checkout de redesign — a main exige VITE_FIREBASE_* no build; sem elas o
+  boot morre em FIREBASE FATAL ERROR antes do React montar (diagnosticado
+  via CDP console). Nenhuma mudanca de codigo na main.
+- Protocolo anti-orfa respeitado: porta alta aleatoria por run, localhost
+  (nao 127.0.0.1), screenshot so apos conferir hash do entry servido contra
+  o dist local (index-D15riw2h.js), chrome headless --disable-gpu, profile
+  descartavel, servidores estaticos proprios fechados no finally. Conteudo
+  das telas provado por texto (visao auxiliar indisponivel nesta sessao):
+  guest login -> fila demo WO-2024-001..115 -> workspace "Demo Video Mode"
+  + RGB Parade/Waveform/Spectrogram/VU + Analysis Sheet -> dialogo QC aberto.
+- Artefatos para aprovacao do dono em redesign_shots/: aceite_1_login_,
+  aceite_2_fila_, aceite_3_analise_ e aceite_4_relatorio_mvp_vs_v3.png
+  (3220x880, MVP a esquerda / v3 a direita, moldura accent na v3). Diferenca
+  real entre paineis provada por estatistica de pixels (ex.: relatorio =
+  documento branco do print stylesheet apenas no lado v3).
+- Scripts versionados: scripts/mvp_shot_acceptance.cjs (captura MVP) +
+  scripts/compose_aceite.py (composite PIL rotulado).
+- Consolidacao anti-false-done @ HEAD 6cc12a5 (= origin/redesign-premium):
+  tsc limpo; vitest 365/365 (33 arquivos); npm run build verde (initial gz
+  index 36.41KB + react-vendor 45.44KB; AnalysisWorkspace 22.83KB lazy;
+  firebase 97.24KB lazy). src-tauri/audio-acoustics/pitch intocados.
+- Residuais axe moderate documentados no tick 6 (region x3 no login,
+  heading-order x1 no dialogo QC); zero critical/serious.
