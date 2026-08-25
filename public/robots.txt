@@ -1,0 +1,5 @@
+# Solaris AV Engine — ferramenta interna de QC (login/demo local).
+# Presente para /robots.txt responder 200 com sintaxe válida (audit LH);
+# sem regra de bloqueio: não há conteúdo público sensível a indexadores.
+User-agent: *
+Allow: /

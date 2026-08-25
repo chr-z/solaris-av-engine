@@ -471,6 +471,107 @@ Lane turbo-web absorvida pelo main @ 30b4b7b (merge ticks #1-#7). Worktree solar
   (LiveMonitors portal, TimestampsModal), sem tocar em comportamento.
 - src-tauri/audio-acoustics/pitch intocados.
 
+
+## turbo-web tick #10 — dívida de segurança: prod zera high/critical — 25/08/2026 ~15h20
+
+- Estado encontrado: fila 1–6 segue DONE/mergeada (nada a re-auditar); main
+  limpo no worktree, origin/main = main. Trabalho novo escolhido: a dívida de
+  segurança marcada fora-de-escopo no tick #7 (npm audit).
+- ANTES (prod): 30 vulns = 1 critical + 8 high + 20 moderate + 1 low.
+  Critical = websocket-driver <=0.7.4 (GHSA-mp7j-qc5w-4988 /
+  GHSA-xv26-6w52-cph6) via firebase@10 > @firebase/database > faye-websocket.
+- Passo 1 — npm audit fix (só não-breaking): crítico morto com patch bump
+  websocket-driver 0.7.4 -> 0.7.5; 29 pacotes re-resolvidos dentro de range;
+  package.json intocado neste passo. Prod: 30 -> 24 vulns.
+- Passo 2 — pins antigos de overrides viraram o gargalo: protobufjs 7.5.5 e
+  fast-xml-parser 4.5.5 (de ticks anteriores) agora são eles mesmos vulneráveis
+  e travavam a cadeia (@grpc/proto-loader, google-gax, proto3-json-serializer,
+  @google-cloud/firestore). Bump mínimo dos pins:
+  protobufjs 7.5.5 -> 7.6.5 (fix range <=7.6.4), fast-xml-parser 4.5.5 -> 5.7.0
+  (fix range <5.7.0). Prod: 24 -> ~20, highs de gRPC zerados.
+- Passo 3 — undici pin 6.25.0 -> 6.28.0 (vuln range <=6.27.0, fix ainda no
+  próprio 6.x — sem major). PROD FINAL: 10 vulns, TODAS moderate major-gated
+  (firebase 12 / firebase-admin 14 / googleapis 176), 0 high, 0 critical.
+  Árvore completa (incl. dev): 35 -> 13 (resta 1 high = vite <=6.4.2, fix é
+  vite@8 major — dívida documentada p/ tick próprio).
+- Gates na árvore atualizada (worktree solaris-web-turbo @ main):
+  - tsc --noEmit limpo; vitest 31 arquivos · 342/342 verdes;
+  - build vite: initial gz 86,71 KB byte-idêntico ao tick #9 (index 33,67 +
+    react-vendor 45,44 + css 7,60); chunks lazy idem (firebase 97,35,
+    AdminGate 18,93, AnalysisWorkspace 19,71, sheetSync 11,18);
+  - E2E fluxo real: 21/21 asserts ok;
+  - axe-core build servida: 0 login / 0 app principal (report regenerado);
+  - console probe CDP: 0 erros / 0 warnings / 0 exceções (guestClicked:false =
+    esperado, build offline entra direto no demo);
+  - Lighthouse x2 rodadas (--headless=new --disable-gpu): performance 99 ·
+    accessibility 100 · best-practices 100 · seo 100 — FCP 1,4s · LCP 1,6s ·
+    TBT 10ms · CLS 0. Perf 99 vs 100 do tick #9 é ruído de CPU (desktop e
+    áudio lanes em paralelo); bundle inicial idêntico, tempos iguais,
+    confirmado em 2 rodadas.
+- Pendências registradas (major-gated, um tick cada com gates completos):
+  firebase ^10->^12, firebase-admin ^12->^14, googleapis ^140->^176,
+  vite ^4->^8 (high dev).
+- src-tauri intocado. Sem Telegram.
+
+### 2026-08-25 ~19h — turbo-web tick #11: guardrail noturno — zero deltas, gates re-provados
+
+- Estado encontrado: fila 1–6 segue DONE/mergeada; origin/main = main local
+  @ 86b6b85 (tick #10); worktree limpo. Branches com ahead>0 sao de OUTRAS
+  lanes (desktop 37, redesign 25, audio 18, features 17) — nenhum trabalho da
+  fila web ficou orfao sem PR.
+- Gates re-provados nesta arvore exata:
+  - tsc --noEmit limpo; vitest 342/342 (31 arquivos);
+  - build deterministica: initial gz 86,71 KB byte-identico ao baseline
+    (index 33,67 + react-vendor 45,44 + css 7,60); lazy idem (firebase 97,35,
+    AdminGate 18,93, AnalysisWorkspace 19,71, sheetSync 11,18);
+  - E2E fluxo real 21/21 asserts;
+  - npm audit prod: 10 moderate major-gated, 0 high/0 critical (estavel vs #10);
+  - axe-core na build servida (preview porta alta aleatoria, hash do entry
+    conferido contra dist local): 0 violacoes login / 0 app principal;
+  - console probe CDP: 0 erros/0 warnings/0 excecoes;
+  - Lighthouse x2 rodadas (--headless=new --disable-gpu): 100/100/100/100 nas
+    duas — perf 99 do tick #10 confirmado como ruido de CPU; FCP 1,4s /
+    LCP 1,4s / TBT 0ms / CLS 0.
+- Nenhuma mudanca de codigo => nenhum commit alem deste registro. Pendencias
+  major-gated seguem as listadas no tick #10 (firebase 12, firebase-admin 14,
+  googleapis 176, vite 8).
+- src-tauri intocado. Sem Telegram.
+
+---
+
+### 2026-08-25 ~20h20 - turbo-web tick #12: vite 4->6.4.3 (security) + robots.txt; guardrail re-provado
+
+- Guardrail inicial (arvore no estado do tick #11): tsc limpo, vitest 342/342,
+  build initial gz 86,71KB byte-identica, e2e 21/21, axe 0/0 (hash entry
+  conferido), console probe 0 eventos, Lighthouse 100/100/100/100.
+- Divergencia de audit detectada vs tick #10/#11: 1 HIGH apareceu (13 vulns
+  total) — vite <=6.4.2 com 7 advisories de dev-server (path traversal /
+  server.fs.deny bypass no Windows, launch-editor cmd injection). A pendencia
+  major-gated "vite 8" virou high real.
+- Decisao por dados (OSV): todas as 7 advisories tem fix na linha 6.x
+  (6.4.3 fecha a ultima). Upgrade MINIMO escolhido: vite ^4.2->^6.4.3 +
+  plugin-react ^3.1->^4.7.0 (peer cobre vite 4-7); evita salto p/ v8
+  (rolldown-by-default, blast radius maior). vitest 4 ja aceitava vite ^6.
+- Resultado seguranca: 13 -> 10 vulns (0 high, 0 low); prod segue 10 moderate
+  major-gated (firebase 12 / firebase-admin 14 / googleapis 176 continuam na
+  fila, um tick cada).
+- Bundle: initial gz 86,71 -> 87,25 KB (+0,54KB, +0,6% = runtime novo do
+  bundler; alvo <500KB intacto). Chunks lazy preservados (firebase 97,38,
+  AdminGate 18,99, AnalysisWorkspace 20,04, sheetSync 11,19).
+- Fix colateral: vite 6 preview responde index.html com 200 em rotas nao-
+  existentes (SPA fallback) => audit LH robots-txt reprovava (92).
+  public/robots.txt adicionado (valido e permissivo; Disallow:/ derrubaria o
+  audit is-crawlable pra 66 — testado e descartado). SEO de volta a 100.
+- Gates na arvore final: tsc limpo; vitest 342/342; e2e 21/21; axe 0/0;
+  console probe 0 eventos; Lighthouse x2 (--headless=new --disable-gpu):
+  R1 99/100/100/100 (FCP 1,4s LCP 1,5s TBT 0 CLS 0), R2 100/100/100/100.
+- Higiene de maquina: kill_turbo_orphans.ps1 -MaxAgeHours 0 limpou 6 previews
+  orfaos DESTE projeto (portas 4223/4261/4707/4711/4713; kill do wrapper npx
+  NAO mata o filho node do preview — usar sempre o script). ~50 orfaos de
+  vite preview da lane redesign (outras pastas) FORA do meu escopo por
+  politica do script — alertado aqui pro worker responsavel limpar.
+- src-tauri intocado. Sem Telegram.
+
 ## redesign (tick 15) — acabamento v3 pós-fusão: zoom dos monitores + Time Markers — 25/08/2026 ~16h45
 
 - Fila do t14 executada: os dois componentes pré-v3 que a main trouxe no merge
