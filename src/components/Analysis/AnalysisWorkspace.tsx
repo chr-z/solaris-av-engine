@@ -17,7 +17,9 @@ import OverlayControls from '../Monitors/OverlayControls';
 import Dock from '../Layout/Dock';
 import UserAvatar from '../Auth/UserAvatar';
 import Popover from '../Core/Popover';
+import Tooltip from '../Core/Tooltip';
 import ScoreRing from '../Core/ScoreRing';
+import ScoreSpark from '../Core/ScoreSpark';
 import ShortcutHelpModal from '../Core/ShortcutHelpModal';
 import { SaveIcon, ClipboardCheckIcon, YouTubeIcon, GoogleDriveIcon, XIcon, GridIcon, ClockIcon, PencilIcon, InfoIcon, ColumnsIcon, RowsIcon, RefreshIcon } from '../Core/icons';
 
@@ -35,6 +37,7 @@ import { useI18n } from '../../i18n/I18nContext';
 import { dropdownFields, inconformityToCategoryMap, resultFields, inconformityScores, categoryMaxScores } from '../../utils/constants';
 import { humanizeSaveError } from '../../utils/humanErrors';
 import { parseScore } from '../../utils/scoreFormat';
+import { formatScorePtBr } from '../../engine/scoring';
 import { getCompareGridClass } from '../../utils/compareMode';
 import { database } from '../../config/firebase';
 import firebase from 'firebase/compat/app';
@@ -508,6 +511,18 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
     const idx = headers.indexOf('FINAL SCORE');
     if (idx < 0) return null;
     return parseScore(localRowData[idx]?.value);
+  }, [localRowData, headers]);
+
+  // Tick 9: breakdown por categoria pro ScoreSpark (mesma matemática do
+  // ScoringEngine usada nas colunas; memo — roda a cada marcação, não por render).
+  const categoryBreakdownForSpark = useMemo(() => {
+    if (!localRowData || headers.length === 0) return null;
+    try {
+      const { result } = recalculateScoresWithEngine(localRowData, headers);
+      return result.categories;
+    } catch {
+      return null;
+    }
   }, [localRowData, headers]);
 
 
@@ -984,6 +999,33 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                           size={44}
                           label={t('workspace.finalScore') || 'FINAL'}
                       />
+                  )}
+                  {/* Tick 9: micro-sparkline do perfil por categoria (spec v3:
+                      "pill com número tabular + micro-sparkline da tendência").
+                      Tooltip rico segue o padrão da casa; some junto com o anel. */}
+                  {localRowData && headers.includes('FINAL SCORE') && categoryBreakdownForSpark && (
+                      <Tooltip
+                          content={
+                              <div className="space-y-1 text-left">
+                                  <p className="font-bold text-white">{t('workspace.scoreSparkTitle')}</p>
+                                  {categoryBreakdownForSpark.map((c) => {
+                                      const label = c.categoryId; // IDs do seed JÁ são o vocabulário do MVP
+                                      return (
+                                          <p key={c.categoryId} className="flex justify-between gap-6 text-xs">
+                                              <span className="text-gray-400">{label}</span>
+                                              <span className="font-mono tnum text-gray-300">
+                                                  {formatScorePtBr(c.finalScore)}/{formatScorePtBr(c.maxScore)}
+                                              </span>
+                                          </p>
+                                      );
+                                  })}
+                              </div>
+                          }
+                      >
+                          <span tabIndex={0} role="img" aria-label={String(t('workspace.scoreSparkTitle'))} className="cursor-help inline-flex">
+                              <ScoreSpark categories={categoryBreakdownForSpark} />
+                          </span>
+                      </Tooltip>
                   )}
                   <h2 className="font-bold">Analysis Sheet</h2>
               </div>

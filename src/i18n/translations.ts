@@ -107,6 +107,9 @@ export const en = {
 
   // R3 v3 — analysis screen finish
   'workspace.finalScore': 'FINAL',
+
+  // tick 9 redesign — micro-sparkline do badge de score (perfil por categoria)
+  'workspace.scoreSparkTitle': 'Score profile by category (dot = weakest)',
   'compare.changeSource': 'Change side B source',
   'compare.loadFailed': 'Side B could not be loaded. The link may be private or unsupported.',
   'compare.syncMode': 'Sync',
@@ -377,6 +380,9 @@ export const pt: Record<TranslationKey, string> = {
 
   // R3 v3 — acabamento da tela de análise
   'workspace.finalScore': 'FINAL',
+
+  // tick 9 redesign — micro-sparkline do badge de score (perfil por categoria)
+  'workspace.scoreSparkTitle': 'Perfil da nota por categoria (ponto = mais fraca)',
   'compare.changeSource': 'Trocar a fonte do lado B',
   'compare.loadFailed': 'Não foi possível carregar o lado B. O link pode ser privado ou não suportado.',
   'compare.syncMode': 'Sincronia',
