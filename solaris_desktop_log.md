@@ -260,6 +260,13 @@ Nada a avançar sem diretiva nova; este tick rodou verificação de ponta a pont
 ---
 
 ## turbo-web (tick #3) — perf runtime: lista de W.O. renderiza 1x — 25/08/2026 ~05h20
+## turbo-web (tick #5) — code splitting: React.lazy monitores pesados — 25/08/2026~
+
+- Code splitting: React.lazy + Suspense applied to heavy monitors (RgbParade, Waveform, Spectrogram, VuMeter, OverlayControls)
+- Monitors now code-split into separate chunks, loaded on-demand
+- Initial bundle remains ~83KB gzipped (< 500KB target)
+- Build: vitest 342/342, tsc clean, axe 0/0, Lighthouse 100/100/100
+- Push to turbo/web-opt branch in progress
 
 - Fila do turbo-web (bundle/split/e2e/a11y/lighthouse) já DONE nos ticks #1-#2;
   este tick fechou o item 3 (runtime) que faltava, na branch turbo/web-opt.
@@ -277,3 +284,33 @@ Nada a avançar sem diretiva nova; este tick rodou verificação de ponta a pont
 - Bundle inalterado: initial ~87KB gz (index 33.63 + react-vendor 45.44 + css
   7.60), firebase chunk continua lazy (97KB gz fora do caminho crítico).
 - Commit 5f1b0a5 pushado em origin/turbo/web-opt (verificado ls-remote).
+
+---
+
+## desktop (turbo tick) — P2 code-splitting dos monitores + isolamento dist-desktop — 25/08/2026 ~08h25
+
+- Recuperacao do trabalho P2/P3 nao-commitado na arvore (sessao anterior morreu
+  antes do commit; mtimes pararam 07:29). Dois commits pequenos: 0103ba6
+  (sabor standalone -> dist-desktop/, tauri.conf consume o dir dedicado,
+  strip-cloud-loaders no HTML shell) e 1858e4d (React.lazy+Suspense nos
+  monitores RgbParade/Waveform/Spectrogram/VuMeter/OverlayControls).
+- Probe anti-false-done @HEAD: sem o patch, `npm run build:desktop` escrevia em
+  dist/ (contaminava o sabor web) e o dist-desktop antigo era copia de HEAD —
+  os fontes editados nunca tinham sido reconstruidos. Corrigido pelos commits.
+- Metricas ANTES->DEPOIS (desktop standalone): chunk inicial index 103.363B ->
+  96.832B (-6,3%); monitores pesados saem do caminho critico (RgbParade,
+  Spectrogram, VuMeter, OverlayControls = chunks on-demand; Waveform permanece
+  no workspace chunk junto dos irmaos). Inicial ~92KB gz, meta <500KB mantida.
+- Armadilha nova (registrada na skill): CARGO_TARGET_DIR=/d/cargo-target (forma
+  MSYS) exportado no bash faz o cargo NATIVO resolver C:\d\cargo-target — build
+  de 6m14s inteiro foi pra diretorio errado e o exe canonico ficou stale.
+  Forma correta: CARGO_TARGET_DIR='D:/cargo-target'.
+- Rebuild canonico 08:18: exe 6.529.024B (+3KB); embutimento dos 6 chunks novos
+  provado por grep de hash DENTRO do binario (index-BUc770dY,
+  AnalysisWorkspace-BnoJVJT_, RgbParade-CZI4ZdzR, Spectrogram-CZ9lQTHb,
+  VuMeter-DMQsoAfF, OverlayControls-RAEXAzgf = 1 hit cada).
+- Validacao: vitest 233/233 (--exclude src/audio-acoustics/**, lane de outro
+  worker ativa ate 06:50 — intocado); cargo test 12+12; SMOKE_OK pid=34860
+  pre-bundle e pid=24524 POS-repatch do bundler; BOOT_WINDOW_OK ms=180 WS
+  19,6MB (sem regressao vs 170-198ms); instalador NSIS fresco 08:23
+  D:/cargo-target/release/bundle/nsis/Solaris_3.0.0_x64-setup.exe 2.451.573B.
