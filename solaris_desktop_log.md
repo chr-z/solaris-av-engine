@@ -44,3 +44,32 @@ versão do lockfile) compilando as funções puras TS on-the-fly.
 
 Resultado: **E2E_FLOW OK — 21/21 asserts**; suíte vitest 29 arquivos / 332 passed
 intacta. Zero dependência nova. Próximo tick: a11y pass (axe-core) ou Lighthouse baseline.
+
+### 2026-08-25 (noite) — tick turbo-web: lazy A/B compare + Lighthouse ANTES/DEPOIS
+
+Code splitting fechado: ComparePane (modo A/B) era eager dentro do
+AnalysisWorkspace; agora e React.lazy + Suspense (fallback inline) — chunk
+proprio baixa so ao ativar o modo compare.
+
+| chunk | antes raw/gz | depois raw/gz |
+|---|---|---|
+| ComparePane.js | (dentro do workspace) | 3,55 KB / 1,36 KB gz |
+| AnalysisWorkspace.js | 70,30 KB / 20,11 KB | 67,47 KB / 19,68 KB |
+| initial total | ~293 KB / ~86 KB gz | ~293 KB / ~86 KB gz (inalterado, como esperado) |
+
+Lighthouse 13.4.1 local (preview estatico em porta aleatoria alta, hash do
+entry conferido, headless novo sem GPU, mobile default):
+
+| categoria | ANTES | DEPOIS |
+|---|---|---|
+| Performance | 95 | 95 |
+| Accessibility | 100 | 100 |
+| Best Practices | 96 | 96 |
+
+Metricas: FCP 1,7->1,4 s, Speed Index 1,7->1,4 s, LCP 2,9 s estavel,
+TBT 0 ms, CLS 0. Axe-core re-validado na build nova: login 0 violacoes,
+app principal 0 violacoes (fallback do Suspense passa em contraste).
+
+Suite: vitest 29 arquivos / 332 passed, tsc --noEmit limpo, build ok.
+Fila do turbo-web: itens 1-6 todos executados (1/3/4 em ticks 24-25/08,
+2 e 6 neste tick).
