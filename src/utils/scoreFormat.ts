@@ -53,3 +53,14 @@ export function parseScore(value: number | string | null | undefined): number | 
         : value;
     return Number.isFinite(n) ? n : null;
 }
+
+/**
+ * Classe do badge semântico pro valor de score cru da planilha (tick 12):
+ * parseia e devolve "badge-ok"/"badge-warn"/"badge-fail" conforme o tier
+ * (mesmos cortes do scoreBandColor). Não-numérico/vazio → '' (badge neutro,
+ * sem inventar cor pra dado que o domínio não reconhece).
+ */
+export function scoreBandClass(value: number | string | null | undefined): string {
+    const n = parseScore(value);
+    return n === null ? '' : `badge-${scoreBandColor(n)}`;
+}

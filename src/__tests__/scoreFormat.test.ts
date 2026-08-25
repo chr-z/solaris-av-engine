@@ -6,6 +6,7 @@ import {
     scoreBandColor,
     formatScore,
     parseScore,
+    scoreBandClass,
 } from '../utils/scoreFormat';
 
 describe('ringDash', () => {
@@ -56,6 +57,32 @@ describe('formatScore / parseScore', () => {
         expect(parseScore(' 4,55 ')).toBeCloseTo(4.55);
         expect(parseScore(3)).toBe(3);
         expect(parseScore('oops')).toBeNull();
+    });
+});
+
+describe('scoreBandClass (tick 12 — badge semântico na lista)', () => {
+    it('maps tiers exactly like scoreBandColor', () => {
+        // Mesmos cortes do anel: >=4 ok, >=3 warn, senão fail
+        expect(scoreBandClass('5.00')).toBe('badge-ok');
+        expect(scoreBandClass('4.60')).toBe('badge-ok');
+        expect(scoreBandClass('3.99')).toBe('badge-warn');
+        expect(scoreBandClass('3.00')).toBe('badge-warn');
+        expect(scoreBandClass('2.99')).toBe('badge-fail');
+        expect(scoreBandClass('0')).toBe('badge-fail');
+    });
+
+    it('parses sheet-formatted values (vírgula decimal)', () => {
+        expect(scoreBandClass('4,55')).toBe('badge-ok');
+        expect(scoreBandClass(' 3,20 ')).toBe('badge-warn');
+        expect(scoreBandClass('1,10')).toBe('badge-fail');
+    });
+
+    it('returns empty class for non-numeric/garbage (never invents color)', () => {
+        expect(scoreBandClass(null)).toBe('');
+        expect(scoreBandClass(undefined)).toBe('');
+        expect(scoreBandClass('')).toBe('');
+        expect(scoreBandClass('n/a')).toBe('');
+        expect(scoreBandClass('oops')).toBe('');
     });
 });
 

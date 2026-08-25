@@ -242,6 +242,18 @@
     overflow: visible;
   }
 
+  /* Badge de score na lista de análise (tick 12): pill um pouco maior que o
+     padrão pra carregar o número com presença, mantendo o mesmo vocabulário
+     semântico (ok/warn/fail). Número já é tabular via .tnum interno. */
+  .badge-score {
+    padding: 2px var(--space-2);
+    font-size: var(--text-xs);
+  }
+  .badge-score .tnum {
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
   /* ---------- Checkbox customizado animado ---------- */
   .checkbox-custom {
     appearance: none;

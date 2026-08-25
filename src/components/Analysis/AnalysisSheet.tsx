@@ -9,6 +9,8 @@ import { UserProfile } from '../../types';
 import UserAvatar from '../Auth/UserAvatar';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
 import { getVideoIdFromUrl } from '../../utils/videoUtils';
+// Tick 12: badge de score com tier semântico (pill tabular verde/amarelo/vermelho)
+import { formatScore, scoreBandClass } from '../../utils/scoreFormat';
 
 declare const gapi: any;
 
@@ -141,7 +143,7 @@ const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, isSele
                     ? 'bg-solar-accent/20 border-l-4 border-solar-accent' 
                     : isLockedByOther
                     ? 'border-l-4 border-blue-500 bg-blue-500/5'
-                    : 'border-l-4 border-transparent hover:bg-gray-500/10 cursor-pointer'
+                    : 'border-l-4 border-transparent hover:bg-surface/50 even:bg-surface/30 even:hover:bg-surface/70 cursor-pointer transition-all duration-150'
             }`}
             title={isLockedByOther ? `${lockInfo?.user.givenName} is editing.` : ''}
         >
@@ -163,8 +165,11 @@ const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, isSele
                     {finalCell?.value && (
                         <div className="mt-1.5 flex items-baseline gap-1">
                             <span className="text-xs text-gray-400">Score:</span>
-                            <span className="font-bold text-lg leading-none">
-                                {finalCell.value}
+                            {/* Tick 12: pill com número tabular, cor pelo tier semântico
+                                (verde=ok, amarelo=atenção, vermelho=inconformidade).
+                                Mesma informação do MVP (o valor cru), acabamento v3. */}
+                            <span className={`badge-pill badge-score ${scoreBandClass(finalCell.value)}`}>
+                                <span className="tnum">{formatScore(finalCell.value) ?? finalCell.value}</span>
                             </span>
                         </div>
                     )}
