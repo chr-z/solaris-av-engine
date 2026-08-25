@@ -36,7 +36,8 @@ import { useLicense } from '../../licensing/LicenseContext';
 import { OverlaySettings, VideoChoice, UserProfile, Timestamp } from '../../types';
 import { useI18n } from '../../i18n/I18nContext';
 import { dropdownFields, inconformityToCategoryMap, resultFields, inconformityScores, categoryMaxScores } from '../../utils/constants';
-import { humanizeSaveError } from '../../utils/humanErrors';
+import { humanizeSaveError, humanizeMarkerSaveError } from '../../utils/humanErrors';
+import { useEscapeToClose } from '../../hooks/useEscapeToClose';
 import { parseScore } from '../../utils/scoreFormat';
 import { formatScorePtBr } from '../../engine/scoring';
 import { getCompareGridClass } from '../../utils/compareMode';
@@ -100,14 +101,22 @@ interface TimestampModalProps {
     currentVideoName: string;
 }
 
-const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoRef, selectedOsIndex, userProfile, currentVideoId, currentVideoName }) => {
+// v3 (t15): exportado pra teste de componente — erro humano no save de
+// marcadores é contrato da spec e precisa ser travado por teste.
+export const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoRef, selectedOsIndex, userProfile, currentVideoId, currentVideoName }) => {
     const [timestamps, setTimestamps] = useState<Timestamp[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [comment, setComment] = useState('');
     const [sortOrder, setSortOrder] = useState<'time' | 'comment'>('time');
     const [editingTimestampId, setEditingTimestampId] = useState<string | null>(null);
     const [editingComment, setEditingComment] = useState('');
+    // v3: falha de save vira mensagem humana (nunca alert cru); o comentário
+    // digitado permanece no campo pra re-tentativa (promessa do hint).
+    const [markerSaveError, setMarkerSaveError] = useState<string | null>(null);
     const listRef = useRef<HTMLUListElement>(null);
+
+    // v3: mesmo gesto de fechar dos modais irmãos (ESC).
+    useEscapeToClose(isOpen, onClose);
 
     useEffect(() => {
         if (!isOpen || !selectedOsIndex || !currentVideoId) return;
@@ -157,28 +166,34 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
             setComment('');
             setEditingTimestampId(null);
         }
+        setMarkerSaveError(null);
     };
     
     const handleSaveNew = async () => {
         if (!comment.trim() || !userProfile || !videoRef.current) return;
+        setMarkerSaveError(null);
 
-        const newTimestamp = {
-            time: videoRef.current.currentTime,
-            comment: comment.trim(),
-            analyst: {
-                id: userProfile.id, name: userProfile.name, givenName: userProfile.givenName, picture: userProfile.picture,
-            },
-            createdAt: (await getFirebaseCompat()).app.database.ServerValue.TIMESTAMP,
-            fileId: currentVideoId,
-            fileName: currentVideoName,
-        };
-        
         try {
+            // Dentro do try: em demo/offline o próprio loadFirebase rejeita —
+            // a falha precisa cair na mensagem humana, não num rejection cru.
+            const newTimestamp = {
+                time: videoRef.current.currentTime,
+                comment: comment.trim(),
+                analyst: {
+                    id: userProfile.id, name: userProfile.name, givenName: userProfile.givenName, picture: userProfile.picture,
+                },
+                createdAt: (await getFirebaseCompat()).app.database.ServerValue.TIMESTAMP,
+                fileId: currentVideoId,
+                fileName: currentVideoName,
+            };
             await (await getDb()).ref(`timestamps/${selectedOsIndex}/${currentVideoId}`).push(newTimestamp);
             setComment('');
         } catch (error) {
             console.error("Failed to save timestamp:", error);
-            alert("Error saving timestamp. Check connection.");
+            // v3: mensagem humana inline (spec v3 — nunca raw error/alert);
+            // o comentário permanece no campo conforme prometido no hint.
+            const raw = error instanceof Error ? error.message : String(error);
+            setMarkerSaveError(humanizeMarkerSaveError(raw).title);
         }
     };
     
@@ -215,9 +230,12 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
     if (!isOpen) return null;
 
     return createPortal(
-        <div 
-            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in-fast" 
+        <div
+            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in-fast"
             onClick={onClose}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Time Markers"
         >
             <div 
                 className="bg-surface text-white w-full max-w-2xl h-[70vh] rounded-lg shadow-xl flex flex-col"
@@ -239,7 +257,15 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
                     </div>
                 </header>
                 <div className="flex-1 min-h-0 overflow-y-auto p-2">
-                     {isLoading && <p className="text-gray-400 text-center p-4">Loading markers...</p>}
+                     {isLoading && (
+                        <div className="p-4 space-y-3" aria-hidden="true">
+                            <div className="skeleton skeleton-line w-2/5 mx-auto" />
+                            <div className="skeleton skeleton-line" />
+                            <div className="skeleton skeleton-line w-4/5" />
+                            <div className="skeleton skeleton-line w-3/5" />
+                            <span className="sr-only">Loading markers…</span>
+                        </div>
+                     )}
                      {!isLoading && sortedTimestamps.length === 0 && (
                         <div className="text-center p-6 text-gray-400">
                            <ClockIcon className="w-12 h-12 mx-auto mb-2 text-ink-secondary"/>
@@ -285,9 +311,15 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
                 </div>
                 <div className="flex-shrink-0 p-3 border-t border-hairline bg-bg/50">
                     <div className="space-y-2">
-                        <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Add a time marker comment..." rows={2} className="w-full bg-bg border border-hairline rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200 dark:placeholder-gray-500" onFocus={handleAddClick}/>
+                        {markerSaveError && (
+                            <p role="alert" className="text-sm text-fail flex items-start gap-1.5">
+                                <span aria-hidden="true">⚠</span>
+                                <span>{markerSaveError} Your comment is still here — check the connection and try again.</span>
+                            </p>
+                        )}
+                        <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Add a time marker comment..." rows={2} className="input w-full resize-none" onFocus={handleAddClick}/>
                         <div className="flex justify-end">
-                            <button onClick={handleSaveNew} disabled={!comment.trim()} className="btn btn-primary px-4 py-2 text-sm font-semibold disabled:opacity-50">Add Marker</button>                        </div>
+                            <button onClick={handleSaveNew} disabled={!comment.trim()} className="btn btn-primary px-4 py-2 text-sm disabled:opacity-50">Add Marker</button>                        </div>
                     </div>
                 </div>
             </div>

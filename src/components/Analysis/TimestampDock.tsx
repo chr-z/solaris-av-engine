@@ -4,6 +4,7 @@ import { Timestamp, UserProfile } from '../../types';
 import { XIcon } from '../Core/icons';
 import UserAvatar from '../Auth/UserAvatar';
 import Dock from '../Layout/Dock';
+import { humanizeMarkerSaveError } from '../../utils/humanErrors';
 
 interface TimestampDockProps {
     videoRef: React.RefObject<HTMLVideoElement>;
@@ -25,6 +26,9 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
     const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [comment, setComment] = useState('');
+    // v3: falha de save vira mensagem humana inline (nunca alert cru);
+    // o comentário digitado permanece no campo pra re-tentativa.
+    const [markerSaveError, setMarkerSaveError] = useState<string | null>(null);
     // turbo-web: videoRef.current must NEVER be read during render (react-hooks/
     // refs) — it is null on first paint and reading it makes render output depend
     // on a mutable ref. The current time and media presence are captured into
@@ -83,30 +87,36 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
     const handleCancel = () => {
         setIsAdding(false);
         setComment('');
+        setMarkerSaveError(null);
     };
 
     const handleSave = async () => {
         if (!comment.trim() || !userProfile || !videoRef.current) return;
+        setMarkerSaveError(null);
 
-        const newTimestamp = {
-            time: videoRef.current.currentTime,
-            comment: comment.trim(),
-            analyst: {
-                id: userProfile.id,
-                name: userProfile.name,
-                givenName: userProfile.givenName,
-                picture: userProfile.picture,
-            },
-            createdAt: (await getFirebaseCompat()).app.database.ServerValue.TIMESTAMP,
-        };
-        
         try {
+            // Dentro do try: em demo/offline o próprio loadFirebase rejeita —
+            // a falha precisa cair na mensagem humana, não num rejection cru.
+            const newTimestamp = {
+                time: videoRef.current.currentTime,
+                comment: comment.trim(),
+                analyst: {
+                    id: userProfile.id,
+                    name: userProfile.name,
+                    givenName: userProfile.givenName,
+                    picture: userProfile.picture,
+                },
+                createdAt: (await getFirebaseCompat()).app.database.ServerValue.TIMESTAMP,
+            };
             const db = await getDb();
             await db.ref(`timestamps/${selectedOsIndex}`).push(newTimestamp);
             handleCancel();
         } catch (error) {
             console.error("Failed to save timestamp:", error);
-            alert("Could not save timestamp. Check connection.");
+            // v3: mensagem humana inline (spec v3 — nunca raw error/alert);
+            // o comentário permanece no campo conforme prometido no hint.
+            const raw = error instanceof Error ? error.message : String(error);
+            setMarkerSaveError(humanizeMarkerSaveError(raw).title);
         }
     };
     
@@ -126,7 +136,14 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
     return (
         <Dock title="Time Markers" className="flex flex-col h-full">
             <div className="flex-1 min-h-0 overflow-y-auto p-2">
-                {isLoading && <p className="text-gray-400 text-center p-4">Loading...</p>}
+                {isLoading && (
+                    <div className="p-3 space-y-3" aria-hidden="true">
+                        <div className="skeleton skeleton-line w-2/5 mx-auto" />
+                        <div className="skeleton skeleton-line" />
+                        <div className="skeleton skeleton-line w-4/5" />
+                        <span className="sr-only">Loading…</span>
+                    </div>
+                )}
                 {!isLoading && timestamps.length === 0 && !isAdding && (
                     <p className="text-gray-400 text-center text-sm p-4">No markers yet. Add one below.</p>
                 )}
@@ -163,20 +180,27 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
                     ))}
                 </ul>
             </div>
-            <div className="flex-shrink-0 p-2 border-t border-solar-light-border dark:border-solar-dark-border">
+            <div className="flex-shrink-0 p-2 border-t border-hairline">
                 {isAdding ? (
                     <div className="space-y-2">
+                        {markerSaveError && (
+                            <p role="alert" className="text-sm text-fail flex items-start gap-1.5">
+                                <span aria-hidden="true">⚠</span>
+                                <span>{markerSaveError} Your comment is still here — check the connection and try again.</span>
+                            </p>
+                        )}
                         <textarea
                             value={comment}
                             onChange={e => setComment(e.target.value)}
                             placeholder={`Comment at ${formatTime(markerTime)}...`}
                             rows={2}
-                            className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent"
+                            className="input w-full resize-none"
                             autoFocus
                         />
                         <div className="flex justify-end gap-2">
-                            <button onClick={handleCancel} className="px-3 py-1 text-sm rounded-md hover:bg-gray-500/20 transition-colors">Cancel</button>
-                            <button onClick={handleSave} disabled={!comment.trim()} className="px-3 py-1 text-sm rounded-md bg-solar-accent text-bg hover:bg-solar-accent-hover disabled:opacity-50 transition-colors">Save</button>                        </div>
+                            <button onClick={handleCancel} className="btn btn-ghost px-3 py-1 text-sm">Cancel</button>
+                            <button onClick={handleSave} disabled={!comment.trim()} className="btn btn-primary px-3 py-1 text-sm disabled:opacity-50">Save</button>
+                        </div>
                     </div>
                 ) : (
                     <button
