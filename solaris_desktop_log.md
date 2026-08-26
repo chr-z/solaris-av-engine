@@ -204,6 +204,36 @@
 # SOLARIS — log de trabalho
 
 ## turbo-web
+### 2026-08-25 ~20h30 - tick #16: guardrail noturno - fila DONE, zero deltas, gates re-provados
+
+- Fila bundle/split/e2e/a11y/lighthouse segue 100% DONE (ticks #1-#15); sem diretiva nova.
+- Upstream auditado: origin/main sem delta (fd281fc == local); v2-upgrade contida em main;
+  develop avançou só README (bd3a560, fora do escopo da lane). Nada a sincronizar.
+- Gates na main @ fd281fc:
+  vitest **342/342** (+tsc clean), e2e fluxo real **21/21**, axe **0/0** violacoes,
+  console probe **0 eventos**, build byte-estavel `index-C1mX7UAW.js` -
+  initial gz **79,65KB core** (index 33,86 + react-vendor 45,79; +CSS 7,60 = 87,25KB) vs alvo <500KB.
+- Lighthouse x2 (headless --disable-gpu): R1 **99/100/100/100**, R2 **99/100/100/100**
+  (FCP 1.5s / LCP 1.6s / TBT 20 e 0ms / CLS 0; perf 99 = ruido CPU ambiente documentado).
+- Preview em porta alta aleatoria (4540) com PROVA de hash (entry servido == dist local);
+  encerrado apos o gate. Background preview passou a esbarrar no guard de foreground do
+  terminal - protocolo: background=true + probe/porta em chamada separada.
+
+
+### 2026-08-25 ~21h40 - tick #15: guardrail noturno - fila DONE, zero deltas, gates re-provados
+
+- Fila bundle/split/e2e/a11y/lighthouse segue 100% DONE (ticks #1-#14); sem diretiva nova.
+- Deps: npm audit re-checado - prod 10 moderates major-gated (0 high/critical),
+  sem advisory nova desde o tick #12. Nada a atualizar.
+- Gates na main @ d479238 (sync origin 0/0):
+  vitest **342/342** (+tsc clean), e2e fluxo real **21/21**, axe **0/0** violacoes,
+  console probe **0 eventos**, build byte-estavel `index-C1mX7UAW.js` -
+  initial gz **79,65KB core** (index 33,86 + react-vendor 45,79; +CSS 7,60 = 87,25KB) vs alvo <500KB.
+- Lighthouse x2 (headless --disable-gpu): R1 **99/100/100/100**, R2 **98/100/100/100**
+  (perf <100 = ruido CPU ambiente ~40% ja documentado nos ticks #13/#14; TBT 20/140ms).
+- Preview servido em porta alta aleatoria com PROVA de hash (entry servido == dist local);
+  preview v4->v6 segue IPv6-only (::1), localhost family:6 ok, 127.0.0.1 ECONNREFUSED esperado.
+
 
 ### 2026-08-24 — tick 1: auditoria de bundle (baseline)
 
@@ -691,6 +721,41 @@ src-tauri intocado. Sem Telegram.
   diretiva nova do dono.
 - src-tauri/audio-acoustics/pitch intocados. Sem Telegram.
 
+## turbo-web tick #14 — guardrail noturno + higiene de orfaos — 25/08/2026 ~19h05
+
+Estado encontrado: worktree @ main == origin/main (88108e3), untracked nenhum;
+`scripts/axe-report.json` sujo era so o artefato REGENERADO pelo proprio tick
+#13 (timestamp/porta novas, 0 violacoes dentro) — superado por re-scan fresco
+deste tick. Fila original (1-6) segue DONE desde o tick #5.
+
+GATES (arvore limpa, build fresca):
+- npm run build (vite 6.4.3): initial = index 33,86 + react-vendor 45,79 +
+  css 7,60 = 87,25 KB gz — BYTE-ESTAVEL vs ticks #12/#13 (mesmo hash de entry
+  index-C1mX7UAW.js). Chunks lazy intactos (firebase 97,38 / AdminGate 18,99 /
+  AnalysisWorkspace 20,04 / sheetSync 11,19 / ComparePane 1,37).
+- tsc --noEmit limpo; vitest 31 arquivos / 342/342 (~52s);
+- e2e fluxo real: 21/21 asserts ok;
+- axe-core scan: 0 violacoes main app (build offline/demo sem login), preview
+  PROVADO nosso antes do scan (entry index-C1mX7UAW.js na porta 4425);
+- Lighthouse x3 (--headless=new --disable-gpu): R1 99/100/100/100 (FCP 1,5 /
+  LCP 1,6 / CLS 0,000 / TBT 27ms); R2 e R3 perf 97 (TBT 185/155ms, FCP/LCP/
+  CLS identicos). Diagnostico: build byte-idêntica não regride — CPU ambiente
+  medida a ~40% durante R2/R3 (enxame de workers/preview de outras lanes ativo
+  hoje); ruído documentado como veio, sem re-run até "pegar" score.
+- npm audit prod: 10 moderate, 0 high/critical — mesmo patamar estável de
+  #12/#13.
+
+HIGIENE (achado novo, SEM acao fora da lane):
+- Enxame de `vite preview` orfaos de OUTRAS lanes vivo agora: ~30 trios
+  npx/cmd/node da lane redesign (03:54–14:03 de hoje, portas 43xx–48xx),
+  + work_ck_repo porta 4179 (24/08) e Hein-Esthetics porta 4188 (24/08).
+  Regra de lane mantida: NAO matei processo de outra lane — registrado para o
+  dono decidir varredura global.
+- Preview deste tick subiu na porta alta 4761 (strictPort), entry provado
+  igual ao dist local antes de qualquer medicao e foi morto no fim.
+
+src-tauri intocado. Sem Telegram.
+
 ## redesign (tick 17) — aceite visual regenerado pos-t8..t16 + fusao turbo #13 — 25/08/2026 ~19h35
 
 - **Fusao primeiro**: merge 0f66d34 absorveu origin/main (turbo #13, docs-only).
@@ -780,6 +845,71 @@ src-tauri intocado. Sem Telegram.
 - Próximo tick: aliases MVP remanescentes fora do Admin (~34) ou diretiva nova
   do dono.
 
+## turbo-web tick #17 — guardrail noturno — 25/08/2026 ~21h25
+
+Estado encontrado: worktree @ main == origin/main (17039f1), zero delta
+upstream desde o tick #16 (v2-upgrade segue contida em main; turbo/web-opt
+ahead 0 do merge-base). Fila original (1-6) segue DONE desde o tick #5.
+
+GATES (arvore limpa, build fresca):
+- build (vite 6.4.3): initial = index 33,86 + react-vendor 45,79 +
+  css 7,60 = 87,25 KB gz — BYTE-ESTAVEL vs ticks #12..#16 (mesmo hash de
+  entry index-C1mX7UAW.js). Chunks lazy intactos (firebase 97,38 /
+  AdminGate 18,99 / AnalysisWorkspace 20,04 / sheetSync 11,19 /
+  ComparePane 1,37).
+- tsc --noEmit limpo; vitest 31 arquivos / 342/342 (~32s);
+- e2e fluxo real: 21/21 asserts ok;
+- axe-core scan: 0 violacoes main app (build demo/offline sem tela de
+  login), preview PROVADO nosso antes do scan. Nota: a primeira tentativa
+  falhou FECHADO na prova de identidade (index servido veio sem o entry
+  esperado — consistente com colisao da porta aleatoria com um dos
+  servidores estranhos conocidos; strictPort mata o nosso e a prova
+  detecta). Re-run em nova porta aleatoria passou e provou o entry.
+- Lighthouse x2 limpas (--headless=new --disable-gpu): R1 E R2
+  100/100/100/100 (FCP 1,4s / LCP 1,5s / CLS 0 / TBT 0ms) — melhor ronda
+  da noite (CPU ambiente livre nas duas).
+- console probe: 0 erros/avisos no boot (build demo abre direto no app,
+  sem botao guest — comportamento estavel desde tick #14);
+- npm audit prod: 10 moderate, 0 high/critical — mesmo patamar estavel
+  de #12/#13/#15/#16.
+
+Preview deste tick subiu na porta alta 4652 (strictPort), entry provado
+igual ao dist antes das medicoes e foi morto no fim (wrapper bash saiu
+cedo e o node filho ficou vivo — matado direto por pid via
+Get-NetTCPConnection; porta confirmada livre depois).
+
+src-tauri intocado. Sem Telegram.
+
+## turbo-web tick #18 — guardrail noturno — 25/08/2026 ~22h00
+
+Estado encontrado: worktree @ main == origin/main (bdc4633, tick #17),
+zero delta upstream desde o último tick (v2-upgrade segue contida em main;
+turbo/web-opt ahead 0; audio/acoustics e desktop em suas lanes próprias).
+Fila original (1-6) segue DONE desde o tick #5.
+
+GATES (árvore limpa, build fresca):
+- build (vite 6.4.3): initial = index 33,86 + react-vendor 45,79 +
+  css 7,60 = 87,25 KB gz — BYTE-ESTÁVEL vs ticks #12..#17 (mesmo hash de
+  entry index-C1mX7UAW.js). Chunks lazy intactos (firebase 97,38 /
+  AdminGate 18,99 / AnalysisWorkspace 20,04 / sheetSync 11,19 /
+  ComparePane 1,37 + BugReport*).
+- tsc --noEmit limpo; vitest 31 arquivos / 342/342 (~23s);
+- e2e fluxo real: 21/21 asserts ok (YouTube → scoring → fila → export QC);
+- axe-core scan: 0 violações main app (build demo/offline sem tela de
+  login), preview PROVADO nosso antes do scan (entry conferido);
+- console probe (preview dedicado porta 4618 strictPort): 0 erros/avisos
+  no boot, entry provado igual ao dist;
+- Lighthouse x2 limpas (--headless=new --disable-gpu): R1 E R2
+  100/100/100/100 (FCP 1,4s / LCP 1,5s / CLS 0 / TBT 0ms) — CPU ambiente
+  livre nas duas rondas.
+- npm audit: não re-executado neste tick (patamar estável 10 moderate /
+  0 high nos ticks #12..#17; nenhuma dependência mudou — árvore idêntica).
+
+Higiene: wrapper npx do preview morto via process.kill + filho node morto
+por pid via GetNetTCPConnection(4618); porta confirmada livre no fim.
+src-tauri intocado. Sem Telegram.
+
+
 ## redesign (tick 19) — sweep FINAL alias→token zerado + classes mortas sobre var() consertadas — 25/08/2026 ~22h50
 
 - Ponto de partida: branch == origin/redesign-premium (d919daf); WIP órfão
@@ -810,3 +940,43 @@ src-tauri intocado. Sem Telegram.
 - Infra: scripts/kill_t19_orphans.ps1 (taskkill /T — wrapper npx não mata o filho).
 - src-tauri/audio-acoustics/pitch intocados (worktree dedicada). Push verificado
   por ls-remote.
+## turbo-web tick #19 — guardrail noturno — 26/08/2026 ~00h30
+
+Estado encontrado: worktree @ main == origin/main (253060e, tick #18),
+zero delta upstream desde o último tick (v2-upgrade ahead 0,
+turbo/web-opt ahead 0; audio/acoustics, desktop, features, redesign em
+suas lanes). Fila original (1-6) segue DONE desde o tick #5.
+
+GATES (árvore limpa, build fresca):
+- build (vite 6.4.3): initial = index 33,86 + react-vendor 45,79 +
+  css 7,60 = 87,25 KB gz — BYTE-ESTÁVEL vs ticks #12..#18 (mesmo hash
+  index-C1mX7UAW.js). Chunks lazy intactos (firebase 97,38 / AdminGate
+  18,99 / AnalysisWorkspace 20,04 / sheetSync 11,19 / ComparePane 1,37
+  + BugReport*).
+- tsc --noEmit limpo; vitest 31 arquivos / 342/342 (~27s);
+- e2e fluxo real: 21/21 asserts ok (YouTube → scoring → fila → export QC);
+- axe-core scan: 0 violações (demo/offline, sem login screen), preview
+  PROVADO nosso antes do scan (entry conferido);
+- console probe (preview dedicado porta 4820 strictPort): 0 eventos de
+  erro/aviso no boot, entry provado igual ao dist;
+- Lighthouse x2 (--headless=new --disable-gpu): R1 E R2 100/100/100/100
+  (FCP 1,4s / LCP 1,5s / CLS 0 / TBT 0ms) — CPU ambiente livre nas duas
+  rondas.
+- npm audit: não re-executado (patamar estável 10 moderate / 0 high nos
+  ticks #10..#18; árvore idêntica).
+
+HIGIENE DE PORTAS (achado novo deste tick):
+- Porta 4477 presa por órfão REAL de 11,2h: wrappers bash/npx/cmd já
+  mortos mas o filho node sobreviveu — servindo build SOLARIS STALE
+  pré-tick-#12 (entry index-DubV40Sq.js), originada da lane
+  solaris-audio. Identidade provada pelo <title>+assets servidos antes
+  de matar (regra: fixed ports guilty until proven innocent). Morto por
+  pid (node 37312); porta confirmada livre.
+- Porta 4188 (órfã de 36,6h): serve build do HEIN ESTHETICS (projeto
+  ZIMNY do Zee) — NÃO tocada, regra de não mexer em Zimny sem ordem.
+- Porta 4599: preview VIVO da lane solaris-redesign (sessão fresca
+  <30min no momento da checagem) — intocada.
+- Meu próprio preview deste tick (porta 4820): wrapper morto via
+  process.kill + filho node morto por pid; porta confirmada livre.
+
+src-tauri intocado. Sem Telegram.
