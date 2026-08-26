@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { I18nProvider } from '../i18n/I18nContext';
 import type { DashboardEntryInput } from '../utils/dashboardData';

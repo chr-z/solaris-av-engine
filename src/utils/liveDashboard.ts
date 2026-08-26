@@ -20,7 +20,6 @@ import {
 import type { Dataset, OsRecord } from './dashboard';
 import { canReadIndividualMetrics, type UserContext } from '../features/db/roles';
 import type { QueueRowLike } from '../features/qol/queue';
-import type { XpEventLike } from '../features/gamification/xp';
 
 // ---------------------------------------------------------------------------
 // KPIs do topo (spec B1)

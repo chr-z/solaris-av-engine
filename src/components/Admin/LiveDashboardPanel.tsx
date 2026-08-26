@@ -13,7 +13,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   buildAnalystCards,
   buildAnalystDrilldown,
-  buildAnalystQuality,
   buildAnalystQualityFull,
   buildLiveKpis,
   buildSlaSummary,
