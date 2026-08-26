@@ -1,3 +1,27 @@
+## redesign (tick 21) — regressão turbo #20 absorvida + regates — 26/08/2026 ~00h20
+
+- **Auditoria de abertura**: spec SOLARIS_REDESIGN.md intacta (mtime 24/08,
+  md5 igual); R1–R4 + wows seguem DONE desde o tick 11; nenhum diretivo novo
+  do dono em saas_factory/. Único delta: origin/main avançou 1 commit sobre a
+  lane (c42bb8d = turbo #20, docs-only: runner scripts/turbo-gates.mjs +
+  relatórios LH/axe).
+- **Fusão**: merge 7275ff0 absorveu origin/main. Único conflito:
+  scripts/axe-report.json (relatório regenerável) resolvido com --ours e
+  REGENERADO na árvore final desta lane (ver abaixo).
+- **GATES pós-merge** (build fresca da lane): tsc --noEmit limpo;
+  vitest **403/403** (38 arquivos, zero teste de comportamento quebrado);
+  build verde — CSS **10,21KB gz** (<30KB orçamento intacto; entry
+  index-BnpO5E5Q.js, initial JS inalterado: index 38,29 + react-vendor 45,79
+  gz; firebase lazy 97,38).
+- **axe-core regenerado NA ÁRVORE MESCLADA** (scripts/axe-scan.mjs, protocolo
+  anti-órfão com prova de hash do build servido == dist local): login **0** /
+  main app **0** / criticalOrSerious **0**.
+- Zero mudança visual/funcional neste tick (merge docs-only): nenhuma tela
+  alterada — shots valem desde o t19 (t19_login/fila/analysis em
+  redesign_shots/). Próximos ticks só agem se a main avançar de novo ou
+  surgir diretiva nova do dono.
+- src-tauri/audio-acoustics/pitch intocados. Sem Telegram.
+
 ## redesign (tick 20) — fusão turbo #14–#19 absorvida + regates — 26/08/2026 ~00h50
 
 - **Fusão primeiro**: merge aab73c7 absorveu origin/main (6 commits, todos
