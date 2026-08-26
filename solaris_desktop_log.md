@@ -833,3 +833,21 @@ src-tauri intocado. Sem Telegram.
   POUPADOS (varredura manual Win32_Process por cmdline 'vite').
 - src-tauri/pitch intocados (do outro worker); suite commitada segue valendo
   (nenhum codigo mudou desde 6933b0b - commits da lane sao docs-only). Sem Telegram.
+
+
+---
+
+## turbo-web (tick #31) — guardrail noturno — 26/08/2026 ~09h55
+
+- Zero deltas: origin/main == HEAD local 64d90d5 provado pos-fetch (ls-remote);
+  lanes irma nas proprias linhas (audio/acoustics +38, features +60,
+  redesign-premium +66 vs as PROPRIAS branches; v2-upgrade/-recovery/turbo
+  contidas em main). Nada a mergear sem aprovacao do dono.
+- Gates re-provados frescos: vitest 342/342 (31 arquivos), tsc --noEmit limpo,
+  e2e-flow 21/21 asserts, axe 0 violacoes (login+main app), console events=0,
+  Lighthouse x2 P100/A100/BP100 (FCP 1,4s / LCP 1,5s / CLS 0,000 / TBT 0ms).
+- Initial 40,35KB gz byte-estavel index-C1mX7UAW (build 3,46s); alvo <500KB gz
+  mantido com folga (initial real ~124KB gz somando react-vendor).
+- Higiene: zero orfaos da lane; unicos vite previews vivos na maquina sao de
+  projetos EXTERNOS (work_ck_repo, Hein-Esthetics-Beauty) — fora do escopo
+  Solaris, intocados.
