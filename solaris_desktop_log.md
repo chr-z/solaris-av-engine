@@ -1229,6 +1229,8 @@ src-tauri intocado. Sem Telegram.
   src-tauri/audio-acoustics/pitch intocados. Fila R1-R4 segue DONE aguardando
   diretiva do dono; proximos ticks so com main avancando de novo ou ordem nova.
 
+
+
 # SOLARIS — log de trabalho
 
 ## turbo-web
@@ -1931,3 +1933,28 @@ src-tauri intocado. Sem Telegram.
   matam o próprio chrome no exit.
 - src-tauri/pitch intocados (do outro worker); suite commitada segue valendo
   (nenhum código mudou desde 6933b0b - commits da lane são docs-only). Sem Telegram.
+
+## Tick #26 26/08 ~05h05 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
+
+- Estado: HEAD 81daa81 == origin/main provado por rev-parse pos-fetch; turbo/web-opt
+  segue reliquia; develop relic fev/2026. Nenhum codigo novo de lanes irma para
+  absorver (audio/acoustics aguarda decisao do dono em PR #2). Zero deltas.
+- Bateria fresca propria (nao herdada): tsc --noEmit limpo; vitest 342/342 (~18s);
+  e2e fluxo real (YouTube -> scoring -> fila -> export QC) 21/21; axe-core 0 violacoes
+  (main app demo/offline - build sem login screen, identidade provada entry
+  index-C1mX7UAW.js == dist); console probe 0 eventos; Lighthouse x2
+  (--headless=new --disable-gpu): R1 e R2 ambos P100/A100/BP100 (FCP 1,4s /
+  LCP 1,5s / CLS 0,000 / TBT 0ms) = baseline mantido.
+- Bundle (chunk_report.mjs, gzip level 9): INITIAL 40,35KB gz byte-estavel vs
+  ticks #12..#25 (entry index-C1mX7UAW.js 32,98KB gz + CSS 7,37KB gz); TOTAL
+  940,32KB raw / 233,16KB gz; maiores chunks: firebase 94,82 (lazy, fora do caminho
+  critico) / react-vendor 44,65 / AnalysisWorkspace 19,49 / AdminGate 18,49 KB gz.
+  Alvo initial <500KB gz mantido com folga (~12x).
+- Higiene (hygiene_tick23.ps1): zero orfaos da lane - so ContractKit (:4179,
+  work_ck_repo) e Hein/Zimny (:4188, intocavel sem ordem explicita), atribuidos
+  por PATH+porta e POUPADOS; vitest visto no solaris-features e a lane irma desktop
+  trabalhando (idade 0min, nao mexer); CHROME_PROBE_ORPHANS NONE (runner mata o
+  proprio chrome no exit).
+- src-tauri/pitch intocados (do outro worker); suite commitada segue valendo
+  (nenhum codigo mudou desde 6933b0b - commits da lane sao docs-only). Sem Telegram.
+
