@@ -59,6 +59,42 @@ pub struct RuntimeConfigResponse {
     pub config_path: String,
 }
 
+/// Resposta do comando de escrita da config local (serde → camelCase pro JS).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetModeWriteResponse {
+    /// Caminho do arquivo gravado (sempre presente, p/ suporte).
+    pub config_path: String,
+    /// Bytes efetivamente escritos (diagnóstico).
+    pub bytes_written: u64,
+}
+
+/// Grava o arquivo de config local com a opinião pedida, criando a pasta pai
+/// quando necessário. Escrita ATÔMICA (temp no mesmo diretório + rename):
+/// uma falha no meio nunca deixa um arquivo pela metade — ou fica o conteúdo
+/// anterior intacto, ou entra o novo completo.
+pub fn write_local_config(path: &Path, standalone_mode: bool) -> Result<SetModeWriteResponse, String> {
+    let body = format!(
+        "{{\n  \"standaloneMode\": {}\n}}\n",
+        if standalone_mode { "true" } else { "false" }
+    );
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("falha ao criar pasta de dados: {}", e))?;
+    }
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, body.as_bytes())
+        .map_err(|e| format!("falha ao gravar a config temporária: {}", e))?;
+    std::fs::rename(&tmp, path).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp);
+        format!("falha ao promover a config temporária: {}", e)
+    })?;
+    Ok(SetModeWriteResponse {
+        config_path: path.display().to_string(),
+        bytes_written: body.len() as u64,
+    })
+}
+
 /// Interpreta o valor bruto da env. Aceita caixa variada e espaços nas bordas.
 pub fn parse_env_flag(raw: Option<&str>) -> Option<bool> {
     match raw.map(str::trim).filter(|s| !s.is_empty()) {
@@ -213,6 +249,43 @@ mod tests {
         assert!(json.contains("\"configPath\""), "campo camelCase: {}", json);
         assert!(json.contains("\"source\":\"file\""), "fonte: {}", json);
         assert!(!json.contains("config_path"), "sem snake_case: {}", json);
+        let _ = std::fs::remove_dir_all(p.parent().unwrap());
+    }
+
+    #[test]
+    fn escrita_cria_pasta_e_arquivo_legivel_de_volta() {
+        let dir = tmp_path("write").parent().unwrap().join("sub").join("dir");
+        let p = dir.join(CONFIG_FILE_NAME);
+        // Pasta ainda não existe — a escrita cria a cadeia inteira.
+        let res = write_local_config(&p, true).expect("escrita deve funcionar");
+        assert!(res.bytes_written > 0);
+        assert_eq!(res.config_path, p.display().to_string());
+        // Roundtrip: o que foi gravado é lido como opinião standalone.
+        let cfg = read_local_config(&p).expect("arquivo gravado deve ser legível");
+        assert_eq!(cfg.standalone_mode, Some(true));
+        // Resposta serializa camelCase (contrato com o front).
+        let json = serde_json::to_string(&res).unwrap();
+        assert!(json.contains("\"configPath\""), "camelCase: {}", json);
+        assert!(!json.contains("config_path"), "sem snake_case: {}", json);
+        // Flip para cloud: sobrescreve e relê como false.
+        write_local_config(&p, false).unwrap();
+        let cfg = read_local_config(&p).unwrap();
+        assert_eq!(cfg.standalone_mode, Some(false));
+        let _ = std::fs::remove_dir_all(tmp_path("write").parent().unwrap());
+    }
+
+    #[test]
+    fn escrita_atomica_nao_deixa_tmp_para_tras() {
+        let p = tmp_path("atomic");
+        write_local_config(&p, true).unwrap();
+        let tmp = p.with_extension("json.tmp");
+        assert!(!tmp.exists(), "temporário deve ser renomeado, não deixado");
+        // Sobrescrita idempotente funciona (rename sobre arquivo existente).
+        write_local_config(&p, false).unwrap();
+        assert_eq!(
+            read_local_config(&p).unwrap().standalone_mode,
+            Some(false)
+        );
         let _ = std::fs::remove_dir_all(p.parent().unwrap());
     }
 }

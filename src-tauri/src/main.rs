@@ -62,6 +62,24 @@ async fn get_runtime_config_command() -> Result<runtime_config::RuntimeConfigRes
     Ok(runtime_config::load_runtime_config())
 }
 
+/// Payload da escrita da config local (serde ← camelCase do JS).
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetStandaloneModeRequest {
+    pub standalone: bool,
+}
+
+/// Comando Tauri: grava a opinião de modo no config local
+/// (`%APPDATA%\dev.chr-z.solaris\config.local.json`) — o toggle de Settings
+/// persiste a escolha do operador na máquina (sobrevive a reboot/reinstall de
+/// perfil). Escrita atômica; a leitura continua com precedência env > arquivo.
+#[tauri::command]
+async fn set_standalone_mode_command(
+    req: SetStandaloneModeRequest,
+) -> Result<runtime_config::SetModeWriteResponse, String> {
+    runtime_config::write_local_config(&runtime_config::config_path(), req.standalone)
+}
+
 /// Comando Tauri: diálogo nativo de seleção de pasta (Admin → Fontes).
 /// Começa em `start_path` quando existe (senão no pai existente mais próximo).
 #[tauri::command]
@@ -184,7 +202,8 @@ fn main() {
             pick_folder_command,
             save_last_report_command,
             load_last_report_command,
-            get_runtime_config_command
+            get_runtime_config_command,
+            set_standalone_mode_command
         ])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o Solaris desktop")
