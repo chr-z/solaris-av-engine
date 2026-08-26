@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import firebase from 'firebase/compat/app';
-import { database } from '../../config/firebase';
+import { getDb, getFirebaseCompat, isFirebaseConfigured, type UnsubscribeFn } from '../../config/firebase';
 import { Timestamp, UserProfile } from '../../types';
 import { XIcon } from '../Core/icons';
 import UserAvatar from '../Auth/UserAvatar';
@@ -10,6 +9,8 @@ interface TimestampDockProps {
     videoRef: React.RefObject<HTMLVideoElement>;
     selectedOsIndex: number;
     userProfile: UserProfile | null;
+    /** Reactive "media loaded" signal from the parent (e.g. !!videoSrc). */
+    hasMedia?: boolean;
 }
 
 const formatTime = (totalSeconds: number): string => {
@@ -19,32 +20,50 @@ const formatTime = (totalSeconds: number): string => {
     return `${minutes}:${seconds}`;
 };
 
-const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex, userProfile }) => {
+const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex, userProfile, hasMedia = false }) => {
     const [timestamps, setTimestamps] = useState<Timestamp[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [comment, setComment] = useState('');
+    // turbo-web: videoRef.current must NEVER be read during render (react-hooks/
+    // refs) — it is null on first paint and reading it makes render output depend
+    // on a mutable ref. The current time and media presence are captured into
+    // state at the moment "Add" opens, so renders stay pure.
+    const [markerTime, setMarkerTime] = useState(0);
     const listRef = useRef<HTMLUListElement>(null);
 
     useEffect(() => {
         if (!selectedOsIndex) return;
 
-        setIsLoading(true);
-        const timestampsRef = database.ref(`timestamps/${selectedOsIndex}`);
-        
-        const listener = timestampsRef.orderByChild('time').on('value', snapshot => {
-            const data = snapshot.val();
-            const loadedTimestamps: Timestamp[] = [];
-            if (data) {
-                Object.keys(data).forEach(key => {
-                    loadedTimestamps.push({ id: key, ...data[key] });
-                });
-            }
-            setTimestamps(loadedTimestamps);
-            setIsLoading(false);
-        });
+        // turbo-web: setState deferred to a microtask — synchronous setState
+        // inside the effect body triggers cascading renders (react-hooks/
+        // set-state-in-effect) and double-renders the dock on every W.O. switch.
+        queueMicrotask(() => setIsLoading(true));
+        let disposed = false;
+        let timestampsRef: ReturnType<Awaited<ReturnType<typeof getDb>>['ref']> | null = null;
+        let unsub: UnsubscribeFn | null = null;
+        // turbo-web: offline/demo builds have no Firebase config — stay silent.
+        if (!isFirebaseConfigured()) { queueMicrotask(() => setIsLoading(false)); return; }
+        getDb().then((db) => {
+            if (disposed) return;
+            timestampsRef = db.ref(`timestamps/${selectedOsIndex}`);
+            unsub = timestampsRef.orderByChild('time').on('value', snapshot => {
+                const data = snapshot.val();
+                const loadedTimestamps: Timestamp[] = [];
+                if (data) {
+                    Object.keys(data).forEach(key => {
+                        loadedTimestamps.push({ id: key, ...data[key] });
+                    });
+                }
+                setTimestamps(loadedTimestamps);
+                setIsLoading(false);
+            });
+        }).catch((err) => console.error('Failed to load database module:', err));
 
-        return () => timestampsRef.off('value', listener);
+        return () => {
+            disposed = true;
+            if (timestampsRef && unsub) timestampsRef.off('value', unsub);
+        };
     }, [selectedOsIndex]);
 
     useEffect(() => {
@@ -56,6 +75,7 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
     const handleAddClick = () => {
         if (videoRef.current) {
             videoRef.current.pause();
+            setMarkerTime(videoRef.current.currentTime);
         }
         setIsAdding(true);
     };
@@ -77,11 +97,12 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
                 givenName: userProfile.givenName,
                 picture: userProfile.picture,
             },
-            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdAt: (await getFirebaseCompat()).app.database.ServerValue.TIMESTAMP,
         };
         
         try {
-            await database.ref(`timestamps/${selectedOsIndex}`).push(newTimestamp);
+            const db = await getDb();
+            await db.ref(`timestamps/${selectedOsIndex}`).push(newTimestamp);
             handleCancel();
         } catch (error) {
             console.error("Failed to save timestamp:", error);
@@ -98,7 +119,7 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
 
     const handleDelete = (timestampId: string) => {
         if (window.confirm("Delete this timestamp?")) {
-            database.ref(`timestamps/${selectedOsIndex}/${timestampId}`).remove();
+            void getDb().then((db) => db.ref(`timestamps/${selectedOsIndex}/${timestampId}`).remove());
         }
     };
 
@@ -148,20 +169,20 @@ const TimestampDock: React.FC<TimestampDockProps> = ({ videoRef, selectedOsIndex
                         <textarea
                             value={comment}
                             onChange={e => setComment(e.target.value)}
-                            placeholder={`Comment at ${formatTime(videoRef.current?.currentTime || 0)}...`}
+                            placeholder={`Comment at ${formatTime(markerTime)}...`}
                             rows={2}
                             className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent"
                             autoFocus
                         />
                         <div className="flex justify-end gap-2">
                             <button onClick={handleCancel} className="px-3 py-1 text-sm rounded-md hover:bg-gray-500/20 transition-colors">Cancel</button>
-                            <button onClick={handleSave} disabled={!comment.trim()} className="px-3 py-1 text-sm rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover disabled:opacity-50 transition-colors">Save</button>
+                            <button onClick={handleSave} disabled={!comment.trim()} className="px-3 py-1 text-sm rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover disabled:opacity-50 transition-colors">Save</button>
                         </div>
                     </div>
                 ) : (
-                    <button 
+                    <button
                         onClick={handleAddClick}
-                        disabled={!userProfile || !videoRef.current?.src}
+                        disabled={!userProfile || !hasMedia}
                         className="w-full px-4 py-2 bg-solar-accent/10 border border-solar-accent/30 text-solar-accent rounded-md hover:bg-solar-accent/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Add Marker

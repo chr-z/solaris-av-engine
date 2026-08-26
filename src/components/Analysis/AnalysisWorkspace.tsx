@@ -1,20 +1,20 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
 
 // --- IMPORTS CORRIGIDOS (NAVIGATION) ---
 import VideoPlayer from '../Media/VideoPlayer';
-import ComparePane from '../Media/ComparePane';
+// turbo-web: A/B compare pane is lazy — its module (and WaveformTimeline) only
+// downloads when the analyst actually activates compare mode.
+const ComparePane = React.lazy(() => import('../Media/ComparePane'));
 import DriveFilePicker from '../Media/DriveFilePicker';
 import SourceSelector from '../Media/SourceSelector';
 import LocalFileHelper from '../Media/LocalFileHelper';
 
-import RgbParade from '../Monitors/RgbParade';
-import Waveform from '../Monitors/Waveform';
-import VuMeter from '../Monitors/VuMeter';
-import Spectrogram from '../Monitors/Spectrogram';
+// turbo-web: live monitors are a self-contained island that owns the 15 Hz
+// analysis state — playback ticks re-render only the docks, not this tree.
+import LiveMonitors from './LiveMonitors';
 import OverlayControls from '../Monitors/OverlayControls';
 
-import Dock from '../Layout/Dock';
 import UserAvatar from '../Auth/UserAvatar';
 import Popover from '../Core/Popover';
 import CopyMarkingsPopover from './CopyMarkingsPopover';
@@ -29,7 +29,8 @@ import { RowData, updateSheetRow, DriveFile } from './AnalysisSheet';
 import { ScratchpadPanel } from './ScratchpadPanel';
 
 // Imports de Lógica (Hooks/Utils/Config)
-import { useAVAnalysis } from '../../hooks/useAVAnalysis';
+// turbo-web: 15 Hz analysis state moved INTO the LiveMonitors island —
+// this tree no longer re-renders on playback ticks.
 import { useAnalystShortcuts } from '../../hooks/useAnalystShortcuts';
 import { useCompareMode } from '../../hooks/useCompareMode';
 import { useLicense } from '../../licensing/LicenseContext';
@@ -45,8 +46,7 @@ import { getUndoLog, resetUndoLog } from '../../features/qol/undoStore';
 import { formatTimestampInTz } from '../../features/i18n/format';
 import { SAO_PAULO_CLOCK } from '../../features/gamification/periods';
 import { getCompareGridClass } from '../../utils/compareMode';
-import { database } from '../../config/firebase';
-import firebase from 'firebase/compat/app';
+import { getDb, getFirebaseCompat, isFirebaseConfigured, type UnsubscribeFn } from '../../config/firebase';
 
 // Solaris v3: scoring + sheet-sync modules
 import { recalculateScoresWithEngine, isScorableHeader, applyScoreUpdates } from '../../config/engineBridge';
@@ -119,21 +119,32 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
         if (!isOpen || !selectedOsIndex || !currentVideoId) return;
 
         queueMicrotask(() => setIsLoading(true));
-        const timestampsRef = database.ref(`timestamps/${selectedOsIndex}/${currentVideoId}`);
-        
-        const listener = timestampsRef.on('value', snapshot => {
-            const data = snapshot.val();
-            const loadedTimestamps: Timestamp[] = [];
-            if (data) {
-                Object.keys(data).forEach(key => {
-                    loadedTimestamps.push({ id: key, ...data[key] });
-                });
-            }
-            setTimestamps(loadedTimestamps);
-            setIsLoading(false);
-        });
+        // turbo-web: subscribe only after the lazy SDK resolves; skip if unmounted first.
+        let disposed = false;
+        let timestampsRef: ReturnType<Awaited<ReturnType<typeof getDb>>['ref']> | null = null;
+        let unsub: UnsubscribeFn | null = null;
+        // turbo-web: offline/demo builds have no Firebase config — stay silent.
+        if (!isFirebaseConfigured()) { queueMicrotask(() => setIsLoading(false)); return; }
+        getDb().then((db) => {
+            if (disposed) return;
+            timestampsRef = db.ref(`timestamps/${selectedOsIndex}/${currentVideoId}`);
+            unsub = timestampsRef.on('value', snapshot => {
+                const data = snapshot.val();
+                const loadedTimestamps: Timestamp[] = [];
+                if (data) {
+                    Object.keys(data).forEach(key => {
+                        loadedTimestamps.push({ id: key, ...data[key] });
+                    });
+                }
+                setTimestamps(loadedTimestamps);
+                setIsLoading(false);
+            });
+        }).catch((err) => console.error('Failed to load database module:', err));
 
-        return () => timestampsRef.off('value', listener);
+        return () => {
+            disposed = true;
+            if (timestampsRef && unsub) timestampsRef.off('value', unsub);
+        };
     }, [isOpen, selectedOsIndex, currentVideoId]);
     
     const sortedTimestamps = useMemo(() => {
@@ -163,13 +174,13 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
             analyst: {
                 id: userProfile.id, name: userProfile.name, givenName: userProfile.givenName, picture: userProfile.picture,
             },
-            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdAt: (await getFirebaseCompat()).app.database.ServerValue.TIMESTAMP,
             fileId: currentVideoId,
             fileName: currentVideoName,
         };
         
         try {
-            await database.ref(`timestamps/${selectedOsIndex}/${currentVideoId}`).push(newTimestamp);
+            await (await getDb()).ref(`timestamps/${selectedOsIndex}/${currentVideoId}`).push(newTimestamp);
             setComment('');
         } catch (error) {
             console.error("Failed to save timestamp:", error);
@@ -186,7 +197,7 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
     
     const handleDelete = (timestampId: string) => {
         if (window.confirm("Are you sure you want to remove this marker?")) {
-            database.ref(`timestamps/${selectedOsIndex}/${currentVideoId}/${timestampId}`).remove();
+            void getDb().then((db) => db.ref(`timestamps/${selectedOsIndex}/${currentVideoId}/${timestampId}`).remove());
         }
     };
 
@@ -203,7 +214,7 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
 
     const handleSaveEdit = () => {
         if (!editingTimestampId || !editingComment.trim()) return;
-        database.ref(`timestamps/${selectedOsIndex}/${currentVideoId}/${editingTimestampId}/comment`).set(editingComment.trim());
+        void getDb().then((db) => db.ref(`timestamps/${selectedOsIndex}/${currentVideoId}/${editingTimestampId}/comment`).set(editingComment.trim()));
         handleCancelEdit();
     };
 
@@ -226,8 +237,8 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <div className="flex items-center gap-1 text-xs bg-solar-dark-bg px-2 py-1 rounded-md">
                             <span className="text-gray-400">Sort by:</span>
-                            <button onClick={() => setSortOrder('time')} className={`px-2 py-0.5 rounded ${sortOrder === 'time' ? 'bg-solar-accent text-white' : 'hover:bg-gray-500/20'}`}>Time</button>
-                            <button onClick={() => setSortOrder('comment')} className={`px-2 py-0.5 rounded ${sortOrder === 'comment' ? 'bg-solar-accent text-white' : 'hover:bg-gray-500/20'}`}>Comment</button>
+                            <button onClick={() => setSortOrder('time')} className={`px-2 py-0.5 rounded ${sortOrder === 'time' ? 'bg-solar-accent text-solar-dark-bg' : 'hover:bg-gray-500/20'}`}>Time</button>
+                            <button onClick={() => setSortOrder('comment')} className={`px-2 py-0.5 rounded ${sortOrder === 'comment' ? 'bg-solar-accent text-solar-dark-bg' : 'hover:bg-gray-500/20'}`}>Comment</button>
                         </div>
                         <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors" aria-label="Close">
                             <XIcon className="w-5 h-5" />
@@ -251,7 +262,7 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
                                         <textarea value={editingComment} onChange={e => setEditingComment(e.target.value)} rows={2} className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200" autoFocus/>
                                         <div className="flex justify-end gap-2">
                                             <button onClick={handleCancelEdit} className="px-3 py-1 text-sm rounded-md hover:bg-gray-500/20">Cancel</button>
-                                            <button onClick={handleSaveEdit} disabled={!editingComment.trim()} className="px-3 py-1 text-sm rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover disabled:opacity-50">Save</button>
+                                            <button onClick={handleSaveEdit} disabled={!editingComment.trim()} className="px-3 py-1 text-sm rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover disabled:opacity-50">Save</button>
                                         </div>
                                     </div>
                                 ) : (
@@ -284,7 +295,7 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
                     <div className="space-y-2">
                         <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Add a time marker comment..." rows={2} className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200 dark:placeholder-gray-500" onFocus={handleAddClick}/>
                         <div className="flex justify-end">
-                            <button onClick={handleSaveNew} disabled={!comment.trim()} className="px-4 py-2 text-sm font-semibold rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover disabled:opacity-50">Add Marker</button>
+                            <button onClick={handleSaveNew} disabled={!comment.trim()} className="px-4 py-2 text-sm font-semibold rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover disabled:opacity-50">Add Marker</button>
                         </div>
                     </div>
                 </div>
@@ -379,7 +390,10 @@ const recalculateScores = (currentRowData: RowData, headers: string[]): RowData 
     return updatedData;
 };
 
-const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
+// Memoized: this subtree embeds the video player + 4 canvas monitors. App-level
+// state churn (debounced search typing, auth ticks) must not re-render it when
+// its own props are unchanged; all callbacks it receives have stable identity.
+const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
   selectedRow,
   headers,
   videoSrc,
@@ -413,12 +427,10 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   const { t, locale } = useI18n();
   const lang = locale === 'pt' ? 'pt' : 'en';
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { analysisData, isAudioReady } = useAVAnalysis(videoRef, videoSrc);
   const [localRowData, setLocalRowData] = useState<RowData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [zoomedDock, setZoomedDock] = useState<string | null>(null);
   const [isTimestampModalOpen, setIsTimestampModalOpen] = useState(false);
   // S5.1: keyboard shortcuts — "?" opens the quick-reference modal.
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
@@ -577,14 +589,16 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   // Fetch stored local file path when OS is selected
   useEffect(() => {
     if (selectedOsIndex) {
-      const pathRef = database.ref(`analysisMetadata/${selectedOsIndex}/localFilePath`);
-      pathRef.get().then(snapshot => {
+      let disposed = false;
+      getDb().then((db) => db.ref(`analysisMetadata/${selectedOsIndex}/localFilePath`).get()).then((snapshot) => {
+        if (disposed) return;
         if (snapshot.exists()) {
           setRetrievedFilePath(snapshot.val());
         } else {
           setRetrievedFilePath(null);
         }
-      });
+      }).catch((err) => console.error('Failed to load local file path:', err));
+      return () => { disposed = true; };
     }
     queueMicrotask(() => setLocalFilePath(''));
   }, [selectedOsIndex]);
@@ -704,7 +718,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
       window.dispatchEvent(new CustomEvent('solaris:scratch-cleaned'));
 
       if (isLocalVideo && localFilePath.trim()) {
-        await database.ref(`analysisMetadata/${selectedOsIndex}/localFilePath`).set(localFilePath.trim());
+        await (await getDb()).ref(`analysisMetadata/${selectedOsIndex}/localFilePath`).set(localFilePath.trim());
       }
 
       setSaveStatus('success');
@@ -799,7 +813,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
       <button
         onClick={handleSave}
         disabled={isSaving}
-        className="flex items-center gap-2 px-4 py-2 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50"
+        className="flex items-center gap-2 px-4 py-2 rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50"
       >
         {isSaving ? (
            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -840,27 +854,6 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   );
 
   const osIdentifier = localRowData ? (localRowData[headers.indexOf('W.O.')]?.value || '') : '';
-
-  const renderZoomedContent = () => {
-    switch (zoomedDock) {
-      case 'rgbParade':
-        return <RgbParade pixelData={analysisData.video} isZoomed />;
-      case 'waveform':
-        return <Waveform pixelData={analysisData.video} isZoomed />;
-      case 'spectrogram':
-        return <Spectrogram frequencyData={analysisData.frequency} isReady={isAudioReady} />;
-      case 'vuMeter':
-        return (
-          <div className="w-full h-full flex justify-center items-center p-4">
-            <div className="h-full w-40">
-              <VuMeter volume={analysisData.volume} isReady={isAudioReady} />
-            </div>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
 
   return (
     <div className="w-full h-full flex p-4 gap-4 overflow-hidden bg-solar-dark-bg">
@@ -932,12 +925,14 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                 </VideoPlayer>
               </div>
               {compare.isActive && (
+                <React.Suspense fallback={<div className="min-w-0 min-h-0 flex items-center justify-center text-xs text-gray-400">Yui…</div>}>
                 <ComparePane
                   source={compare.slotBSource}
                   onChangeSource={compare.setSlotBSource}
                   subscribeToLeader={compare.subscribeToLeader}
                   syncNonce={compare.syncNonce}
                 />
+                </React.Suspense>
               )}
             </div>
           ) : (
@@ -990,7 +985,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
             <span className="font-bold text-xs uppercase tracking-wide text-solar-accent">{t('compare.title')}</span>
             <button
               onClick={compare.toggleSyncMode}
-              className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent ${compare.syncMode === 'locked' ? 'bg-solar-accent text-white hover:bg-solar-accent-hover' : 'bg-solar-dark-bg border border-solar-dark-border text-gray-300 hover:bg-gray-500/20'}`}
+              className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent ${compare.syncMode === 'locked' ? 'bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover' : 'bg-solar-dark-bg border border-solar-dark-border text-gray-300 hover:bg-gray-500/20'}`}
               title={compare.syncMode === 'locked' ? t('compare.syncLocked') : t('compare.syncFree')}
               aria-label={t('compare.syncMode')}
             >
@@ -1168,40 +1163,8 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
             />
           </div>
       </div>
-      {zoomedDock && (
-        <div 
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-8 animate-fade-in-fast" 
-          onClick={() => setZoomedDock(null)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div 
-            className="relative w-full h-full max-w-5xl bg-solar-dark-bg border border-solar-dark-border rounded-lg shadow-2xl flex flex-col p-4"
-            onClick={e => e.stopPropagation()}
-          >
-            <header className="flex-shrink-0 flex justify-between items-center pb-2 mb-2 border-b border-solar-dark-border">
-                <h2 className="text-lg font-bold">
-                    {zoomedDock === 'rgbParade' && 'RGB Parade'}
-                    {zoomedDock === 'waveform' && 'Waveform'}
-                    {zoomedDock === 'spectrogram' && 'Spectrogram'}
-                    {zoomedDock === 'vuMeter' && 'VU Meter'}
-                </h2>
-                <button 
-                    onClick={() => setZoomedDock(null)} 
-                    className="p-2 rounded-full text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors"
-                    aria-label="Close"
-                >
-                    <XIcon className="w-6 h-6" />
-                </button>
-            </header>
-            <div className="flex-1 min-h-0">
-              {renderZoomedContent()}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
-};
+});
 
 export default AnalysisWorkspace;

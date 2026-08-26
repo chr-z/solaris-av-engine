@@ -116,7 +116,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
               <button
                 onClick={handleActivate}
                 disabled={!keyInput.trim() || isActivating}
-                className="w-full px-3 py-2 rounded-md bg-solar-accent text-white font-medium hover:bg-solar-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-solar-accent"
+                className="w-full px-3 py-2 rounded-md bg-solar-accent text-solar-dark-bg font-medium hover:bg-solar-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-solar-accent"
               >
                 {isActivating ? t('solaris.pro.activating') : t('solaris.pro.activate')}
               </button>

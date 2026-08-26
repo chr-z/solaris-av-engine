@@ -541,7 +541,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
                 {onRetry && (
                   <button
                     onClick={onRetry}
-                    className="px-4 py-2 bg-solar-accent text-white rounded-md hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-bg focus:ring-solar-accent"
+                    className="px-4 py-2 bg-solar-accent text-solar-dark-bg rounded-md hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-bg focus:ring-solar-accent"
                   >
                     Retry
                   </button>

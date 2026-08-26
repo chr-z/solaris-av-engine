@@ -81,7 +81,7 @@ const Header: React.FC<HeaderProps> = ({
               <Popover 
                 contentClassName="w-96"
                 trigger={
-                  <button className="flex items-center gap-2 px-3 py-2 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-light-content dark:focus:ring-offset-solar-dark-content focus:ring-solar-accent">
+                  <button className="flex items-center gap-2 px-3 py-2 rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-light-content dark:focus:ring-offset-solar-dark-content focus:ring-solar-accent">
                     <VideoIcon className="w-5 h-5" />
                     <span>{t('header.loadMedia')}</span>
                   </button>

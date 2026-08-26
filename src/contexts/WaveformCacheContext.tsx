@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { CACHE_KEY_PREFIX } from '../hooks/useAudioWaveform';
 
 interface WaveformCacheContextType {
@@ -7,11 +7,13 @@ interface WaveformCacheContextType {
     isLoading: boolean;
 }
 
-const WaveformCacheContext = createContext<WaveformCacheContextType>({
+const DEFAULT_VALUE: WaveformCacheContextType = {
     cachedVideoIds: new Set(),
     addCachedId: () => {},
     isLoading: true,
-});
+};
+
+const WaveformCacheContext = createContext<WaveformCacheContextType>(DEFAULT_VALUE);
 
 export const useWaveformCache = () => useContext(WaveformCacheContext);
 
@@ -55,7 +57,15 @@ export const WaveformCacheProvider: React.FC<{ children: React.ReactNode }> = ({
         });
     }, []);
 
-    const value = { cachedVideoIds, addCachedId, isLoading };
+    // Stable context value: a new object identity is emitted ONLY when the
+    // cached-id set or the loading flag actually changes. Without this memo,
+    // every provider render (including parent-driven ones) produced a fresh
+    // value object and re-rendered ALL consumers down the tree, defeating
+    // React.memo on AnalysisSheet/VideoPlayer/DriveFilePicker.
+    const value = useMemo<WaveformCacheContextType>(
+        () => ({ cachedVideoIds, addCachedId, isLoading }),
+        [cachedVideoIds, addCachedId, isLoading]
+    );
 
     return (
         <WaveformCacheContext.Provider value={value}>
