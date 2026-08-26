@@ -1,3 +1,28 @@
+## redesign (t28) — turbo #25 absorvido + regates — 26/08/2026 ~05h10
+
+- **Auditoria**: spec SOLARIS_REDESIGN.md intacta; R1-R4 + wows seguem DONE.
+  Unico delta: origin/main avancou 1 commit (81daa81 = turbo-web #25, docs-only).
+  Residuo sujo do tick anterior (axe-report/lh-r1/lh-r2) descartado via git
+  restore e REGENERADO na arvore final deste tick.
+- **Fusao**: merge e399ec1 absorveu origin/main. Conflito unico no log
+  compartilhado, resolvido mantendo os dois blocos (redesign primeiro, turbo
+  #25 depois); codigo de app intocado.
+- **GATES pos-merge** (build fresca da lane): tsc --noEmit limpo; vitest
+  **403/403** (38 arquivos); e2e fluxo real **21/21**; build verde
+  byte-estavel - entry **index-CHKfTLey.js**, INITIAL **46,89KB gz** +
+  CSS **10,12KB gz** (<30KB alvo ok); firebase lazy 97KB fora do caminho critico.
+- **Browser gates** (scripts/turbo-gates.mjs): console probe **0 eventos**;
+  LH x2 **P99/A100/BP100** (FCP 1,5s LCP 1,8s CLS 0,001 TBT 0ms).
+- **axe-core regenerado NA ARVORE MESCLADA** (scripts/axe-scan.mjs):
+  login **0** / main app **0** / criticalOrSerious **0**.
+- Shots de aceite regenerados ->
+  C:/Yui/data/saas_factory/redesign_shots/r28_merge_{fila,analysis,qc_dialog}.png
+  via scripts/redesign_shot_t25.cjs (hash do entry conferido antes de cada captura).
+- Nota de flake: scripts/redesign_axe_t9.cjs falhou no passo pos-reload
+  ("workspace nao voltou apos reload"); gate oficial segue axe-scan.mjs (0/0).
+- src-tauri/audio-acoustics/pitch intocados. Fila R1-R4 segue DONE aguardando
+  diretiva do dono. Sem Telegram.
+
 ## redesign (tick 21) — regressão turbo #20 absorvida + regates — 26/08/2026 ~00h20
 
 - **Auditoria de abertura**: spec SOLARIS_REDESIGN.md intacta (mtime 24/08,
