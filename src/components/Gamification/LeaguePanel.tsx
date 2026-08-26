@@ -34,6 +34,16 @@ import {
   analystsFromEvents,
 } from '../../features/gamification/podiumFreeze';
 import {
+  isPodiumShareAllowed,
+  setPodiumShareAllowed,
+} from '../../features/gamification/podiumSharePref';
+import {
+  buildPodiumCsv,
+  buildPodiumXlsx,
+  podiumExportFilename,
+  type PodiumExportInput,
+} from '../../features/gamification/podiumExport';
+import {
   SAO_PAULO_CLOCK,
   currentPeriodKey,
   closedPeriodRange,
@@ -205,6 +215,59 @@ const LeaguePanel: React.FC<LeaguePanelProps> = ({ userProfile }) => {
         : podiumYear.slice(0, 3);
 
   const history = useMemo(() => historyKeys(profile), [profile]);
+
+  // ── C4/E: exportação de pódio com opt-in explícito ─────────────────
+  // Default OFF; só admin vê a seção e só o toggle liga o gate real.
+  const [shareAllowed, setShareAllowedState] = useState(() =>
+    isPodiumShareAllowed(storage),
+  );
+
+  /** Baixa bytes como arquivo (mesma mecânica dos exports do dashboard). */
+  const downloadBytes = useCallback((bytes: Uint8Array, filename: string) => {
+    const blob = new Blob([bytes], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const downloadText = useCallback((text: string, filename: string) => {
+    const blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  /** Exporta UM pódio (histórico ou ao vivo) no formato pedido. */
+  const exportPodium = useCallback(
+    (
+      input: PodiumExportInput,
+      format: 'csv' | 'xlsx',
+    ) => {
+      // O gate é duplo: bandeira de consentimento E papel admin (defesa em
+      // profundidade — a UI já esconde, o núcleo recusa sem optIn).
+      if (!isPodiumShareAllowed(storage)) return;
+      if (format === 'csv') {
+        const csv = buildPodiumCsv(input, { locale: lang, optIn: true });
+        if (csv != null) {
+          downloadText(csv, podiumExportFilename(input, 'csv'));
+        }
+        return;
+      }
+      const xlsx = buildPodiumXlsx(input, { locale: lang, optIn: true, now: new Date() });
+      if (xlsx != null) {
+        downloadBytes(xlsx, podiumExportFilename(input, 'xlsx'));
+      }
+    },
+    [storage, lang, downloadText, downloadBytes],
+  );
 
   if (!gamificationOn) {
     return (
@@ -490,20 +553,72 @@ const LeaguePanel: React.FC<LeaguePanelProps> = ({ userProfile }) => {
         <h2 id="league-history-title" className="text-base font-bold text-gray-100">
           {t('league.history')}
         </h2>
+        {isAdmin && (
+          <div className="mt-3 rounded-lg border border-solar-dark-border px-3 py-2">
+            {/* C4/E: dados de pódio só saem daqui com consentimento EXPLÍCITO.
+                Default OFF — sem esta chave ligada, nenhum botão exporta nada. */}
+            <label className="flex items-start gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                data-testid="podium-share-toggle"
+                checked={shareAllowed}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setPodiumShareAllowed(storage, next);
+                  setShareAllowedState(next);
+                }}
+                className="mt-0.5 h-4 w-4 accent-solar-accent"
+              />
+              <span>
+                {t('league.export.shareLabel')}
+                <span className="block text-xs text-gray-500">
+                  {t('league.export.shareHint')}
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
         {history.length === 0 ? (
           <p className="mt-3 text-sm text-gray-400">{t('league.historyEmpty')}</p>
         ) : (
           <ul className="mt-3 space-y-2" data-testid="league-history">
             {history.map(({ type, key }) => {
               const rows = profile.podiumHistory[`${type}:${key}`] ?? [];
+              const canExport = isAdmin && shareAllowed && rows.length > 0;
               return (
                 <li
                   key={`${type}:${key}`}
                   className="rounded-lg border border-solar-dark-border px-3 py-2"
                 >
-                  <p className="text-sm font-semibold text-gray-200">
-                    {formatPeriodLabel(type, key, lang)}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-gray-200">
+                      {formatPeriodLabel(type, key, lang)}
+                    </p>
+                    {canExport && (
+                      <span className="ml-auto flex gap-1">
+                        <button
+                          type="button"
+                          data-testid={`podium-export-csv-${type}-${key}`}
+                          onClick={() =>
+                            exportPodium({ periodType: type, periodKey: key, rows }, 'csv')
+                          }
+                          className="rounded-md px-2 py-0.5 text-xs text-solar-accent hover:bg-solar-accent/10 transition-colors"
+                        >
+                          {t('league.export.csv')}
+                        </button>
+                        <button
+                          type="button"
+                          data-testid={`podium-export-xlsx-${type}-${key}`}
+                          onClick={() =>
+                            exportPodium({ periodType: type, periodKey: key, rows }, 'xlsx')
+                          }
+                          className="rounded-md px-2 py-0.5 text-xs text-solar-accent hover:bg-solar-accent/10 transition-colors"
+                        >
+                          {t('league.export.xlsx')}
+                        </button>
+                      </span>
+                    )}
+                  </div>
                   <p className="tnum mt-1 text-xs text-gray-400">
                     {rows
                       .slice(0, 3)
