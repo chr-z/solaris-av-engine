@@ -1,5 +1,23 @@
 # SOLARIS — log de trabalho
 
+## Tick #31 26/08 ~10h40 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
+
+- Estado: HEAD 43c7641 == origin/main provado pos-fetch; rev-list 0/0 nos dois
+  sentidos. Branches pendentes re-auditadas: v2-upgrade, v2-upgrade-recovery e
+  turbo/web-opt TODAS contidas em main (0 ahead). Lanes irma desktop
+  (9b7edf2), audio/acoustics (7d7f53a), features (eac588d), redesign
+  (0960829) e develop (bd3a560 = README do proprio dono) seguem nas PROPRIAS
+  linhas, byte-identicas ao tick #30 - zero movimento no repo inteiro.
+- Bateria fresca propria: tsc --noEmit limpo; vitest 31 arquivos / 342/342
+  (~27s); e2e fluxo real (YouTube -> scoring -> fila -> export QC) 21/21;
+  axe-report.json regenerado, 0 violacoes; console probe 0 eventos;
+  Lighthouse x2 (--headless=new --disable-gpu): R1 e R2 ambos P100/A100/BP100
+  (FCP 1,4s / LCP 1,5s / CLS 0,000 / TBT 0ms).
+- Bundle: INITIAL 40,35KB gz byte-estavel vs ticks #12..#30 (entry
+  index-C1mX7UAW.js == dist provado pelo turbo-gates); alvo initial <500KB gz
+  mantido com folga (~12x). Deps sem advisory nova desde o tick #12.
+- Higiene: src-tauri/pitch intocados; suite commitada segue valendo. Sem Telegram.
+
 ## Tick #30 26/08 ~09h10 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
 
 - Estado: HEAD 2379323 == origin/main provado pos-fetch; rev-list 0/0 nos dois
