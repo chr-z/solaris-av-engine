@@ -11,6 +11,9 @@ import OfflineIndicator from '../Core/OfflineIndicator';
 import { QCExportButton } from '../Analysis/QCExportButton';
 import ProUpgradeModal from '../Admin/ProUpgradeModal';
 import { useLicense } from '../../licensing/LicenseContext';
+// F2 QoL A2: tema claro/escuro/sistema + timer de pausa (Pomodoro).
+import ThemeMenu from './ThemeMenu';
+import PomodoroBadge from './PomodoroBadge';
 import { describeFeature } from '../../licensing/core';
 import { useAdminRole } from '../../hooks/useAdminRole';
 
@@ -90,6 +93,10 @@ const Header: React.FC<HeaderProps> = ({
           <div className="h-6 w-px bg-solar-dark-border"></div>
           
           <OfflineIndicator />
+
+          {/* F2 QoL A2: tema + timer de pausa. */}
+          <ThemeMenu />
+          <PomodoroBadge />
 
           {/* S6.1: edition badge + upgrade entry point (free tier only). */}
           {isPro ? (

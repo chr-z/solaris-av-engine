@@ -389,6 +389,20 @@ export const en = {
   'league.team.progress': '{pct}% of {goal} XP',
   'league.team.remaining': '{remaining} XP to go',
   'league.team.met': 'Goal met — great teamwork!',
+
+  // F2 QoL: theme preference (A2)
+  'theme.label': 'Theme',
+  'theme.light': 'Light theme',
+  'theme.dark': 'Dark theme',
+  'theme.system': 'Follow system',
+
+  // F2 QoL: Pomodoro break timer (A2)
+  'pomodoro.label': 'Break timer (Pomodoro)',
+  'pomodoro.start': 'Start 25 min focus block',
+  'pomodoro.stop': 'Cancel focus block',
+  'pomodoro.restart': 'Restart 25 min focus block',
+  'pomodoro.runningTitle': 'Focus block running — stretch when it hits zero',
+  'pomodoro.expiredTitle': "Time's up — take a short break",
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -778,6 +792,20 @@ export const pt: Record<TranslationKey, string> = {
   'league.team.progress': '{pct}% de {goal} XP',
   'league.team.remaining': 'Faltam {remaining} XP',
   'league.team.met': 'Meta batida — ótimo trabalho em equipe!',
+
+  // F2 QoL: tema (A2)
+  'theme.label': 'Tema',
+  'theme.light': 'Tema claro',
+  'theme.dark': 'Tema escuro',
+  'theme.system': 'Seguir o sistema',
+
+  // F2 QoL: timer de pausa Pomodoro (A2)
+  'pomodoro.label': 'Timer de pausa (Pomodoro)',
+  'pomodoro.start': 'Iniciar bloco de foco de 25 min',
+  'pomodoro.stop': 'Cancelar bloco de foco',
+  'pomodoro.restart': 'Reiniciar bloco de foco de 25 min',
+  'pomodoro.runningTitle': 'Bloco de foco rodando — alongue quando zerar',
+  'pomodoro.expiredTitle': 'Deu o tempo — faça uma pausa curta',
 };
 
 export const dictionaries = { en, pt } as const;
