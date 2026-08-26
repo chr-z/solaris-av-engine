@@ -1,5 +1,30 @@
 # SOLARIS — log de trabalho
 
+## Tick 26/08 ~09h00 — audio-dsp (Yui / cron solaris-audio)
+
+Worktree solaris-audio (branch audio/acoustics); desktop/src-tauri/pitch intocados.
+TEMA: MERGE PREVENTIVO da origin/main pos tick#29 do turbo-web (delta docs-only:
+logs+gates lh/axe) + PROVAS FRESCAS + auditoria anti-buraco da spec.
+
+- MERGE c/ conflito esperado no log compartilhado (prepend duplo): resolvido pelo
+  protocolo da lane (parse linha-a-linha, AMBOS os blocos mantidos, lane primeiro,
+  remocao byte-exata dos 3 marcadores CRLF) -> b1d938c. Lane 0/0 vs main.
+- PROVAS FRESCAS na arvore mesclada (execucao propria): tsc --noEmit limpo;
+  vitest 446/446 VERDES (46 arquivos, 131s). Push via workaround GCM provado por
+  ls-remote (b1d938c em origin).
+- PR #2 RE-VERDE: ci success @b1d938c (1m55s) + Vercel x2 pass. Continua OPEN,
+  aguardando decisao do dono (nada merged por mim).
+- AUDITORIA DE FRAQUEZAS (busca de trabalho real): zero gaps novos encontrados.
+  (a) Benchmark P2 existe e esta verde: 120s de aula sintetica <3s => 1h extrapolada
+  <90s (alvo da spec); (b) FP dry+lossy do Schroeder coberto: sentinel ||2.5 restrito
+  ao caminho legado, caminho ML trata rt60Final=0 como 'seco' genuino;
+  (c) known-answer re-executado fresco: 16/16 (FFT/clipping/hum/floor/eco/reverb
+  Schroeder+dry+monotonicidade + integracao analyzeAudioPcm);
+  (d) P3 vivo: AcousticPanel importado e renderizado em AnalysisWorkspace.tsx:935.
+- NOTA: preview Vercel da lane esta atras de login (deployment protection) -
+  nao citavel como prova externa; validacao segue local + CI remoto.
+=== FIM TICK - lane sincronizada c/ main, PR #2 pronto, motor sem gaps ===
+
 
 ## Tick 26/08 ~08h10 — audio-dsp (Yui / cron solaris-audio)
 
