@@ -772,3 +772,27 @@ baratas de não-drift, sem re-executar build:
 - Sem merge na main; nenhum arquivo de lane irmã tocado (untracked
   src/audio-acoustics/, scripts/smoke-p*.mjs etc. intocados); nenhum código
   mudou — suíte 246/246 segue valendo.
+
+## Tick 25/08 ~23h45 (desktop worker, cron turbo): guardrail — fila P1-P3 DONE confirmada, varredura de branches órfãs limpa
+
+- Fila P1-P3: nada a executar. Artefatos conferidos NO DISCO neste tick:
+  exe canônico D:/cargo-target/release/solaris-av-engine.exe 6.529.536B
+  (22:23, embute index-CloehhZU.js e AnalysisWorkspace-T-On_-F1.js do HEAD —
+  grep 1 hit cada) + instalador NSIS 2.452.025B (22:23). Commits pós-código
+  (9865221/4bf5f90/06d57ba) são docs-only, então build segue alinhado ao HEAD.
+- Branch desktop == origin/desktop em 06d57ba; CI remoto success no commit
+  exato (ci + Vercel Preview Comments).
+- Varredura anti-stop-loop de TODAS as heads remotas: develop é relíquia de
+  fevereiro; v2-upgrade/v2-upgrade-recovery/turbo/web-opt ahead_of_main=0
+  (contidas); audio/acoustics (+23), features/analista-feliz (+44),
+  redesign-premium (+45) são lanes VIVAS com commits de hoje e donos ativos —
+  nenhuma branch órfã com trabalho não integrado. Único PR aberto: nenhum
+  (#1 turbo/web-opt já merged).
+- Higiene de log: entrada anterior datava "26/08 ~01h45" mas o relógio real
+  era 23h4x de 25/08 (confirmado por git ci e Get-Date) — corrigida a leitura
+  de hora aqui; ticks futuros devem bater data/hora antes de logar.
+- Processos: zero node/vite/exe da lane Solaris rodando; nodes vivos pertencem
+  à Hermes UI, ContractKit (:4179), Hein (:4188), LambdaHabits (:8799, já
+  atribuído no tick anterior) e afins — poupados, fora da lane.
+- Sem merge na main; nada tocado de lanes irmãs; nenhum código mudou — suíte
+  246/246 segue valendo (última execução registrada no tick 22h30).
