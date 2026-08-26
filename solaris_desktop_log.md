@@ -1,3 +1,34 @@
+## redesign (t30) — turbo #27 absorvido + regates — 26/08/2026 ~06h55
+
+- **Auditoria**: spec SOLARIS_REDESIGN.md intacta; R1-R4 + wows seguem DONE.
+  Unico delta: origin/main avancou 2 commits (f859745 + 661cb50 = turbo-web #27,
+  guardrail noturno docs-only). Worktree limpo ao abrir o tick.
+- **Fusao**: merge 95ad171 absorveu origin/main. Conflitos triviais: relatorios
+  regeneraveis (axe/lh-r1/lh-r2 -> --ours e REGENERADOS neste tick) e bloco de
+  topo do log compartilhado (t29 primeiro, turbo #27 depois; parser linha-a-linha).
+  Codigo de app intocado.
+- **GATES pos-merge** (build fresca da lane): tsc --noEmit limpo; vitest
+  **403/403** (38 arquivos); e2e fluxo real **21/21**; build verde byte-estavel
+  — entry **index-CHKfTLey.js**, INITIAL **46,89KB gz** + CSS index-C1l8F6-j
+  **9,79KB gz** (<30KB alvo ok); firebase lazy 94,82KB fora do caminho critico.
+  Zero re-hash vs t25/t28/t29.
+- **Browser gates** (scripts/run_gates_t30.sh: preview efemero porta alta
+  aleatoria + prova de hash antes de cada gate): console probe **0 eventos**;
+  LH x2 **P99/A100/BP100** (FCP 1,5s LCP 1,7-1,8s CLS 0,001 TBT 0ms).
+- **axe-core regenerado NA ARVORE MESCLADA** (scripts/axe-scan.mjs):
+  login **0** / main app **0** / criticalOrSerious **0**
+  (build demo sobe direto no app principal por design pos-t24).
+- Shots de aceite regenerados ->
+  C:/Yui/data/saas_factory/redesign_shots/r30_merge_{fila,analysis,qc_dialog}.png
+  via scripts/redesign_shot_t25.cjs (hash conferido; PIL: 97,9/95,8/96,1% dark,
+  stdev 19,3-30,0 = conteudo rico nas tres telas).
+- **LICAO DO TICK**: scripts/mvp_shot_acceptance.cjs (variante antiga que espera
+  TELA DE LOGIN) falha reproduzivel no build demo atual ('login guest falhou') —
+  desde o fix LCP do t24 a build sobe DIRETO na fila e login guest nao existe;
+  shots de merge devem usar redesign_shot_t25.cjs. Evidencia do DOM real
+  commitada em scripts/dom_probe_t30.cjs (fila renderiza em /#/login e /).
+- src-tauri/audio-acoustics/pitch intocados. Fila R1-R4 segue DONE aguardando
+  diretiva do dono. Sem Telegram.
 ## redesign (t29) — turbo #26 absorvido + regates — 26/08/2026 ~05h58
 
 - **Auditoria**: spec SOLARIS_REDESIGN.md intacta; R1-R4 + wows seguem DONE.

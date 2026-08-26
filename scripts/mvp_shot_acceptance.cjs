@@ -1,4 +1,7 @@
 // Captura MVP (main) p/ aceite visual: login, análise, diálogo QC.
+// [t30] OBSOLETO p/ builds demo pos-t24: espera TELA DE LOGIN que não existe mais
+// (build sobe direto na fila; guest click falha). Use scripts/redesign_shot_t25.cjs
+// para shots de merge/regate — evidência: scripts/dom_probe_t30.cjs + log t30.
 // Protocolo anti-órfão (skill saas-factory-ops): porta alta aleatória, navega
 // em localhost (não 127.0.0.1), stubs gapi/google + bloqueio de rede Google,
 // screenshot só após conferir hash do entry contra o dist local.
