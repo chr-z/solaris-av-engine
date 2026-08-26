@@ -771,3 +771,39 @@ Guardrail barato SEM código novo: fila P1-P4 segue DONE e pushed.
   POUPADOS (varredura manual Win32_Process por cmdline 'vite').
 - src-tauri/pitch intocados (do outro worker); suite commitada segue valendo
   (nenhum codigo mudou desde 6933b0b - commits da lane sao docs-only). Sem Telegram.
+
+## Tick 26/08 ~07h45 — audio-dsp (Yui / cron solaris-audio)
+
+Worktree solaris-audio (branch audio/acoustics); desktop/src-tauri/pitch intocados.
+TEMA: AUDITORIA DE ESTADO + PROVAS FRESCAS + MINA TERRESTRE DESARMADA no
+checkout principal. Fila da diretiva segue 100% FECHADA desde 25/08 (P1-P4
+pushed @ dea3422); PR #2 aberto aguardando decisão do dono (nada merged).
+
+- ESTADO CONFIRMADO COM EXECUÇÃO FRESCA (não herdada): vitest 446/446 VERDES
+  na árvore da lane (46 arquivos, ~111s) + tsc implícito nos gates; CI REMOTO
+  success no sha exato dea3422 (ci + Vercel Preview Comments via API).
+  PR #2: state=OPEN, mergeable=MERGEABLE/CLEAN, zero reviews pendentes.
+- AUDITORIA ANTI-BURACO contra a spec linha a linha: fingerprint/cache
+  (analysisCache.ts), progress granular por estágio (frames/peak/reverb/echo/
+  finalize), cancelamento real (worker 'cancelled' + hook cancela run em
+  unmount/troca de mídia), THD em frames tonais (clipping.ts +
+  estimateTHDFromSpectrum), ML embutido int16 com ONNX opcional INJETÁVEL e
+  NUNCA dependência do núcleo (decisão de bundle preservada p/ turbo-web),
+  mudança acústica mid-video INFO (acousticShift level+spectral). Zero TODO/
+  FIXME/HACK no src/audio-acoustics/. Nenhum buraco restante encontrado.
+- MINA TERRESTRE DESARMADA (higiene inter-lane): o worktree principal
+  (desktop) carregava um src/audio-acoustics/ UNTRACKED com rascunhos VELHOS
+  de 25/08 de manhã (pré-worktree, mtimes 01h05-05h42). Quando o PR #2
+  mergear e o desktop mergear main, o git recusaria o checkout/merge com
+  "untracked working tree files would be overwritten". Provas antes de mover:
+  (1) nenhum arquivo TRACKED do desktop importa audio-acoustics (grep -r);
+  (2) todos os módulos têm versões evoluídas commitadas na lane (blobs dos
+  drafts não são únicos em conteúdo, só em hash). MOVIDOS para
+  C:/Yui/data/quarantine/solaris-desktop-audio-drafts-20260826/ com README de
+  reversão. Desktop ficou limpo (git status sem nada de audio-acoustics).
+- OBSERVAÇÃO (não é da minha lane): desktop local está ahead 3 de
+  origin/desktop (ModeBadge/ponte standalone, 6e30339..18806ab, não pushed) —
+  trabalho do worker desktop, intocado, apenas anotado aqui p/ visibilidade.
+- Zero código novo nesta lane neste tick; push deste log via workaround GCM;
+  src-tauri e pitch intocados; sem Telegram.
+=== FIM TICK — lane audio/acoustics verde, quarentena documentada, PR #2 aguardando dono ===
