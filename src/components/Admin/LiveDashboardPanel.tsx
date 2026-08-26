@@ -12,6 +12,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   buildAnalystCards,
+  buildAnalystDrilldown,
   buildAnalystQuality,
   buildLiveKpis,
   buildSlaSummary,
@@ -20,6 +21,7 @@ import {
   mergeFeed,
   visibleQualityRows,
   type AnalystActivity,
+  type AnalystDrilldown,
   type FeedEvent,
   type LiveKpis,
 } from '../../utils/liveDashboard';
@@ -228,6 +230,13 @@ export default function LiveDashboardPanel({
   const dataset: Dataset = useMemo(
     () => buildDashboardDataset(ownEntries),
     [ownEntries],
+  );
+
+  // Fila real entra no dataset p/ tempo médio por O.S. (B2) — o mesmo array
+  // que alimenta sugestão/ações; a planilha sozinha não inventa tempo.
+  const datasetWithQueue: Dataset = useMemo(
+    () => ({ ...dataset, queueRows: queueState }),
+    [dataset, queueState],
   );
 
   // Relógio: agora real (ou injetado), atualizado a cada tick de refresh.
@@ -483,11 +492,11 @@ export default function LiveDashboardPanel({
 
   const cards = useMemo(
     () =>
-      buildAnalystCards(effectiveActivities, dataset, {
+      buildAnalystCards(effectiveActivities, datasetWithQueue, {
         todayKey,
         nowMs: tickNow,
       }),
-    [effectiveActivities, dataset, todayKey, tickNow],
+    [effectiveActivities, datasetWithQueue, todayKey, tickNow],
   );
 
   const qualityAll = useMemo(() => buildAnalystQuality(dataset), [dataset]);
@@ -496,6 +505,23 @@ export default function LiveDashboardPanel({
     [qualityAll, viewerCtx],
   );
   const canSeeIndividual = canReadIndividualMetrics(viewerCtx);
+
+  // B2 drill-down: analista selecionado num card (null = visão geral).
+  const [drillUserId, setDrillUserId] = useState<string | null>(null);
+  const openDrill = useCallback((id: string) => setDrillUserId(id), []);
+  const closeDrill = useCallback(() => setDrillUserId(null), []);
+
+  const drilldown: AnalystDrilldown | null = useMemo(
+    () =>
+      drillUserId == null
+        ? null
+        : buildAnalystDrilldown(effectiveActivities, datasetWithQueue, {
+            userId: drillUserId,
+            todayKey,
+            nowMs: tickNow,
+          }),
+    [drillUserId, effectiveActivities, datasetWithQueue, todayKey, tickNow],
+  );
 
   // Feed: SSE próprio com fallback polling 5s; injetável em testes.
   const pullEvents = useCallback(async (): Promise<FeedEvent[]> => {
@@ -806,31 +832,41 @@ export default function LiveDashboardPanel({
           </h3>
           <ul data-testid="live-analyst-cards" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {cards.map((c) => (
-              <li
-                key={c.userId}
-                data-testid="live-analyst-card"
-                className="rounded-lg border border-gray-600/60 bg-gray-800/40 px-3 py-2"
-              >
-                <div className="flex items-center gap-2">
-                  <span aria-hidden="true">{PRESENCE_DOT[c.state] ?? '⚪'}</span>
-                  <span className="truncate text-sm font-medium text-gray-100">
-                    {c.name}
+              <li key={c.userId} data-testid="live-analyst-card">
+                <button
+                  type="button"
+                  onClick={() => openDrill(c.userId)}
+                  title={t('dash.live.cardHint')}
+                  aria-label={t('dash.live.openDrill', { name: c.name })}
+                  className="w-full rounded-lg border border-gray-600/60 bg-gray-800/40 px-3 py-2 text-left transition-colors hover:border-sky-500/70 hover:bg-gray-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                >
+                  <span className="flex items-center gap-2">
+                    <span aria-hidden="true">{PRESENCE_DOT[c.state] ?? '⚪'}</span>
+                    <span className="truncate text-sm font-medium text-gray-100">
+                      {c.name}
+                    </span>
+                    <span className="ml-auto text-xs text-gray-500">
+                      {c.analyzingOsId
+                        ? t('dash.live.workingOn', { os: c.analyzingOsId })
+                        : ''}
+                    </span>
                   </span>
-                  <span className="ml-auto text-xs text-gray-500">
-                    {c.analyzingOsId
-                      ? t('dash.live.workingOn', { os: c.analyzingOsId })
-                      : ''}
+                  <span className="mt-1 flex items-center gap-3 text-xs text-gray-400">
+                    <span>{t('dash.live.todayCount', { n: String(c.todayCount) })}</span>
+                    <span>{t('dash.live.weekCount', { n: String(c.weekCount) })}</span>
+                    {canSeeIndividual && c.avgGiven != null && (
+                      <span>{t('dash.live.avgGiven', { score: fmtScore(c.avgGiven, language === 'pt') })}</span>
+                    )}
+                    {canSeeIndividual && c.avgHoursPerOs != null && (
+                      <span>
+                        {t('dash.live.avgHours', { h: String(c.avgHoursPerOs).replace('.', language === 'pt' ? ',' : '.') })}
+                      </span>
+                    )}
                   </span>
-                </div>
-                <div className="mt-1 flex items-center gap-3 text-xs text-gray-400">
-                  <span>{t('dash.live.todayCount', { n: String(c.todayCount) })}</span>
-                  {canSeeIndividual && c.avgGiven != null && (
-                    <span>{t('dash.live.avgGiven', { score: fmtScore(c.avgGiven, language === 'pt') })}</span>
+                  {(canSeeIndividual ? c.avgGiven == null : true) && c.todayCount === 0 && (
+                    <span className="mt-1 block text-xs text-gray-600">{t('dash.live.noDataToday')}</span>
                   )}
-                </div>
-                {canSeeIndividual && c.avgGiven == null && c.todayCount === 0 && (
-                  <p className="mt-1 text-xs text-gray-600">{t('dash.live.noDataToday')}</p>
-                )}
+                </button>
               </li>
             ))}
             {cards.length === 0 && (
@@ -857,6 +893,146 @@ export default function LiveDashboardPanel({
           </ul>
         </div>
       </div>
+
+      {/* B2 drill-down: histórico completo do analista (substitui a visão geral) */}
+      {drilldown && (
+        <div
+          data-testid="analyst-drilldown"
+          className="rounded-lg border border-sky-500/40 bg-gray-800/40 p-4"
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            <span aria-hidden="true">{PRESENCE_DOT[drilldown.state] ?? '⚪'}</span>
+            <h3 className="text-base font-semibold text-gray-100">
+              {t('dash.live.drillTitle', { name: drilldown.name })}
+            </h3>
+            {drilldown.analyzingOsId && (
+              <span className="text-xs text-gray-400">
+                {t('dash.live.workingOn', { os: drilldown.analyzingOsId })}
+              </span>
+            )}
+            <button
+              type="button"
+              data-testid="drill-close"
+              onClick={closeDrill}
+              className="ml-auto rounded border border-gray-600/60 px-2 py-1 text-xs text-gray-300 hover:border-sky-500/70 hover:text-sky-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+            >
+              {t('dash.live.backToOverview')}
+            </button>
+          </div>
+
+          <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
+            <div className="rounded bg-gray-900/60 px-2 py-1.5">
+              <dt className="text-gray-500">{t('dash.live.todayCount', { n: '' }).trim()}</dt>
+              <dd className="text-sm font-semibold text-gray-100">{drilldown.todayCount}</dd>
+            </div>
+            <div className="rounded bg-gray-900/60 px-2 py-1.5">
+              <dt className="text-gray-500">{t('dash.live.weekCount', { n: '' }).trim()}</dt>
+              <dd className="text-sm font-semibold text-gray-100">{drilldown.weekCount}</dd>
+            </div>
+            <div className="rounded bg-gray-900/60 px-2 py-1.5">
+              <dt className="text-gray-500">{t('dash.live.colAnalyzed')}</dt>
+              <dd className="text-sm font-semibold text-gray-100">{drilldown.totalCount}</dd>
+            </div>
+            <div className="rounded bg-gray-900/60 px-2 py-1.5">
+              <dt className="text-gray-500">{t('dash.live.colAvgScore')}</dt>
+              <dd className="text-sm font-semibold text-gray-100">
+                {drilldown.avgScore == null ? '—' : fmtScore(drilldown.avgScore, language === 'pt')}
+              </dd>
+            </div>
+            <div className="rounded bg-gray-900/60 px-2 py-1.5">
+              <dt className="text-gray-500">{t('dash.live.colAvgTime')}</dt>
+              <dd className="text-sm font-semibold text-gray-100" data-testid="drill-avg-time">
+                {!canSeeIndividual || drilldown.avgHoursPerOs == null
+                  ? '—'
+                  : t('dash.live.kpiSlaHours', {
+                      h: String(drilldown.avgHoursPerOs).replace('.', language === 'pt' ? ',' : '.'),
+                    })}
+              </dd>
+            </div>
+          </dl>
+          {canSeeIndividual ? (
+            <p className="mt-2 text-[11px] text-gray-500">
+              {t('dash.live.lastActivity')}{' '}
+              {drilldown.lastActiveMs == null
+                ? '—'
+                : fmtClock(drilldown.lastActiveMs)}
+            </p>
+          ) : (
+            <p className="mt-2 text-[11px] text-gray-500">
+              {t('dash.live.privacyHint')}
+            </p>
+          )}
+
+          <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div>
+              <h4 className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500">
+                {t('dash.live.monthHistory')}
+              </h4>
+              <table data-testid="drill-months" className="w-full text-left text-xs">
+                <thead>
+                  <tr className="text-gray-500">
+                    <th scope="col" className="py-1 pr-3 font-medium uppercase tracking-wide">{t('dash.trend.month')}</th>
+                    <th scope="col" className="py-1 pr-3 font-medium uppercase tracking-wide">{t('dash.live.colAnalyzed')}</th>
+                    <th scope="col" className="py-1 pr-3 font-medium uppercase tracking-wide">{t('dash.live.colAvgScore')}</th>
+                    <th scope="col" className="py-1 pr-3 font-medium uppercase tracking-wide">{t('dash.live.colMarks')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {drilldown.months.map((m) => (
+                    <tr key={m.monthKey} className="border-t border-gray-700/60 text-gray-300">
+                      <td className="py-1.5 pr-3">{m.monthKey}</td>
+                      <td className="py-1.5 pr-3">{m.analyses}</td>
+                      <td className="py-1.5 pr-3">
+                        {m.avgScore == null ? '—' : fmtScore(m.avgScore, language === 'pt')}
+                      </td>
+                      <td className="py-1.5 pr-3">
+                        {m.avgMarksPerOs == null ? '—' : m.avgMarksPerOs.toFixed(1)}
+                      </td>
+                    </tr>
+                  ))}
+                  {drilldown.months.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-2 text-gray-500">{t('dash.live.noDataToday')}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <h4 className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500">
+                {t('dash.live.recentOs')}
+              </h4>
+              <table data-testid="drill-recent-os" className="w-full text-left text-xs">
+                <thead>
+                  <tr className="text-gray-500">
+                    <th scope="col" className="py-1 pr-3 font-medium uppercase tracking-wide">O.S.</th>
+                    <th scope="col" className="py-1 pr-3 font-medium uppercase tracking-wide">{t('dash.period.title')}</th>
+                    <th scope="col" className="py-1 pr-3 font-medium uppercase tracking-wide">{t('dash.live.colAvgScore')}</th>
+                    <th scope="col" className="py-1 pr-3 font-medium uppercase tracking-wide">{t('dash.live.colMarksShort')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {drilldown.recentOs.map((r) => (
+                    <tr key={r.osId} className="border-t border-gray-700/60 text-gray-300">
+                      <td className="py-1.5 pr-3">{r.osId}</td>
+                      <td className="py-1.5 pr-3">{r.date ?? '—'}</td>
+                      <td className="py-1.5 pr-3">
+                        {r.score == null ? '—' : fmtScore(r.score, language === 'pt')}
+                      </td>
+                      <td className="py-1.5 pr-3">{r.marks}</td>
+                    </tr>
+                  ))}
+                  {drilldown.recentOs.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-2 text-gray-500">{t('dash.live.noDataToday')}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Qualidade cruzada (respeita papel) */}
       <div>

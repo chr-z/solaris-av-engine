@@ -45,6 +45,11 @@ export interface OsRecord {
 
 export interface Dataset {
   records: OsRecord[];
+  /**
+   * v3 F5/B2: linhas da fila real (os_queue) quando disponíveis no painel.
+   * Opcional e injetado pelo chamador — o parser da planilha nunca popula.
+   */
+  queueRows?: import('../features/qol/queue').QueueRowLike[];
 }
 
 export interface SummaryStats {

@@ -11,12 +11,15 @@
 
 import {
   SAO_PAULO_CLOCK,
+  closedPeriodRange,
   localDayKey,
   localParts,
+  weekKey,
   type PodiumClockConfig,
 } from '../features/gamification/periods';
 import type { Dataset, OsRecord } from './dashboard';
 import { canReadIndividualMetrics, type UserContext } from '../features/db/roles';
+import type { QueueRowLike } from '../features/qol/queue';
 
 // ---------------------------------------------------------------------------
 // KPIs do topo (spec B1)
@@ -196,27 +199,51 @@ export interface AnalystCardData {
   analyzingOsId: string | null;
   /** Análises concluídas hoje (pela planilha). */
   todayCount: number;
+  /** Análises na SEMANA do pódio (seg-dom, fuso -03:00) — spec B2. */
+  weekCount: number;
   /** Média das notas dadas (só exibida p/ papéis autorizados). */
   avgGiven: number | null;
+  /** Média de horas por O.S. concluída (fila real; null sem timestamps). */
+  avgHoursPerOs: number | null;
   lastActiveMs: number | null;
 }
 
+/**
+ * Tempo médio por O.S. (spec B2) — da FILA REAL (os_queue), não inventado:
+ * média created_at→completed_at das linhas 'done' atribuídas ao analista com
+ * timestamps parseáveis e coerentes (conclusão antes da criação = fora).
+ * Sem conclusões datadas → null (a UI mostra "—", nunca zero).
+ */
 export function buildAnalystCards(
   activities: readonly AnalystActivity[],
   dataset: Dataset,
   opts: { todayKey: string; nowMs: number },
 ): AnalystCardData[] {
-  const perAnalyst = new Map<string, { count: number; sum: number }>();
+  const perAnalyst = new Map<
+    string,
+    { count: number; sum: number; weekCount: number }
+  >();
+  const wk = weekKey(opts.nowMs, SAO_PAULO_CLOCK);
+  const weekEndExclusive = localDayKey(
+    closedPeriodRange('week', wk, SAO_PAULO_CLOCK).fromMs + 7 * MS_PER_DAY_LOCAL,
+    SAO_PAULO_CLOCK,
+  );
   for (const rec of dataset.records) {
-    if (rec.date !== opts.todayKey) continue;
+    if (!rec.analyst || rec.finalScore === null || !rec.date) continue;
     const id = rec.analyst;
-    const entry = perAnalyst.get(id) ?? { count: 0, sum: 0 };
-    if (rec.finalScore !== null) {
+    const entry = perAnalyst.get(id) ?? { count: 0, sum: 0, weekCount: 0 };
+    if (rec.date === opts.todayKey) {
+      // Card mostra o DIA: contagem e média das notas de hoje.
       entry.count++;
       entry.sum += rec.finalScore;
     }
+    // Janela semanal meio-aberta [segunda 00:00, próxima segunda 00:00)
+    // no fuso do pódio — a mesma régua do pódio (spec C2/B2).
+    if (rec.date >= wk && rec.date < weekEndExclusive) entry.weekCount++;
     perAnalyst.set(id, entry);
   }
+
+  const hours = analystAvgHoursFromQueue(dataset.queueRows ?? [], opts.nowMs);
 
   return activities.map((a) => {
     const agg = perAnalyst.get(a.userId);
@@ -226,7 +253,9 @@ export function buildAnalystCards(
       state: presenceState(a, opts.nowMs),
       analyzingOsId: a.analyzingOsId ?? null,
       todayCount: agg?.count ?? 0,
+      weekCount: agg?.weekCount ?? 0,
       avgGiven: agg && agg.count > 0 ? agg.sum / agg.count : null,
+      avgHoursPerOs: hours.get(a.userId) ?? null,
       lastActiveMs: a.lastActiveMs,
     };
   });
@@ -384,4 +413,184 @@ export function visibleQualityRows(
 ): AnalystQualityRow[] {
   if (canReadIndividualMetrics(viewer)) return [...rows];
   return rows.filter((r) => r.analyst === viewer.userId);
+}
+
+// ---------------------------------------------------------------------------
+// Drill-down do analista (spec B2 — "clicar → histórico completo da pessoa")
+// ---------------------------------------------------------------------------
+
+/** Linha de histórico mensal do drill-down (só meses com atividade). */
+export interface AnalystMonthRow {
+  /** Chave 'YYYY-MM' no fuso do pódio. */
+  monthKey: string;
+  analyses: number;
+  avgScore: number | null;
+  /** Marcações médias por O.S. (null quando nenhuma linha veio marcada). */
+  avgMarksPerOs: number | null;
+}
+
+/** Uma O.S. recente do analista (mais nova primeiro). */
+export interface AnalystOsRow {
+  osId: string;
+  date: string | null;
+  score: number | null;
+  marks: number;
+}
+
+export interface AnalystDrilldown {
+  userId: string;
+  name: string;
+  todayCount: number;
+  weekCount: number;
+  /** Total de O.S. com nota na planilha inteira. */
+  totalCount: number;
+  avgScore: number | null;
+  /** Média de horas/O.S. da fila real (null sem timestamps — nunca zero). */
+  avgHoursPerOs: number | null;
+  /** Última atividade conhecida (evento XP/save); null = nunca visto. */
+  lastActiveMs: number | null;
+  state: PresenceState;
+  analyzingOsId: string | null;
+  /** Meses com atividade, mais recente primeiro (cap interno nenhum — dataset é pequeno). */
+  months: AnalystMonthRow[];
+  /** Até 8 O.S. mais recentes, mais nova primeiro. */
+  recentOs: AnalystOsRow[];
+}
+
+const HOUR_MS_DRILL = 3_600_000;
+
+/**
+ * Tempo médio por O.S. concluída POR ANALISTA, da fila real (os_queue).
+ * Atribuição: assignee, senão claimed_by (mesma semântica do suggestNext).
+ * Timestamp ausente/inválido ou conclusão antes da criação = FORA da média.
+ */
+export function analystAvgHoursFromQueue(
+  rows: readonly QueueRowLike[],
+  now: number,
+): Map<string, number> {
+  void now; // assinatura estável p/ futuras janelas (ex.: só últimos 30d)
+  const acc = new Map<string, { sumMs: number; n: number }>();
+  for (const r of rows) {
+    if (r.status !== 'done') continue;
+    const who = r.assignee ?? r.claimed_by ?? null;
+    if (!who) continue;
+    const created = Date.parse(r.created_at);
+    const completed =
+      r.completed_at != null && r.completed_at !== '' ? Date.parse(r.completed_at) : NaN;
+    if (!Number.isFinite(created) || !Number.isFinite(completed)) continue;
+    if (completed < created) continue; // relógio corrupto não entra
+    const cur = acc.get(who) ?? { sumMs: 0, n: 0 };
+    cur.sumMs += completed - created;
+    cur.n++;
+    acc.set(who, cur);
+  }
+  const out = new Map<string, number>();
+  for (const [who, a] of acc) {
+    if (a.n > 0) out.set(who, Math.round((a.sumMs / a.n / HOUR_MS_DRILL) * 10) / 10);
+  }
+  return out;
+}
+
+/**
+ * História completa do analista (spec B2): totais, mês a mês e O.S. recentes.
+ * Puro — o painel só injeta viewer/papel via visibleQualityRows-like gates.
+ */
+export function buildAnalystDrilldown(
+  activities: readonly AnalystActivity[],
+  dataset: Dataset,
+  opts: {
+    userId: string;
+    todayKey: string;
+    nowMs: number;
+    cfg?: PodiumClockConfig;
+  },
+): AnalystDrilldown | null {
+  const cfg = opts.cfg ?? SAO_PAULO_CLOCK;
+  const activity = activities.find((a) => a.userId === opts.userId);
+  if (!activity) return null;
+
+  let totalCount = 0;
+  let totalSum = 0;
+  let todayCount = 0;
+  const wk = weekKey(opts.nowMs, cfg);
+  const weekEndExclusive = localDayKey(
+    closedPeriodRange('week', wk, cfg).fromMs + 7 * MS_PER_DAY_LOCAL,
+    cfg,
+  );
+  let weekCount = 0;
+
+  interface MonthAcc {
+    n: number;
+    sum: number;
+    marks: number;
+    marked: number;
+  }
+  const months = new Map<string, MonthAcc>();
+  const osRows: AnalystOsRow[] = [];
+
+  for (const rec of dataset.records) {
+    if (!rec.analyst || rec.analyst !== opts.userId) continue;
+    if (rec.finalScore !== null) {
+      totalCount++;
+      totalSum += rec.finalScore;
+    }
+    if (!rec.date) continue;
+    if (rec.date === opts.todayKey && rec.finalScore !== null) todayCount++;
+    // Semana do pódio: mesma régua meio-aberta dos cards (B2/C2).
+    if (rec.date >= wk && rec.date < weekEndExclusive && rec.finalScore !== null) {
+      weekCount++;
+    }
+    const mk = `${rec.date.slice(0, 4)}-${rec.date.slice(5, 7)}`;
+    const m = months.get(mk) ?? { n: 0, sum: 0, marks: 0, marked: 0 };
+    if (rec.finalScore !== null) {
+      m.n++;
+      m.sum += rec.finalScore;
+    }
+    if (rec.marks && rec.marks.length > 0) {
+      m.marks += rec.marks.length;
+      m.marked++;
+    }
+    months.set(mk, m);
+    osRows.push({
+      osId: rec.wo || `#${rec.rowIndex}`,
+      date: rec.date,
+      score: rec.finalScore,
+      marks: rec.marks?.length ?? 0,
+    });
+  }
+
+  const monthRows: AnalystMonthRow[] = [...months.entries()]
+    .map(([monthKey, m]) => ({
+      monthKey,
+      analyses: m.n,
+      avgScore: m.n > 0 ? m.sum / m.n : null,
+      avgMarksPerOs: m.marked > 0 ? m.marks / m.marked : null,
+    }))
+    .sort((x, y) => y.monthKey.localeCompare(x.monthKey));
+
+  osRows.sort((x, y) => {
+    if (x.date != null && y.date != null && x.date !== y.date) {
+      return y.date.localeCompare(x.date);
+    }
+    if (x.date == null && y.date != null) return 1;
+    if (x.date != null && y.date == null) return -1;
+    return x.osId.localeCompare(y.osId);
+  });
+
+  const hours = analystAvgHoursFromQueue(dataset.queueRows ?? [], opts.nowMs);
+
+  return {
+    userId: opts.userId,
+    name: activity.name,
+    todayCount,
+    weekCount,
+    totalCount,
+    avgScore: totalCount > 0 ? totalSum / totalCount : null,
+    avgHoursPerOs: hours.get(opts.userId) ?? null,
+    lastActiveMs: activity.lastActiveMs,
+    state: presenceState(activity, opts.nowMs),
+    analyzingOsId: activity.analyzingOsId ?? null,
+    months: monthRows,
+    recentOs: osRows.slice(0, 8),
+  };
 }
