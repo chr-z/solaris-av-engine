@@ -2,6 +2,51 @@
 
 ## features
 
+### 2026-08-26 ~08h20 — tick features-worker: F5/B2 drill-down do analista FECHADO (792/792)
+
+- **Diagnóstico de abertura**: worktree limpo e em sync (6c7ccba, fetch com
+  workaround GCM), baseline **770/770** verde re-provado. Fila F1–F6 segue
+  DONE; varredura dirigida pela spec achou o buraco real restante: spec B2
+  pedia "Drill-down: clicar → histórico completo da pessoa" — os cards de
+  analista eram estáticos (zero clique) e faltavam "OSs na semana" e "última
+  atividade" do card.
+- **Núcleo puro (`utils/liveDashboard.ts`)**:
+  - `weekCount` nos cards: régua DO PÓDIO (semana seg-dom meio-aberta no
+    fuso -03:00, via weekKey/closedPeriodRange de periods.ts) — domingo
+    pertence à semana que abriu na segunda passada (testado);
+  - `avgHoursPerOs`: tempo médio/O.S. SÓ da fila real (`analystAvgHoursFromQueue`
+    sobre QueueRowLike): assignee → claimed_by, created→completed, timestamps
+    ausentes/inválidos ou conclusão antes da criação ficam FORA — null nunca
+    zero (mesma linha honesta dos núcleos anteriores); planilha sozinha não
+    inventa tempo;
+  - `Dataset.queueRows?` opcional (injetado pelo painel; parser nunca popula);
+  - `buildAnalystDrilldown`: totais (hoje/semana/geral), média global,
+    meses mês-a-mês (mais recente primeiro, marcações médias por O.S.) e até
+    8 O.S. recentes (data desc, sem-data vai pro fim, tie-break por osId);
+    retorna null pra analista sem atividade conhecida;
+  - card preserva o contrato antigo: "hoje" continua sendo contagem/média do
+    DIA (avgGiven), semana é campo NOVO ao lado.
+- **UI (`LiveDashboardPanel`)**:
+  - card virou `<button>` acessível (aria-label "Open {name}'s full history",
+    hover/focus-visible ring, tooltip do hint);
+  - linha nova no card: "{n} this week · {h}h/O.S." (tempo só c/ papel que
+    lê métricas individuais);
+  - clique abre bloco drill-down: KPIs hoje/semana/Analyzed/média/tempo
+    médio, última atividade (ou hint de privacidade), tabela mês-a-mês e
+    tabela das O.S. recentes; "Back to overview" restaura;
+  - privacidade B4 mantida: avgHoursPerOs mascarado ("—") pra papel sem
+    canReadIndividualMetrics mesmo com dado presente;
+  - i18n EN/PT em paridade (16 chaves novas dash.live.*).
+- **Provas**: suíte **792/792** (+22: liveDashboardDrill 17 — bordas de
+  semana domingo/segunda 00h, claimed_by fallback, relógio corrupto, status
+  ≠done fora, cap-8, cfg injetável Tóquio; liveDashboardDrillUi 5 jsdom —
+  abrir/fechar/privacidade/sem-invenção). tsc limpo; lint ratchet estável
+  (42E/18W antes=depois); build verde — initial **57,19 KB gz**
+  (+1,62 vs tick anterior; budget <500KB intacto).
+- **Gotcha do tick**: patch tool avisou "modified by sibling subagent" em
+  arquivo que EU estava editando — probe de processos provou zero worker
+  vivo na lane e diff = só o meu; segui com re-read antes de cada patch.
+
 ### 2026-08-26 ~07h00 — tick features-worker: F5/B1 "SLA médio" + C4/E opt-in de exportação de pódio FECHADOS (770/770)
 
 - **Diagnóstico de abertura**: worktree limpo e em sync (4a77ada, fetch com
