@@ -949,3 +949,57 @@ olhava mediana de RMS por quartil — troca de sala/mic com nível IGUAL passava
   ATENÇÃO: PR #2 (audio/acoustics -> main) agora aponta head 9f9f57d —
   segue aguardando decisão do dono, nada merged.
 === FIM TICK — spec SOLARIS_AUDIO_ACOUSTICS 100% coberta linha a linha ===
+
+
+===============================================================
+== TICK DESKTOP 26/08 ~06h15 — P3 LITERAL: FLAG RUNTIME STANDALONE_MODE
+===============================================================
+Contexto: dono mandou sair do guardrail e AVANÇAR (um pacote grande/tick).
+Auditoria disco-a-disco mostrou P1/P2 materialmente DONE (exe+NSIS 25/08 22h23,
+LTO/strip/panic=abort, lazy chunks) — o único item da diretiva sem prova em
+código era o flag de RUNTIME (hoje o modo só vinha de build flag/Tauri/local-
+Storage). Este tick entregou isso, ponta a ponta:
+
+- CORE RUST (141c468): src-tauri/src/runtime_config.rs — env STANDALONE_MODE
+  (1/true/yes/on | 0/false/no/off, tolerante a lixo) + arquivo
+  %APPDATA%/dev.chr-z.solaris/config.local.json {"standaloneMode":bool};
+  env vence sobre arquivo; qualquer config ruim = sem opinião (nunca derruba);
+  comando get_runtime_config_command com resposta serde camelCase — teste de
+  serialização pegou rename_all faltando ANTES do push. cargo test 18/18.
+- FRONT (bf10921): src/config/remoteModeFlag.ts + applyRemoteModeOpinion() em
+  runtimeMode.ts — duas fontes de opinião: core Tauri E solaris.config.json
+  SAME-ORIGIN do deploy web (caso on-premise WEB sem rebuild!). Guarda anti-
+  rebaixamento (opinionToApply): opinião cloud NUNCA desliga artefato que já
+  nasceu standalone; override manual do usuário tem precedência máxima.
+  Novo degrau 'applied' na detecção (override > applied > build > Tauri).
+  main.tsx virou boot async: aplica a opinião ANTES do 1o render (o modo é
+  lido sincronamente nos gates de UI), timeout 1.5s nunca segura o boot.
+  23 testes novos cobrindo os dois modos.
+- CORREÇÃO DE INSTRUMENTO (b30fdf0): probe E2E não reconhecia
+  http://ipc.localhost (forma WINDOWS da origem ipc:// do Tauri v2, já na CSP
+  desde 2fafb29) — meu get_runtime_config_command foi o primeiro IPC de boot
+  da história do app e expôs a lacuna; allowlist corrigida nos 2 probes.
+  KIT FORENSE diag_*.mjs provou armadilha nova: `cargo build --release` PURO
+  regrediu o embed (assets vazios → janela cai no devUrl localhost:5173 →
+  ERR_CONNECTION_REFUSED); rota canônica é o CLI cargo tauri build --no-bundle.
+- PROVAS VIVAS (c02a503): (A) matriz dentro do exe via CDP — A1 env=1 ⇒
+  aplicado/persistido; A2 sem env ⇒ nada decidido; A3 env=0 ⇒ GUARDA bloqueou
+  (modo nato-standalone intocado). (B) Experimento web no Chrome headless:
+  build CLOUD (chunk firebase 472KB real) + solaris.config.json no deploy ⇒
+  entra direto no workspace SEM login wall, opinião persistida; removendo o
+  arquivo ⇒ "Sign in with Google" volta e nada fica aplicado. Flag de runtime
+  funciona sem rebuild nos dois mundos (exe e deploy web).
+- GATES FINAIS: probe git-archive da árvore commitada: tsc --noEmit LIMPO +
+  vitest 262/262 (pegou TS2554 meu em remoteModeFlag.ts — esbuild não checa
+  tipos; corrigido em e965220 antes do push); smoke SMOKE_OK no exe novo;
+  desktop_e2e_probe_p3 VERDICT PASS (boot 816ms, W.O. ok, só aba Local File,
+  zero upsell/Drive, console limpo, zero recurso externo além do IPC próprio).
+- PUSH verificado 60408a2..e965220 ls-remote OK; CI REMOTO SUCCESS (50s).
+- Armadilha de ambiente p/ próxima lane: Chrome headless morre com bind()
+  WSAEACCES 0x271D quando a porta cai nas faixas reservadas (netsh int ipv4
+  show excludedportrange): 49749-49948, 50000-50059, 50160-50359... usar
+  faixa livre ~42xxx/43xxx. E .env.<modo> é o nome que o Vite carrega por
+  --mode (não .env.<sufixo> arbitrário).
+Commits deste tick: 141c468 bf10921 b30fdf0 c02a503 e965220 (branch desktop,
+nada merged em main — aguarda aprovação do dono).
+=== FIM TICK DESKTOP ===
