@@ -2,6 +2,55 @@
 
 ## features
 
+### 2026-08-26 ~07h00 — tick features-worker: F5/B1 "SLA médio" + C4/E opt-in de exportação de pódio FECHADOS (770/770)
+
+- **Diagnóstico de abertura**: worktree limpo e em sync (4a77ada, fetch com
+  workaround GCM), baseline **738/738** verde re-provado antes de mexer.
+  Fila original F1–F6 confirmada DONE nos ticks anteriores; varredura
+  dirigida pela spec achou os DOIS buracos REAIS restantes:
+  1. spec B1 pedia "SLA médio" nos cards topo — nunca implementado (zero hits);
+  2. spec C4/E pedia que dados de pódio não vazem pra planilha SEM opt-in —
+     até aqui garantido só por OMISSÃO (não existia caminho nenhum de
+     exportação de pódio; regra negativa sem porta positiva).
+- **B1 SLA (núcleo `utils/liveDashboard.ts::buildSlaSummary` + card vivo)**:
+  - média created_at→completed_at das OSs 'done' da fila viva +
+    overdueCount/atraso médio das 'queued' com deadline no passado;
+  - honestidade de dado: timestamp ausente/inválido ou conclusão ANTES da
+    criação (relógio corrupto) fica FORA da média — null vira "—" no card,
+    NUNCA zero inventado (mesma linha dos núcleos anteriores);
+  - `QueueRowLike` ganha `completed_at?` opcional espelhando os_queue da
+    migration 0002 (aditivo, zero toque em código dos workers irmãos);
+  - UI: 5º KpiCard "SLA — avg completion" (grid foi a lg:grid-cols-5), sub
+    "{n} overdue · avg {h}h late" ou "no overdue O.S."; i18n EN/PT paridade.
+- **C4/E opt-in (`features/gamification/podiumExport.ts` + `podiumSharePref.ts`
+  + seção admin na Liga)**:
+  - gate POSITIVO e testável: `buildPodiumCsv`/`buildPodiumXlsx` exigem
+    `{optIn: true}` literal — sem ele retornam null (NEM bytes são montados);
+    valor lixo em runtime também recusa ('sim' → null; o gate é valor, não
+    comentário);
+  - preferência `solaris.gamification.podiumShareOptIn`: default OFF, só o
+    valor exato '1' liga, desligar REMOVE a chave (mapa enxuto), storage
+    explosivo = falha fechada (nunca abre por erro);
+  - XLSX reusa `buildSingleSheetXlsx` (sheet 'Podium', números como células
+    numéricas de verdade, determinístico p/ input+timestamp iguais); CSV
+    gêmeo com escape RFC 4180 (aspas/vírgula no nome); filename estável
+    `solaris-podium_<type>_<key>.<ext>` compartilhado pelos dois formatos;
+  - LeaguePanel: checkbox só-admin no histórico ("Allow sharing podium data
+    externally", default OFF) e botões Export CSV/XLSX por pódio congelado
+    que aparecem SOMENTE com toggle ON + admin — defesa em profundidade: a
+    UI esconde E o núcleo recusa; analista com chave suja no storage segue
+    sem botão nenhum (testado).
+- **Provas**: suíte **770/770** (+32 asserts: liveDashboardSla 12,
+  podiumExport 14, liveSlaUi 5 jsdom, podiumExportUi 5 jsdom incluindo
+  download real capturado via createObjectURL mockado); tsc limpo; lint
+  ratchet estável (42E/18W antes=depois); build verde — initial entry
+  **55,57 KB gz** (budget <500KB intacto; pesados vfs_fonts/pdfmake/ECharts/
+  firebase seguem fora do initial).
+- **Gotchas do tick**: import relativo de módulo novo em
+  src/features/gamificação é '../../utils/…' (dois níveis — vite cuspiu
+  "Failed to resolve import" no 1o run); mock de papel via vi.hoisted VAZA
+  entre tests → resetar roleState + cleanup no beforeEach (jsdom mantém DOM).
+
 ### 2026-08-25 ~23h30 — tick features-worker: resgate de WIP órfão (A1) + C4 modo time FECHADO (núcleo + UI) (commits a6fa915..0cc8eb3)
 
 - **Diagnóstico de abertura**: worktree estava AHEAD 4 do remoto (f5d019e)
