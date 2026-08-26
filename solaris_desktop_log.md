@@ -2,6 +2,48 @@
 
 ## features
 
+### 2026-08-25 ~23h30 — tick features-worker: resgate de WIP órfão (A1) + C4 modo time FECHADO (núcleo + UI) (commits a6fa915..0cc8eb3)
+
+- **Diagnóstico de abertura**: worktree estava AHEAD 4 do remoto (f5d019e)
+  com WIP sujo de um tick anterior MEU cortado antes do commit — probe de
+  processos (scripts/tick_probe.ps1, escrito em arquivo por causa do $_
+  comido pelo bash) provou ZERO worker vivo na lane (só a própria sonda,
+  nascida no mesmo segundo = anti-self-detecção). WIP validado (tsc limpo,
+  659/659) e commitado como a6fa915; os 4 commits pendentes + este foram
+  empurrados com o workaround de GCM.
+- **A1 remapeamento robusto (resgate)**: conflito agora é contra a tecla
+  EFETIVA dos outros atalhos (mapa do usuário OU padrão — bindar 't' quando
+  markTime ainda usa 't' padrão colide); mapa enxuto via removeItem quando
+  vazio; storage default window.localStorage com null explícito = desacoplado;
+  hot-reload dos atalhos também nos dashboards + jsdom do painel.
+- **Fila original F1–F6 confirmada DONE** nos logs anteriores (trocas D:
+  wavesurfer v7 lazy ✓, pdfmake ✓, Intl/fuso fixo ✓ com date-fns REJEITADO
+  com prova ~70KB que não resolve problema real; ECharts ✓ desde F5).
+- **C4 modo time — buraco real restante da spec** ("soma do grupo vs meta
+  mensal — cooperação antes de competição"): zero hits no grep antes deste
+  tick. Núcleo puro `features/gamification/teamGoal.ts`: meta mensal inteira
+  ≥1 em localStorage (`solaris.teamGoal.monthlyXp`), load tolerante (lixo =
+  desligado), save best-effort com hot-reload por evento custom,
+  `teamProgress` soma XP líquido SÓ do roster dentro da janela meio-aberta
+  (retrabalho -150 estorna — coerente com o guardrail de nunca premiar
+  análise rasa), `goalStatus` defensivo (meta 0 → nunca divide por zero).
+  13 asserts de borda.
+- **Wiring vivo na LeaguePanel**: seção "Meta do mês" entre pódio e
+  conquistas — progresso ao vivo (roster = mesmos analistas do pódio ao
+  vivo, mês civil corrente fuso -03:00), form admin define/remove com
+  validação i18n EN/PT, hot-reload por evento custom + aba cruzada
+  ('storage'), barra acessível (progressbar nomeado, met=verde). Não-admin
+  vê o progresso mas não o form (privacidade por papel). 5 asserts jsdom.
+- **Gates finais**: vitest **677/677** (55 arquivos, +18 no tick), tsc
+  limpo, build verde — entry 51,48 KB gz + react-vendor 44,43 (~96KB
+  initial, budget <500KB intacto; pesados todos lazy: vfs_fonts 454,6 /
+  pdfmake 353,7 / ECharts 163,6 / firebase 95,0 fora do initial).
+- **Gotchas do tick**: jsdom não dispara submit de form via clique em botão
+  type=submit → usar fireEvent.submit(form); múltiplas progressbars exigem
+  getByRole com name acessível. scripts/build_report.mjs = medição
+  reproduzível de chunks gz (npm run build via execSync contorna o guard
+  falso-positivo de "servidor" no npx vite build direto).
+
 ### 2026-08-25 ~20h25 — tick features-worker: A3 FECHADO — importação CSV/XLSX da fila + exportação + undo snapshot (commits 70803e4..461bd9e)
 
 - **Escopo**: spec A3 (anti-fricção administrativa) na superfície que ainda
