@@ -1,5 +1,22 @@
 # SOLARIS — log de trabalho
 
+## Tick 26/08 ~09h45 - audio-dsp (Yui / cron solaris-audio)
+
+Worktree solaris-audio (branch audio/acoustics); desktop/src-tauri/pitch intocados.
+TEMA: MERGE PREVENTIVO da origin/main pos tick#30 do turbo-web (delta docs-only:
+logs + gates lh/axe + script append_log_t30.py) + PROVAS FRESCAS + PR #2 re-verde.
+Feature em modo guardrail: motor completo, zero gaps novos encontrados.
+
+- Merge origin/main (64d90d5): conflito so no prepend do log compartilhado;
+  resolvido pelo protocolo da lane (parse linha-a-linha, AMBOS os blocos mantidos,
+  lane primeiro, marcadores removidos byte-exato) => commit fd10cae.
+- PROVAS FRESCAS na arvore mesclada (execucao propria, foreground): tsc --noEmit
+  limpo; vitest 446/446 VERDES (46 arquivos, ~123s).
+- Push via workaround GCM provado por ls-remote (fd10cae em origin).
+- PR #2 RE-VERDE: ci success @fd10cae + Vercel x2 pass; mergeable=MERGEABLE.
+  Continua OPEN, aguardando decisao do dono (nada merged por mim).
+=== FIM TICK - lane sincronizada c/ main, PR #2 verde, motor estavel ===
+
 ## Tick 26/08 ~09h00 — audio-dsp (Yui / cron solaris-audio)
 
 Worktree solaris-audio (branch audio/acoustics); desktop/src-tauri/pitch intocados.
