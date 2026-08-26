@@ -17,6 +17,15 @@ import { makeSpeechLike } from '../../audio-acoustics/fixtures';
 
 const SR = 16000;
 
+/** Espera determinística por uma condição de estado do hook (polling). */
+async function waitFor(cond: () => boolean, timeoutMs = 8000): Promise<void> {
+  const t0 = Date.now();
+  while (!cond()) {
+    if (Date.now() - t0 > timeoutMs) throw new Error('waitFor: timeout');
+    await new Promise((r) => setTimeout(r, 10));
+  }
+}
+
 /** Minimal harness: mounts a probe component and mirrors hook state. */
 function mountHook(
   args: Parameters<typeof useAcousticAnalysis>[0]
@@ -85,17 +94,34 @@ const CLEAN_PCM = () => {
 
 describe('useAcousticAnalysis', () => {
   it('idle → running → done with a real report', async () => {
-    const h = mountHook({ getPcm: CLEAN_PCM, mediaKey: 'm1' });
-    // Setters vivem no callback do timer de 30ms (não no corpo síncrono do
-    // efeito — react-hooks/set-state-in-effect). Pouco depois do tick, o run
-    // está em curso (motor leva ~centenas de ms p/ 6s de áudio sintético).
+    // PCM bloqueado num deferred controlado pelo teste: garante que o estado
+    // "running" é observável SEM corrida contra o relógio (a análise deste
+    // fixture é tão rápida que já chegou a "done" antes do assert antigo de
+    // 40ms em máquinas rápidas — flake real observado 1/4 no HEAD limpo).
+    let release!: () => void;
+    const gatedPcm = new Promise<{ samples: Float32Array; sampleRate: number }>((res) => {
+      release = () => {
+        const dry = makeSpeechLike(
+          [
+            { word: 1.2, pause: 0.9 },
+            { word: 1.4, pause: 0.9 },
+            { word: 1.2, pause: 0.9 },
+            { word: 1.6, pause: 0.9 },
+            { word: 1.3, pause: 0.0 },
+          ],
+          SR
+        );
+        res({ samples: new Float32Array(dry), sampleRate: SR });
+      };
+    });
+    const h = mountHook({ getPcm: () => gatedPcm, mediaKey: 'm1' });
+    // Passado o defer de 30ms do hook, o run está EM CURSO e preso no PCM.
     await act(async () => {
-      await new Promise((r) => setTimeout(r, 40));
+      await new Promise((r) => setTimeout(r, 80));
     });
     expect(h.getState().status).toBe('running');
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 200));
-    });
+    act(() => release());
+    await waitFor(() => h.getState().status === 'done');
     const s = h.getState();
     expect(s.status).toBe('done');
     expect(s.report).not.toBeNull();
