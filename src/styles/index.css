@@ -1,11 +1,6 @@
-/* Fontes locais (@fontsource, zero CDN). Precisam vir antes de tudo. */
-@import '@fontsource/inter/latin-400.css';
-@import '@fontsource/inter/latin-500.css';
-@import '@fontsource/inter/latin-600.css';
-@import '@fontsource/inter/latin-700.css';
-@import '@fontsource/jetbrains-mono/latin-400.css';
-@import '@fontsource/jetbrains-mono/latin-500.css';
-@import '@fontsource/jetbrains-mono/latin-700.css';
+/* Fontes locais v3 (Inter + JetBrains Mono) — font-display:optional, ver
+   fonts.css. Precisam vir antes de tudo. */
+@import './fonts.css';
 
 /* Design tokens v3 — fonte canônica de toda cor/espaço/raio/sombra.
    TEM que vir antes das diretivas @tailwind: @import só é válido

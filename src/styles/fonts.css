@@ -1,0 +1,65 @@
+/* ============================================================
+   Fontes locais v3 — Inter (UI) + JetBrains Mono (timecodes).
+   redesign tick 24: correção de LCP.
+   ------------------------------------------------------------
+   ANTES: @fontsource com font-display:swap. Sob throttling de
+   rede (Lighthouse mobile) as fontes só são descobertas depois
+   do download do CSS; o swap repintava o texto maior da tela
+   segundos depois e virava um novo LCP (~7s, element render
+   delay ~2,3s+). Preload não resolveu: competia banda com o
+   caminho crítico (FCP subiu pra ~4,5s).
+   AGORA: font-display:optional + arquivos importados direto no
+   CSS (URL de primeira classe, descoberta imediata). Visita
+   fria pinta UMA vez com fallback métrico (sem repaint/LCP
+   tardio); visita morna e o app desktop têm a Inter instantânea
+   do cache HTTP/disco. Zero CDN, zero request extra.
+   ============================================================ */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-display: optional;
+  font-weight: 400;
+  src: url('../assets/fonts/inter-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-display: optional;
+  font-weight: 500;
+  src: url('../assets/fonts/inter-latin-500-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-display: optional;
+  font-weight: 600;
+  src: url('../assets/fonts/inter-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-weight: 700;
+  font-style: normal;
+  font-display: optional;
+  src: url('../assets/fonts/inter-latin-700-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-display: optional;
+  font-weight: 400;
+  src: url('../assets/fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-display: optional;
+  font-weight: 500;
+  src: url('../assets/fonts/jetbrains-mono-latin-500-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-display: optional;
+  font-weight: 700;
+  src: url('../assets/fonts/jetbrains-mono-latin-700-normal.woff2') format('woff2');
+}
