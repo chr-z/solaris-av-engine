@@ -125,7 +125,7 @@ export async function fetchDeployModeOpinion(): Promise<ModeOpinion> {
 export function guardedFetchDeployModeOpinion(
   timeoutMs = OPINION_TIMEOUT_MS,
 ): Promise<ModeOpinion> {
-  const call = fetchDeployModeOpinion(timeoutMs);
+  const call = fetchDeployModeOpinion();
   return withTimeout(call, timeoutMs, noOpinion());
 }
 
