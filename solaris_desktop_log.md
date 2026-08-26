@@ -1134,3 +1134,28 @@ src-tauri intocado. Sem Telegram.
   chrome de probe/LH zerado pelo proprio runner no exit.
 - Sem merge de lanes irmaas na main; src-tauri/pitch intocados; suite commitada
   segue valendo (nenhum codigo mudou desde 6933b0b - commits da lane sao docs-only).
+
+## Tick #25 26/08 ~03h40 - redesign-premium worker (cron MODO TURBO SOLARIS): absorcao do main (turbo #22+#23) + gates frescos na arvore mesclada
+
+- MERGE origin/main -> redesign-premium (2b82f61): conteudo-only (docs +
+  relatorios LH/axe do turbo). Conflitos triviais em scripts/lh-report-r1.json,
+  lh-report-r2.json, axe-report.json resolvidos com --theirs (versoes novas do
+  turbo). Nenhum codigo de app mudou; zero mudanca visual/funcional.
+- Gates frescos NA ARVORE MESCLADA (prova pos-absorcao): tsc --noEmit limpo;
+  vitest 403/403 (~32s); e2e fluxo real 21/21 (busca sem resultado -> lista
+  vazia; export QC com metricas populadas); axe-core 0 violacoes (identidade
+  provada entry index-CHKfTLey.js == dist); console probe 0 eventos;
+  Lighthouse x2 (--headless=new --disable-gpu): R1 P99/A100/BP100 e R2
+  P99/A100/BP100 (FCP 1,5s / LCP 1,8s / CLS 0,001 / TBT 0ms ambos).
+- Bundle (chunk_report.mjs gzip level 9): INITIAL 46,89KB gz (entry
+  index-CHKfTLey.js 38,09 + CSS index-C1l8F6-j 9,79 gz); CSS 10,12KB gz no
+  build (alvo <30KB mantido c/ ~3x folga); TOTAL 1128,34KB raw / 401KB gz;
+  firebase 97,38 gz lazy fora do caminho critico. Deltas vs t24 sao so
+  re-hash de assets (mesma base de codigo).
+- Screenshots de aceite regenerados da arvore mesclada ->
+  C:/Yui/data/saas_factory/redesign_shots/r25_merge_{fila,analysis,qc_dialog}.png
+  (novo runner tolerante scripts/redesign_shot_t25.cjs: build offline/demo
+  pos-LCP-fix entra direto no app sem tela de login - guest click agora
+  opcional; hash do entry conferido contra dist antes de cada captura).
+- Higiene: chrome/preview de probe mortos pelos proprios runners (exit hooks);
+  src-tauri/audio-acoustics/pitch intocados.
