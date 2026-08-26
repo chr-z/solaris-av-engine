@@ -1159,3 +1159,23 @@ src-tauri intocado. Sem Telegram.
   opcional; hash do entry conferido contra dist antes de cada captura).
 - Higiene: chrome/preview de probe mortos pelos proprios runners (exit hooks);
   src-tauri/audio-acoustics/pitch intocados.
+## Tick #24 26/08 ~04h00 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
+
+- Estado: HEAD 15ae5f5 == origin/main provado por rev-parse pos-fetch; develop segue
+  relic fev/2026; nenhum codigo novo de lanes irma para absorver. Zero deltas.
+- Bateria fresca propria: tsc --noEmit limpo; vitest 342/342 (~36s); e2e fluxo real
+  (YouTube -> scoring -> fila -> export QC) 21/21; axe-core 0 violacoes (fase login +
+  main app demo/offline, identidade provada entry index-C1mX7UAW.js == dist);
+  console probe 0 eventos; Lighthouse x2 (--headless=new --disable-gpu):
+  R1 e R2 ambos P100/A100/BP100 (FCP 1,4s / LCP 1,5s / CLS 0,000 / TBT 0ms).
+- Bundle (chunk_report.mjs, gzip level 9): INITIAL 40,35KB gz byte-estavel vs
+  ticks #12..#23 (entry index-C1mX7UAW.js 32,98KB gz + CSS 7,37KB gz); TOTAL
+  940,32KB raw / 233,16KB gz; maiores chunks: firebase 94,82 (lazy) /
+  react-vendor 44,65 / AnalysisWorkspace 19,49 / AdminGate 18,49 KB gz.
+  Alvo initial <500KB gz mantido (~12x folga).
+- Higiene (hygiene_tick23.ps1): zero orfaos da lane - so ContractKit (:4179,
+  work_ck_repo) e Hein/Zimny (:4188, intocavel sem ordem explicita), atribuidos
+  por PATH+porta e POUPADOS; CHROME_PROBE_ORPHANS NONE (runner mata o proprio
+  chrome no exit).
+- src-tauri/pitch intocados; suite commitada continua valendo (commits da lane
+  sao docs-only desde 6933b0b). Sem Telegram.
