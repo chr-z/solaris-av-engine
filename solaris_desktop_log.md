@@ -2,6 +2,45 @@
 
 ## features
 
+### 2026-08-26 ~09h45 — tick features-worker: B3 métricas cruzadas COMPLETAS (802/802)
+
+- **Diagnóstico de abertura**: worktree limpo em sync com origin
+  (0268104, fetch c/ workaround GCM), baseline **792/792** verde re-provado +
+  build fresco (initial 55,84KB gz). Fila F1–F6 segue DONE; varredura
+  dirigida pela spec achou o buraco REAL restante na seção B3:
+  "nota média dada vs recebida em auditoria (frouxo/cruel)" e "tempo por OS
+  vs média do time" — a tabela de qualidade só tinha avgScore/marks, com
+  `reworkRate: null` PERMANENTE embora o sinal de auditoria já existisse nos
+  eventos XP (`quality_bonus`/`rework_penalty`, spec C1/B).
+- **Núcleo puro (`utils/liveDashboard.ts`)**:
+  - `auditVerdictFromEvents`: deriva veredito por analista dos eventos XP
+    (amount não-finito fora; motivos alheios ignorados);
+  - `buildAnalystQualityFull`: mesma base da simples + cruzamento com
+    auditoria (auditedOs/auditsOk/reworkEvents/reworkRate — null SEM
+    auditoria, nunca zero que leria como perfeito) e tempo real da fila via
+    `analystAvgHoursFromQueue`; `teamAvgHoursPerOs` = MÉDIA DAS MÉDIAS
+    (mesmo peso por analista — maratonista não mascara o time);
+    `deltaVsTeamPct` exige ≥2 analistas medidos (time de um só se
+    compararia consigo mesmo: 0% vazio — borda pega pelo teste);
+  - `visibleQualityRows` virou genérica `<T extends AnalystQualityRow>`
+    (aditivo: chamadas antigas compilam igual);
+  - honestidade herdada: timestamps corruptos/ausentes ficam FORA (null
+    nunca zero); ordenação por volume desc idêntica à função simples.
+- **UI (`LiveDashboardPanel`)**: eventos XP lidos dos perfis gamificados
+  (`solaris.gamification.profile.*`, tolerante a storage lixo/corrupto;
+  leitura uma vez por montagem, mesma linha do hourEvents); tabela ganhou
+  colunas Rework (audit) — % + "{ok} ok / {bad} rework", Tempo médio
+  (fila real) e vs team (+x% slower / −x% faster / on par); máscara B4
+  mantida (sem canReadIndividualMetrics tudo vira —); i18n EN/PT paridade
+  (6 chaves novas dash.live.*).
+- **Provas**: suíte **802/802** (+10: 7 núcleo — bordas de veredito, NaN,
+  50% retrabalho, média-de-médias, delta ±50%, relógio corrupto, time-solo;
+  3 jsdom — admin vê 50%/0%/+50%−50%, sem-dado mostra —, analista mascarado).
+  tsc limpo; lint ratchet estável (5E pré-existentes do painel, mesmos
+  tipos, deslocados −1 linha); build verde — initial **55,98KB gz**
+  (+0,14; budget <500KB intacto), chunk do painel 13,91→14,51KB gz.
+- Commits 2010a5f + 93b45f7 + 820c513; push confirmado por ls-remote
+  (820c513). src-tauri/audio-acoustics/tokens.css/pitch intocados.
 ### 2026-08-26 ~08h20 — tick features-worker: F5/B2 drill-down do analista FECHADO (792/792)
 
 - **Diagnóstico de abertura**: worktree limpo e em sync (6c7ccba, fetch com
