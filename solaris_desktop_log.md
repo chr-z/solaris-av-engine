@@ -779,3 +779,34 @@ src-tauri intocado. Sem Telegram.
 
 - Próximo tick: aliases MVP remanescentes fora do Admin (~34) ou diretiva nova
   do dono.
+
+## redesign (tick 19) — sweep FINAL alias→token zerado + classes mortas sobre var() consertadas — 25/08/2026 ~22h50
+
+- Ponto de partida: branch == origin/redesign-premium (d919daf); WIP órfão
+  não-commitado do tick anterior meu (13 arquivos, 21h37) ADOTADO e completado
+  — nenhum worker irmão vivo na lane (Get-CimInstance por CommandLine, zero hit).
+- Sweep FINAL de aliases: últimos 4 resíduos no App.tsx
+  (bg-solar-light-bg dark:bg-surface → bg-surface; valor renderizado dark JÁ
+  ERA surface — zero mudança visual). grep solar-dark-*/solar-light-* em src/
+  = 0 ocorrências. Migração de tokens 100% completa.
+- BUG real consertado (classe morta do Tailwind): cores canônicas são var()
+  puras no config → variantes de opacidade /N NÃO são geradas. 4 usos de
+  border-hairline/30|50 (Dock, VuMeter, lock-info do AnalysisSheet, linhas do
+  AdminRulesPanel) renderizavam SEM borda visível (currentColor) desde commits
+  antigos — provado greppando o CSS compilado. Normalizados pra border-hairline.
+- Divisores OR do LocalFileHelper: WIP tinha trocado bg por border em div h-px
+  (divisor invisível) → bg-hairline. BugReportViewer: bg-surface-raised/50
+  (morto) → card hairline (bg-surface + border), acabamento da fila.
+- Validação: build verde; CSS 10,1KB gz (meta <30KB); tsc limpo; vitest 403/403
+  (38 arquivos); axe-core 0/0 (axe-report regenerado); harness browser real
+  redesign_shot_t19.cjs: preview próprio porta alta + strictPort, hash servida
+  == dist local (index-BnpO5E5Q), provas getComputedStyle no DOM vivo
+  (bg-hairline = rgba(255,255,255,0.06)) e 0 classes /N mortas no DOM; análise
+  conferida textualmente (demo mode: empty state R3 + tabs + fila com scores).
+  Shots: t19_{login,fila,analysis}.png em saas_factory/redesign_shots/.
+- Lição pro kit: NUNCA usar variante /N sobre token que é var() pura no
+  tailwind.config (Tailwind 3 não gera alpha sobre cor var()) — classe nasce
+  morta e silenciosa; usar token dedicado ou embutir o alpha no valor.
+- Infra: scripts/kill_t19_orphans.ps1 (taskkill /T — wrapper npx não mata o filho).
+- src-tauri/audio-acoustics/pitch intocados (worktree dedicada). Push verificado
+  por ls-remote.
