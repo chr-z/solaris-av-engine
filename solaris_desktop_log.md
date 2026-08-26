@@ -1003,3 +1003,52 @@ Storage). Este tick entregou isso, ponta a ponta:
 Commits deste tick: 141c468 bf10921 b30fdf0 c02a503 e965220 (branch desktop,
 nada merged em main — aguarda aprovação do dono).
 === FIM TICK DESKTOP ===
+
+## Tick desktop 07h40 (26/08) — P3+ : toggle persistente de modo + badge de origem
+
+**Fila literal:** P1/P2/P3 continuam DONE (confirmado no disco antes de começar:
+exe canônico D:/cargo-target/release 6.542.848B @05h47 com embed válido,
+Cargo.toml release profile completo desde f07077d, flag runtime desde 7af7081).
+Este tick avançou nos next-tick candidates registrados pelo próprio P3.
+
+### Entregue (4 commits)
+- **6e30339** `set_standalone_mode_command` (core): grava `"standaloneMode"` no
+  `%APPDATA%/dev.chr-z.solaris/config.local.json` — toggle de Settings persiste
+  a escolha na máquina. Escrita ATÔMICA (temp mesmo diretório + rename, tmp
+  nunca sobra), cria pasta pai, resposta serde camelCase (configPath/
+  bytesWritten). cargo test 18→20/20 (roundtrip + atomicidade).
+- **95cb570** ponte front: `setStandaloneModeDesktop()` em services/desktopBridge
+  (null = sem ponte/falha — chamador decide feedback) + `getRuntimeModeOrigin()`
+  em config/runtimeMode: rastreia DE ONDE veio o modo (user override >
+  opinião aplicada > build flag > runtime Tauri), nova chave
+  `solaris.runtimeModeRemoteOrigin` gravada/removida junto da decisão no boot.
+  vitest 6/6 novos (runtimeModeOrigin.test.ts).
+- **18806ab** UI: `ModeBadge` (components/Core) no Header — "Modo local" só em
+  standalone, tooltip i18n EN+pt com a origem ("decision source: {origin}");
+  cloud puro não renderiza nada (web demo sem anúncio).
+- **46c6ec0** probe E2E `scripts/desktop_e2e_probe_p3b.mjs`: matriz viva dentro
+  do exe (CDP, porta ~42xxx fora das faixas reservadas).
+
+### Prova E2E dentro do exe (VERDICT PASS)
+Boot 819ms → F1: badge visível, origem "build flag (standalone)" (no sabor
+standalone o build flag é degrau ACIMA do runtime Tauri — primeira rodada do
+probe esperava "Tauri runtime"; expectativa do instrumento corrigida, o app
+estava certo). F2: invoke('set_standalone_mode_command') → arquivo REAL em
+%APPDATA% validado node-side (`{"standaloneMode": true}`, 29 bytes) → reload ⇒
+tooltip vira "file (core)" e get_runtime_config reflete arquivo. F3: estado
+anterior restaurado (arquivo removido pois não preexistia) ⇒ origem volta ao
+sinal nativo do artefato. Zero recurso remoto além do IPC, zero endpoint
+proibido no DOM, console limpo. Exe reconstruído pela rota canônica
+(`cargo tauri build --no-bundle`, gnu+winlibs, CARGO_TARGET_DIR=D:/cargo-target):
+6.560.768B @07h27, grep conta 1 ocorrência de set_standalone_mode_command
+(prova anti-stale). Smoke implícito no probe (spawn/taskkill limpos).
+
+### Validação pré-push (probe git-archive da árvore commitada)
+vitest 268/268 + tsc --noEmit LIMPO na cópia limpa do HEAD com junction de
+node_modules (o dir principal segue carregando código untracked de lanes
+irmãs — validar sempre lá, nunca aqui).
+
+Armadilhas do tick: hardline block pegou `rm -rf` do probe dir → usar mktemp -d
+e deixar sujar; tar MSYS come caminho `C:\...` passado por variável (usar
+/c/...) embora o PowerShell junction precise do formato Windows — separar as
+duas formas por contexto.
