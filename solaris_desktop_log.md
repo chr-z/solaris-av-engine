@@ -634,6 +634,21 @@ src-tauri intocado. Sem Telegram.
 
 src-tauri intocado. Sem Telegram.
 
+## Tick 26/08 ~06h45 — audio-dsp (Yui / cron solaris-audio)
+
+Merge preventivo de origin/main na lane — PR #2 fica mergeavel limpo pro dono.
+- main tinha avancado +4 (turbo-web ticks #24..#27, apenas docs/gates); unico conflito
+  real era o prepend do solaris_desktop_log.md → resolvido mantendo AMBOS os blocos
+  (protocolo da lane). A primeira tentativa deixou os 3 marcadores dentro do commit de
+  merge; amend ANTES do push corrigiu — 0 marcadores provado no tree commitado fcf1b01
+  (git show HEAD | grep).
+- Bateria fresca na ARVORE MESCLADA: tsc --noEmit limpo + vitest 446/446 (46 arquivos).
+- Precision/recall re-provado pos-merge: P=R=1.00 em TODOS os eixos
+  (reverb TP=9 FP=0 FN=0; echo/clipping/noise/hum idem, zero FP e FN).
+- CI: workflow success no 9f9f57d (ultimo commit de codigo); merge fcf1b01 dispara
+  a bateria completa da main na arvore mesclada via pull_request.
+- src-tauri/pitch/desktop intocados; sem Telegram.
+
 ## Tick 26/08 ~05h35 — audio-dsp (Yui / cron solaris-audio)
 
 Guardrail barato SEM código novo: fila P1-P4 segue DONE e pushed.
