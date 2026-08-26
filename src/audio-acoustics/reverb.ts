@@ -162,7 +162,6 @@ export function rt60Schroeder(
   opts?: { startDb?: number; endDb?: number; maxRt60Sec?: number; minSpanDb?: number; subtractNoiseFloor?: boolean }
 ): number | null {
   const startDb = opts?.startDb ?? -5;
-  const endDb = opts?.endDb ?? -35;
   const maxRt60 = opts?.maxRt60Sec ?? 4;
   const minSpanDb = opts?.minSpanDb ?? 12;
   const n = samples.length;
@@ -345,7 +344,7 @@ export function analyzeReverb(
   }
 
   // ---------- Fallback C50/C80 sobre o sinal inteiro ----------
-  let c50Val = 0, c80Val = 0;
+  let c50Val: number, c80Val: number;
   {
     let early = 0, late = 0;
     const split = Math.floor(0.05 * sr);

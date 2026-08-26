@@ -13,7 +13,7 @@ import {
   clearSharedAcousticCache,
   type BaselineInfo,
 } from '../useAcousticAnalysis';
-import { makeSpeechLike, makeSine, addHum } from '../../audio-acoustics/fixtures';
+import { makeSpeechLike } from '../../audio-acoustics/fixtures';
 
 const SR = 16000;
 
@@ -86,9 +86,15 @@ const CLEAN_PCM = () => {
 describe('useAcousticAnalysis', () => {
   it('idle → running → done with a real report', async () => {
     const h = mountHook({ getPcm: CLEAN_PCM, mediaKey: 'm1' });
-    expect(h.getState().status).toBe('running'); // deferred but synchronous state set
+    // Setters vivem no callback do timer de 30ms (não no corpo síncrono do
+    // efeito — react-hooks/set-state-in-effect). Pouco depois do tick, o run
+    // está em curso (motor leva ~centenas de ms p/ 6s de áudio sintético).
     await act(async () => {
-      await new Promise((r) => setTimeout(r, 80));
+      await new Promise((r) => setTimeout(r, 40));
+    });
+    expect(h.getState().status).toBe('running');
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 200));
     });
     const s = h.getState();
     expect(s.status).toBe('done');
@@ -98,8 +104,8 @@ describe('useAcousticAnalysis', () => {
   }, 15000);
 
   it('resets to idle when mediaKey becomes null', async () => {
-    let pcm = CLEAN_PCM as NonNullable<Parameters<typeof useAcousticAnalysis>[0]['getPcm']>;
-    let key: string | null = 'm1';
+    const pcm = CLEAN_PCM as NonNullable<Parameters<typeof useAcousticAnalysis>[0]['getPcm']>;
+    const key: string | null = 'm1';
     // Re-mount with mutable args via a wrapper re-render is complex; instead
     // verify the null path directly.
     const h = mountHook({ getPcm: pcm, mediaKey: key });

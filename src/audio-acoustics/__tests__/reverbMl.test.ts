@@ -27,7 +27,6 @@ import { analyzeAudioPcm } from '../audioAcoustics';
 import {
   REVERB_ML_META,
   REVERB_ML_W_I16,
-  REVERB_ML_SCALE,
   REVERB_ML_SHAPES,
   REVERB_ML_MU,
   REVERB_ML_SD,

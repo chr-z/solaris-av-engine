@@ -4,7 +4,6 @@
  * vizinhança ±lag. Eco real: delay ≥80ms.
  */
 
-import { amplitudeEnvelope } from './features';
 
 export interface EchoResult {
   /** Delay do pico aceito, em ms (0 se nenhum). */

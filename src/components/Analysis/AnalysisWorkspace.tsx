@@ -627,6 +627,72 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
     }
   };
 
+  const osIdentifier = localRowData ? (localRowData[headers.indexOf('W.O.')]?.value || '') : '';
+
+
+  // Solaris v3 P3: acoustic analysis engine (reverb/clip/noise/distortion/echo).
+  // PCM getter re-fetches the current media and decodes to mono via
+  // AudioContext; cross-origin streams (YouTube/Drive sem CORS) surface the
+  // error dentro do painel, nunca derrubam o workspace.
+  const acousticPcmGetter = React.useCallback((): Promise<{ samples: Float32Array | Float64Array; sampleRate: number }> => {
+    const el = videoRef.current;
+    if (!el || !videoSrc) return Promise.reject(new Error('No media loaded'));
+    const srcUrl = el.currentSrc || videoSrc;
+    return fetch(srcUrl)
+      .then((r) => {
+        if (!r.ok) throw new Error(`fetch ${r.status}`);
+        return r.arrayBuffer();
+      })
+      .then((buf) => {
+        const AC: typeof AudioContext | undefined =
+          window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!AC) throw new Error('AudioContext unavailable');
+        const ctx = new AC();
+        return ctx.decodeAudioData(buf).then((audio) => {
+          void ctx.close?.().catch(() => {});
+          if (audio.numberOfChannels > 1) {
+            const outL = audio.getChannelData(0);
+            const outR = audio.getChannelData(1);
+            const mono = new Float32Array(outL.length);
+            for (let i = 0; i < outL.length; i++) mono[i] = (outL[i] + outR[i]) / 2;
+            return { samples: mono, sampleRate: audio.sampleRate };
+          }
+          return { samples: audio.getChannelData(0).slice(), sampleRate: audio.sampleRate };
+        });
+      });
+  }, [videoSrc]);
+  const studioNameForAcoustics = osIdentifier || undefined;
+  const acoustics = useAcousticAnalysis({
+    getPcm: videoSrc ? acousticPcmGetter : null,
+    mediaKey: videoSrc,
+    studioName: studioNameForAcoustics,
+  });
+  /** Absolute seek usado pela timeline do painel acústico. */
+  const seekToAcousticMark = useCallback(
+    (tSec: number) => {
+      const video = videoRef.current;
+      if (!video) return;
+      video.currentTime = tSec;
+    },
+    []
+  );
+
+  // Duração da mídia em estado (ref durante render viola react-hooks/refs).
+  const [mediaDurationSec, setMediaDurationSec] = useState(0);
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const sync = () => setMediaDurationSec(Number.isFinite(el.duration) ? el.duration : 0);
+    sync();
+    el.addEventListener('durationchange', sync);
+    el.addEventListener('loadedmetadata', sync);
+    return () => {
+      el.removeEventListener('durationchange', sync);
+      el.removeEventListener('loadedmetadata', sync);
+    };
+  }, []);
+
+
   if (isRowLoading) {
     return (
       <div className="flex items-center justify-center w-full h-full">
@@ -697,56 +763,6 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
         <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar com planilha'}</span>
       </button>
     </div>
-  );
-
-  const osIdentifier = localRowData ? (localRowData[headers.indexOf('W.O.')]?.value || '') : '';
-
-
-  // Solaris v3 P3: acoustic analysis engine (reverb/clip/noise/distortion/echo).
-  // PCM getter re-fetches the current media and decodes to mono via
-  // AudioContext; cross-origin streams (YouTube/Drive sem CORS) surface the
-  // error dentro do painel, nunca derrubam o workspace.
-  const acousticPcmGetter = React.useCallback((): Promise<{ samples: Float32Array | Float64Array; sampleRate: number }> => {
-    const el = videoRef.current;
-    if (!el || !videoSrc) return Promise.reject(new Error('No media loaded'));
-    const srcUrl = el.currentSrc || videoSrc;
-    return fetch(srcUrl)
-      .then((r) => {
-        if (!r.ok) throw new Error(`fetch ${r.status}`);
-        return r.arrayBuffer();
-      })
-      .then((buf) => {
-        const AC: typeof AudioContext | undefined =
-          window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-        if (!AC) throw new Error('AudioContext unavailable');
-        const ctx = new AC();
-        return ctx.decodeAudioData(buf).then((audio) => {
-          void ctx.close?.().catch(() => {});
-          if (audio.numberOfChannels > 1) {
-            const outL = audio.getChannelData(0);
-            const outR = audio.getChannelData(1);
-            const mono = new Float32Array(outL.length);
-            for (let i = 0; i < outL.length; i++) mono[i] = (outL[i] + outR[i]) / 2;
-            return { samples: mono, sampleRate: audio.sampleRate };
-          }
-          return { samples: audio.getChannelData(0).slice(), sampleRate: audio.sampleRate };
-        });
-      });
-  }, [videoSrc]);
-  const studioNameForAcoustics = osIdentifier || undefined;
-  const acoustics = useAcousticAnalysis({
-    getPcm: videoSrc ? acousticPcmGetter : null,
-    mediaKey: videoSrc,
-    studioName: studioNameForAcoustics,
-  });
-  /** Absolute seek usado pela timeline do painel acústico. */
-  const seekToAcousticMark = useCallback(
-    (tSec: number) => {
-      const video = videoRef.current;
-      if (!video) return;
-      video.currentTime = tSec;
-    },
-    []
   );
 
 return (
@@ -921,7 +937,7 @@ return (
               report={acoustics.report}
               error={acoustics.error}
               baselineInfo={acoustics.baselineInfo}
-              durationSec={videoRef.current?.duration || 0}
+              durationSec={mediaDurationSec}
               onMarkReference={() => acoustics.markReference()}
               onForgetReference={() => acoustics.forgetReference()}
               onSeek={seekToAcousticMark}

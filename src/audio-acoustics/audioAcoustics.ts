@@ -176,7 +176,7 @@ export function analyzeAudioPcm(
   const report_ = (p: number, stage: AcousticStage, framesDone?: number): void => {
     if (p < pctFloor) p = pctFloor;
     pctFloor = p;
-    opts?.signal?.aborted ? throwCancelled() : undefined;
+    if (opts?.signal?.aborted) throwCancelled();
     opts?.onProgress?.({ pct: Math.min(100, p), stage, ...(framesDone !== undefined ? { framesDone } : {}) });
   };
   function throwCancelled(): never {

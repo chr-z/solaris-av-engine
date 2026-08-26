@@ -68,7 +68,7 @@ export function createAnalysisCache(opts: AnalysisCacheOptions = {}): AnalysisCa
 
   function readPersisted(mediaKey: string): StoredEntry | undefined {
     if (!storage) return undefined;
-    let raw: string | null = null;
+    let raw: string | null;
     try {
       raw = storage.getItem(keyOf(mediaKey));
     } catch {

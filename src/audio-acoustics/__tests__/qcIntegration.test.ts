@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { analyzeAudioPcm } from '../audioAcoustics';
-import { makeSpeechLike, addReverb, hardClip } from '../fixtures';
+import { makeSpeechLike, hardClip } from '../fixtures';
 import {
   buildAcousticQCSection,
   acousticSheetColumns,

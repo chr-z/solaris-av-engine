@@ -10,7 +10,7 @@ import {
   makeSine, makeSpeechLike, addReverb, addWhiteNoise, hardClip, addEcho, addHum,
 } from '../fixtures';
 import { detectClip, estimateTHDFromSpectrum } from '../clipping';
-import { detectHum, estimateNoiseFloorDb } from '../noise';
+import { detectHum } from '../noise';
 import { detectEcho } from '../echo';
 import { analyzeReverb, rt60Schroeder } from '../reverb';
 import { analyzeAudioPcm } from '../audioAcoustics';
@@ -108,7 +108,6 @@ describe('Clipping', () => {
 
 describe('Hum / Noise floor', () => {
   it('detecta hum 60Hz com harmônicos e não dispara no limpo', () => {
-    const n = SR * 2;
     const base = makeSine(3000, 2, SR, 0.2); // tonal alto, fora do pente do hum
     const withHum = addHum(base, SR, 60, -30);
     const fft = new FFT(4096);

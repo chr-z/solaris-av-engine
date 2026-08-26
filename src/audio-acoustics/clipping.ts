@@ -3,7 +3,6 @@
  * THD estimada sobre o espectro (harmônicos espúrios do fundamental).
  */
 
-import { FFT } from './fft';
 import { dcOffset } from './features';
 
 export interface ClipResult {

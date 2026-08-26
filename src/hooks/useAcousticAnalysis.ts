@@ -8,7 +8,7 @@
  *   estúdio re-analisa em vez de servir score velho;
  * - Baseline resolve/capture ("marcar como referência") como antes.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { analyzeAudioPcm, type AcousticOptions, type AcousticProgress, type AcousticReport } from '../audio-acoustics/audioAcoustics';
 import {
   saveStudioBaseline,
@@ -77,42 +77,47 @@ export function useAcousticAnalysis({ getPcm, mediaKey, studioName, options }: U
   const [progress, setProgress] = useState<AcousticProgress | null>(null);
   const [fromCache, setFromCache] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [baselineInfo, setBaselineInfo] = useState<BaselineInfo>(() => ({
-    ...ACOUSTIC_DEFAULTS,
-    learned: false,
-  }));
   const runIdRef = useRef(0);
   const activeRunRef = useRef<AnalysisRun | null>(null);
+  // Overrides de baseline por estúdio (pós mark/forget) — estado puro para o
+  // painel refletir na hora sem setState síncrono em efeito.
+  const [baselineOverrides, setBaselineOverrides] = useState<Record<string, BaselineInfo>>({});
 
-  // Re-resolve baseline when studio changes.
-  useEffect(() => {
+  // Re-resolve baseline when studio changes (derived during render — no
+  // setState-in-effect cascade; mark/forget write back via the same state).
+  const effBaselineInfo: BaselineInfo = useMemo(() => {
+    const override = studioName ? baselineOverrides[studioName] : undefined;
+    if (override) return override;
     const eff = studioName
       ? resolveBaselineOptions(studioName, ACOUSTIC_DEFAULTS)
       : { ...ACOUSTIC_DEFAULTS, learned: false };
-    setBaselineInfo({ learned: eff.learned, rt60Target: eff.rt60Target, noiseFloorDbMax: eff.noiseFloorDbMax });
-  }, [studioName]);
+    return { learned: eff.learned, rt60Target: eff.rt60Target, noiseFloorDbMax: eff.noiseFloorDbMax };
+  }, [studioName, baselineOverrides]);
 
   // Run analysis per media key (cache → worker/fallback → cache).
   useEffect(() => {
     const runId = ++runIdRef.current;
     if (!getPcm || !mediaKey) {
+      // Sem mídia: zera via microtask (fora do corpo síncrono do efeito,
+      // evita cascata de render apontada por react-hooks/set-state-in-effect).
       activeRunRef.current?.cancel();
       activeRunRef.current = null;
-      setStatus('idle');
-      setReport(null);
-      setProgress(null);
-      setFromCache(false);
-      setError(null);
+      queueMicrotask(() => setStatus('idle'));
+      queueMicrotask(() => setReport(null));
+      queueMicrotask(() => setProgress(null));
+      queueMicrotask(() => setFromCache(false));
+      queueMicrotask(() => setError(null));
       return;
     }
     let cancelled = false;
-    setStatus('running');
-    setError(null);
-    setProgress(null);
-    setFromCache(false);
 
-    // Defer so the panel paints its "analyzing" state before CPU work.
+    // Defer so the panel paints its "analyzing" state before CPU work
+    // (setters vivem no callback do timer — não no corpo síncrono do efeito).
     const handle = setTimeout(() => {
+      setStatus('running');
+      setError(null);
+      setProgress(null);
+      setFromCache(false);
       (async () => {
         try {
           const effBaseline: StudioBaseline = studioName
@@ -200,18 +205,26 @@ export function useAcousticAnalysis({ getPcm, mediaKey, studioName, options }: U
       noiseFloorDbMax: Math.round(report.noiseFloorDb),
     });
     const eff = resolveBaselineOptions(studioName, ACOUSTIC_DEFAULTS);
-    setBaselineInfo({ learned: true, rt60Target: eff.rt60Target, noiseFloorDbMax: eff.noiseFloorDbMax });
+    setBaselineOverrides((m) => ({
+      ...m,
+      [studioName]: { learned: true, rt60Target: eff.rt60Target, noiseFloorDbMax: eff.noiseFloorDbMax },
+    }));
     return true;
   }, [report, studioName]);
 
   const forgetReference = useCallback(() => {
     if (!studioName) return false;
     const removed = clearStudioBaseline(studioName);
-    setBaselineInfo({ ...ACOUSTIC_DEFAULTS, learned: false });
+    setBaselineOverrides((m) => {
+      const rest = { ...m };
+      delete rest[studioName];
+      return rest;
+    });
     return removed;
   }, [studioName]);
 
-  return { status, report, progress, fromCache, error, baselineInfo, markReference, forgetReference, cancelAnalysis };
+  const mergedBaselineInfo = effBaselineInfo;
+  return { status, report, progress, fromCache, error, baselineInfo: mergedBaselineInfo, markReference, forgetReference, cancelAnalysis };
 }
 
 // Re-export para quem já importava analyzeAudioPcm daqui (compat).

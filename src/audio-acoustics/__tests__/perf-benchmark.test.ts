@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { makeSpeechLike, addWhiteNoise, toFloat32 } from '../fixtures';
+import { makeSpeechLike, toFloat32 } from '../fixtures';
 import { analyzeAudioPcm } from '../audioAcoustics';
 import { noiseScoreFromFloorDb } from '../audioAcoustics';
 
@@ -63,7 +63,6 @@ describe('benchmark — 1h < 90s (spec P2)', () => {
       const dtMs = performance.now() - t0;
 
       const perHour = (dtMs / BENCH_SEC) * 3600;
-      // eslint-disable-next-line no-console
       console.log(
         `[bench] ${BENCH_SEC}s de áudio em ${(dtMs / 1000).toFixed(2)}s ` +
         `→ 1h ≈ ${(perHour / 1000).toFixed(1)}s (alvo spec: <90s)`

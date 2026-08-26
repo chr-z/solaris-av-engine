@@ -113,7 +113,6 @@ export function extractReverbFeaturesDetailed(
   const GUARD = Math.floor(sampleRate * 0.04);
   let pauseCount = 0;
   let fillAcc = 0;   // soma de tailE/headE
-  let tailAcc = 0;   // soma de sqrt(tailE/headE)
   let decaySum = 0;
   let decayN = 0;
   for (let i = 0; i + 1 < segs.length; i++) {
@@ -130,7 +129,6 @@ export function extractReverbFeaturesDetailed(
     const floorE = headE * 1e-3;
     pauseCount++;
     fillAcc += tailE / headE;
-    tailAcc += Math.sqrt(Math.max(tailE / headE, 0));
     // Slope linear do envelope em dB ao longo do gap (com piso relativo).
     const pts = 8;
     let sx = 0, sy = 0, sxx = 0, sxy = 0, n = 0;
