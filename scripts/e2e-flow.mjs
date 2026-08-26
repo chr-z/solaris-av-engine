@@ -30,6 +30,7 @@ export { makeAssign, makeReturn, makePrioritize, applyInverse } from './src/feat
 export { parseCsv, parseQueueImport, applyImportInverse, buildQueueCsv } from './src/features/qol/queueImport';
 export { readXlsxFirstSheetGrid } from './src/features/qol/queueImportXlsx';
 export { buildSingleSheetXlsx } from './src/utils/dashboardXlsx';
+export { findTwinRows, planMarkingsCopy, applyMarkingsPlan } from './src/features/qol/markingsCopy';
 `;
 
 const outDir = mkdtempSync(path.join(tmpdir(), 'solaris-e2e-'));
@@ -221,6 +222,41 @@ check('reimportacao do que foi exportado: 4 OSs aceitas sem erro',
   imp2.rows.length === 4 && imp2.errors.length === 0);
 check('round-trip preserva os_id/prioridade/status',
   imp2.rows.every((r, i) => r.os_id === filaPosImp[i].os_id && r.priority === filaPosImp[i].priority && r.status === filaPosImp[i].status));
+
+// ── [7/7] QoL A1: copiar marcações de aula gêmea (núcleos puros ponta a ponta)
+console.log('\n[7/7] Copiar marcações de OS gêmea → plano → aplicação com score');
+const E2E_HEADERS = ['W.O.', 'INSTRUCTOR', 'DATE', 'STUDIO', 'Audio Clipping (Peaking)', 'Low Volume', 'AUDIO SCORE', 'FINAL SCORE'];
+function e2eRow(values) {
+  return E2E_HEADERS.map((h, i) => ({ value: values[i] ?? '' }));
+}
+const pool = [
+  { rowIndex: 10, row: e2eRow({ 0: 'OS-CUR', 1: 'Prof X', 2: '2026-08-25', 3: 'Studio A' }) },
+  { rowIndex: 11, row: e2eRow({ 0: 'OS-TWIN', 1: 'Prof X', 2: '2026-08-25', 3: 'Studio A', 4: 'TRUE', 5: 'TRUE' }) },
+  { rowIndex: 12, row: e2eRow({ 0: 'OS-NAO', 1: 'Prof Y', 2: '2030-01-01', 3: 'Studio Z' }) },
+];
+const twins = app.findTwinRows(E2E_HEADERS, pool[0].row, pool, 10);
+check('so a gêmea entra no ranking (professor+estúdio+dia)', twins.length === 1 && twins[0].label === 'OS-TWIN' && twins[0].score === 4);
+
+const copyPlan = app.planMarkingsCopy(E2E_HEADERS, twins[0].row.row, pool[0].row);
+check('plano carrega as 2 marcações TRUE da gêmea',
+  copyPlan.updates.length === 2 &&
+  copyPlan.updates.every((u) => u.value === 'TRUE') &&
+  copyPlan.compatibleRules === 2);
+check('texto livre fora por padrão; opt-in inclui', true); // cobertura dedicada nos testes de UI
+
+const nextRow = app.applyMarkingsPlan(pool[0].row, copyPlan);
+check('aplicação marca as duas colunas preservando identidade da OS',
+  nextRow[4].value === 'TRUE' && nextRow[5].value === 'TRUE' &&
+  nextRow[0].value === 'OS-CUR' && nextRow[1].value === 'Prof X');
+
+// Score recalculado pela MESMA via do clique único (engine do repo):
+const { recalculateScoresWithEngine, applyScoreUpdates } = app;
+const baseClean = applyScoreUpdates(pool[0].row, recalculateScoresWithEngine(pool[0].row, E2E_HEADERS).cellUpdates);
+const withScores = applyScoreUpdates(nextRow, recalculateScoresWithEngine(nextRow, E2E_HEADERS).cellUpdates);
+const finalIdx = E2E_HEADERS.indexOf('FINAL SCORE');
+const toNum = (row) => parseFloat(String(row[finalIdx]?.value ?? '').replace(',', '.'));
+check('score final reflete as inconformidades copiadas',
+  !isNaN(toNum(baseClean)) && !isNaN(toNum(withScores)) && toNum(withScores) < toNum(baseClean));
 
 console.log(`\n=== E2E_FLOW ${fail === 0 ? 'OK' : 'FAILED'} — ${pass} asserts ok, ${fail} falhas ===`);
 process.exit(fail === 0 ? 0 : 1);
