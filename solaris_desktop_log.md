@@ -745,3 +745,30 @@ Regras respeitadas: sem merge na main; nada tocado de src-tauri de lanes
 irmas nem src/audio-acoustics/ untracked; suíte commitada 246/246 verde
 (última execução registrada no tick anterior; nenhum código mudou neste
 tick - só artefato regenerado + este log).
+
+## Tick 26/08 madrugada (~01h45) - desktop worker (cron turbo): guardrail — fila P1-P3 segue DONE, higiene de árvore
+
+Fila literal P1-P3: nada a executar (DONE auditado no tick 22h30). Provas
+baratas de não-drift, sem re-executar build:
+
+- Branch == origin/desktop em 4bf5f90; CI remoto success no commit exato
+  (run concluído 01:25Z). Commits pós-código são docs-only (9865221, 4bf5f90),
+  então artefatos continuam alinhados: exe canônico
+  D:/cargo-target/release/solaris-av-engine.exe 6.529.536B (22:23, embute
+  dist-desktop 21h33) e instalador NSIS 2.452.025B (22:23) — conferidos no
+  disco neste tick.
+- Higiene: bloco sujo NÃO-commitado do "redesign (tick 19)" no
+  solaris_desktop_log.md deste worktree principal era DUPLICATA (mesmos fatos,
+  re-wrap markdown) da entrada já commitada/pushada em origin/redesign-premium
+  — worker irmão escreveu no dir errado. Descartado aqui (checkout) para não
+  criar near-duplicate na desktop; conteúdo preservado na lane dele.
+- Órfão atribuído e POUPADO: node "scripts/serve.mjs 8799" (PID 30388,
+  nascido 18:03, pai morto, só responde 404 "nope") NÃO é Solaris — é o
+  servidor E2E do projeto LambdaHabits
+  (saas_factory/work_lambdahabits/scripts/serve.mjs, porta por argv[2],
+  comportamento idêntico ao observado). Fora da lane; registrado para quem
+  cuida daquela lane derrubar quando quiser.
+- Nodes transitórios de ~23:01 já saíram sozinhos (re-checagem vazia).
+- Sem merge na main; nenhum arquivo de lane irmã tocado (untracked
+  src/audio-acoustics/, scripts/smoke-p*.mjs etc. intocados); nenhum código
+  mudou — suíte 246/246 segue valendo.
