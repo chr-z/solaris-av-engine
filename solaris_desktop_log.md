@@ -680,3 +680,23 @@ src-tauri intocado. Sem Telegram.
   chrome no exit).
 - src-tauri/pitch intocados; suite commitada continua valendo (commits da lane
   sao docs-only desde 6933b0b). Sem Telegram.
+
+## Tick #25 26/08 ~04h30 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
+
+- Estado: HEAD ce02b29 == origin/main provado por rev-parse pos-fetch; turbo/web-opt
+  confirmada relíquia (0 ahead / 19 behind da main); develop relic fev/2026.
+  Nenhum código novo de lanes irmã para absorver. Zero deltas.
+- Bateria fresca própria: tsc --noEmit limpo; vitest 342/342 (~44s); e2e fluxo real
+  (YouTube -> scoring -> fila -> export QC) 21/21; axe-core 0 violações
+  ({loginRules:0, mainAppRules:0, criticalOrSeriousMainApp:0}, entry index-C1mX7UAW.js
+  == dist provado); console probe 0 eventos; Lighthouse x2 (--headless=new --disable-gpu):
+  R1 e R2 ambos P100/A100/BP100 (FCP 1,4s / LCP 1,5s / CLS 0,000 / TBT 0ms).
+- Bundle (chunk_report.mjs, gzip level 9): INITIAL 40,35KB gz byte-estável vs
+  ticks #12..#24 (entry index-C1mX7UAW.js 32,98KB gz + CSS 7,37KB gz); TOTAL
+  940,32KB raw / 233,16KB gz; maiores chunks: firebase 94,82 (lazy, fora do caminho
+  crítico) / react-vendor 44,65 / AnalysisWorkspace 19,49 / AdminGate 18,49 KB gz.
+  Alvo initial <500KB gz mantido com folga (~12x).
+- Higiene (kill_turbo_orphans.ps1): NONE - zero órfãos de preview da lane; runners
+  matam o próprio chrome no exit.
+- src-tauri/pitch intocados (do outro worker); suite commitada segue valendo
+  (nenhum código mudou desde 6933b0b - commits da lane são docs-only). Sem Telegram.
