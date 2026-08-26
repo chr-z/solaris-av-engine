@@ -1052,3 +1052,31 @@ Armadilhas do tick: hardline block pegou `rm -rf` do probe dir → usar mktemp -
 e deixar sujar; tar MSYS come caminho `C:\...` passado por variável (usar
 /c/...) embora o PowerShell junction precise do formato Windows — separar as
 duas formas por contexto.
+
+---
+
+## Tick 26/08 ~08h35 — Fila turbo P1-P3 auditada; instalador NSIS atualizado com o exe P3
+
+**Escopo:** fila da noite pediu P1 (build Tauri), P2 (otimizacoes) e P3
+(standalone). Auditoria do estado real: tudo JA entregue — P1 conf/smoke
+desde 6ac8176; P2 perfil release no tick 24/08 ~23:55; P3 flag runtime +
+toggle persistido + badge ate 3eca986; affordance de nuvem em standalone ja
+oculto (AnalysisForm/AnalysisSheet/SourceSelector, suites dedicadas).
+Unico artefato desatualizado: instalador NSIS (25/08 ~03h, sem o exe P3).
+
+### Feito
+- `cargo tauri build` COMPLETO (gnu toolchain, winlibs_full no PATH):
+  3m15s, NSIS regenerado sobre o exe atual.
+- Forense de embed pos-patch do bundler: hash `index-DvaYXDkh.js` do
+  dist-desktop presente no exe canonico (assets embutidos, nao devUrl).
+- `smoke_desktop.ps1`: SMOKE_OK pid=3108 vivo 5s mem=28.1MB -> kill limpo.
+- `install_smoke.ps1`: INSTALLER_EXIT=0; instala -> boot do app INSTALADO ok
+  (pid 32352, vivo 5s, 28MB) -> desinstala; INSTALLSMOKE_PASS.
+- Gates de push: cargo test 20/20; vitest standalone gates 36/36
+  (standaloneUiGates + analysisForm/SheetStandalone + config/__tests__).
+
+### Artefatos
+- Exe: D:/cargo-target/release/solaris-av-engine.exe (6.560.768 B,
+  inalterado — nenhum codigo Rust mudou neste tick).
+- Instalador: D:/cargo-target/release/bundle/nsis/Solaris_3.0.0_x64-setup.exe
+  (2.461.979 B, 08:18) — agora contem toggle de modo + ModeBadge do P3.
