@@ -1,0 +1,18 @@
+{
+  "featureCount": 8,
+  "count": 270,
+  "featureOrder": [
+    "rt60Det",
+    "c50",
+    "envDecay",
+    "pauseFill",
+    "tailRatio",
+    "flatnessPause",
+    "centroidVar",
+    "speechDuty"
+  ],
+  "label": "truthRt60SecDryIsZero",
+  "meanAbsDetectorError": 0.3336,
+  "v": 3,
+  "note": "v3: ruído branco REAL (snr 20/12) após codec — v2 rotulava snr mas nunca aplicava (dataset todo limpo)"
+}
