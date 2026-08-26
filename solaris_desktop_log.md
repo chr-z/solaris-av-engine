@@ -796,3 +796,26 @@ baratas de não-drift, sem re-executar build:
   atribuído no tick anterior) e afins — poupados, fora da lane.
 - Sem merge na main; nada tocado de lanes irmãs; nenhum código mudou — suíte
   246/246 segue valendo (última execução registrada no tick 22h30).
+
+
+## Tick 26/08 ~00h30 - desktop worker (cron turbo): guardrail - fila P1-P3 segue DONE, prova de vida fresca do exe
+
+- Fila literal P1-P3: nada a executar (P1 exe rodando; P2 perfil release
+  lto/codegen-units/strip/panic=abort + metricas ANTES/DEPOIS ja no log;
+  P3 standalone com testes dos dois modos). Nenhum codigo mudou desde
+  4ef1349; commits posteriores sao docs-only.
+- Provas frescas deste tick SEM re-build: branch desktop ==
+  origin/desktop em 7a53613; CI remoto success no commit exato (run
+  concluido ~02:10Z); exe canonico D:/cargo-target/release/solaris-av-engine.exe
+  6.529.536B (22:23) embute index-CloehhZU.js do dist-desktop do HEAD
+  (grep 1 hit); instalador NSIS 2.452.025B (22:23) no disco.
+- SMOKE_OK novo: pid=48712 vivo apos 5s mem=28MB -> SMOKE_KILLED limpo
+  (exe canonico, mesmo binario auditado nos ticks anteriores).
+- Higiene de processos: nodes antigos pertencem a Hermes UI, ContractKit
+  (:4179), Hein (:4188), LambdaHabits (serve.mjs 8799), npx serve :8931 e
+  leftover elm - todos FORA da lane Solaris, poupados. Zero orphan
+  solaris-av-engine.exe / vite da lane.
+- Sem merge na main; nada tocado de lanes irmaas (untracked
+  src/audio-acoustics/, scripts/smoke-p*.mjs etc. intocados); suite
+  commitada 246/246 segue valendo (ultima execucao registrada no tick
+  22h30; nenhum codigo mudou neste tick).
