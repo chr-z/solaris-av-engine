@@ -23,7 +23,9 @@ if (!EXE) { console.error('usage: node desktop_e2e_probe_p3.mjs <exe>'); process
 
 const PORT = 47400 + Math.floor(Math.random() * 1500);
 const UDD = mkdtempSync(join(tmpdir(), 'solaris_e2e_p3_'));
-const TAURI_ORIGINS = ['tauri://', 'http://tauri.localhost', 'https://tauri.localhost', 'data:', 'blob:', 'about:', 'ipc://'];
+// http://ipc.localhost = forma WINDOWS da origem de IPC do Tauri v2
+// (equivalente ao ipc:// acima; ja allowlistada na CSP desde 2fafb29).
+const TAURI_ORIGINS = ['tauri://', 'http://tauri.localhost', 'https://tauri.localhost', 'data:', 'blob:', 'about:', 'ipc://', 'http://ipc.localhost'];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const results = { bootMs: null, clicked: null, woClicked: null, tabs: [], upgradeBtn: false,
