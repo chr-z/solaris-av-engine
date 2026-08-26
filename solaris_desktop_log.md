@@ -627,3 +627,77 @@ Branch: audio/acoustics; digest HEAD 591e6b0; guardrail 410/410 verde (avulso 2m
 
 - DESFECHO: run 32910279730 = success (~2min) — primeiro CI remoto verde da
   branch desktop, na estreia do trigger.
+
+## Tick 25/08 ~21h00 — audio-dsp (Yui / cron solaris-audio)
+
+Worktree solaris-audio (branch audio/acoustics); desktop/src-tauri/pitch intocados.
+TEMA: PUSH DO INTEGRAÇÃO RETIDO + AUDITORIA DE FECHAMENTO DO P3 (fila da diretiva).
+
+- PUSH DESBLOQUEADO: os 2 commits do tick 20h30 (0ffe34f sheet-sync acústico +
+  591e6b0 QC report/registry) estavam presos só pelo GCM interativo. Árvore
+  commitada provada ANTES do push: tsc --noEmit limpo + vitest 42 arq /
+  418 testes VERDES (~112s) no HEAD exato 591e6b0 (worktree limpo = snapshot).
+  Push via bypass gh-credential verificado: e8e28e2..591e6b0 ls-remote OK.
+- P3 AUDITADO POR EXISTÊNCIA E TESTE (nada reconstruído): AcousticPanel.tsx
+  completo no produto — barras por eixo, timeline CLICÁVEL com onSeek pro
+  player (buildTimelineMarks), botão "marcar como referência" wired ao
+  useAcousticAnalysis/baselineStore (localStorage injetável, aprendível),
+  integrado no AnalysisWorkspace (getPcm + status/report/error). Cobertura de
+  teste: baselineStore.test.ts, panelModel.test.ts,
+  useAcousticAnalysis.test.ts, sheetSyncAcoustic.test.ts (9 casos),
+  qcIntegration.test.ts — todos na suíte 418.
+- ESLINT RATCHET vs e8e28e2 (probe git-archive + junction node_modules):
+  14 problemas (13 err / 1 warn) EM AMBOS => zero regressão; 12 pré-existentes
+  do módulo + 2 pré-existentes fora do escopo anterior. Nenhum corrigido
+  (baseline da lane, não desta fila).
+- ESTADO DA FILA DA DIRETIVA: P1/P2/P3 100% entregues e pushed
+  (origin/audio/acoustics @ 591e6b0 == local). Única pendência: P4 ML ONNX
+  (opcional na diretiva, "SE P1-P3 estiverem sólidos") — sólidos estão;
+  aguarda priorização explícita do dono ou próximo tick decide sozinho.
+- Infra: probe lint removida (junction deletada antes do worktree remove —
+  ordem inversa trava o cleanup por aprovação headless).
+=== FIM TICK — integração no origin; lane sem trabalho pendente além de P4 ===
+
+## Tick 25/08 ~21h40 — desktop worker (cron turbo): P3 refinamento final — gate de fonte de nuvem na linha
+
+Fila literal P1/P2/P3: DONE em disco e HEAD (confirmado por leitura fresca,
+sem re-execução). Avanço real deste tick = a última pendência P3 aberta no
+log ("refinamento futuro: esconder o affordance de link nas linhas quando
+standalone"), que era também um BUG funcional latente:
+
+### Bug
+No exe standalone, linha com link YouTube/Drive em W.O./OPERATOR disparava
+handleSourceSelected com flags de nuvem → caminho gapi.client.getToken()
+→ ReferenceError (loaders Google removidos do shell) → "Media Load Failed"
+genérico. Pasta Drive ainda abria o picker cloud (gapi + /api proxy).
+
+### Correções (commit 4ef1349, branch desktop)
+- runtimeMode.ts: STANDALONE_CLOUD_SOURCE_MESSAGE (mensagem humana EN) +
+  describeCloudSource() classificando {isYoutube,isDriveLink}.
+- App.tsx: gate ANTES do try/gapi — fonte de nuvem no standalone mostra a
+  mensagem e título "(local mode)", zero rede, zero exceção.
+- App.tsx: pasta Drive não abre mais o picker no standalone (cai no gate).
+- AnalysisSheet.tsx: ícone de link de nuvem escondido nos itens quando
+  standalone (zero affordance).
+- App.tsx (dívida exposta pelo ratchet): sessão standalone nasce pronta via
+  lazy init dos estados (authStatus/userProfile/headers/allRows) — elimina
+  set-state-in-effect; helper createLocalReviewerProfile(); deps arrays
+  completos nos 3 callbacks. Efeito colateral positivo: sem flash da tela
+  "initializing" no boot desktop.
+
+### Testes (dois modos, como manda a diretiva)
+- runtimeMode.test.ts: +2 (classificador youtube/drive/null + mensagem).
+- analysisSheetStandalone.test.tsx: +2 — mesma lista com W.O. linkada:
+  cloud mantém ícone dentro do <li>; standalone renderiza ZERO svg no item.
+- Suíte tracked: 246/246 VERDES (~13s); tsc --noEmit limpo na árvore
+  commitada (erros restantes só em src/audio-acoustics/ untracked de outra
+  lane); eslint 0 erro 0 warning nos arquivos tocados.
+
+### Prova ponta-a-ponte NO EXE (dist-desktop 21h33 embutido, cargo tauri
+build --no-bundle, 4m52s warm)
+- desktop_e2e_probe.mjs → DESKTOP_E2E_PASS: boot 970ms, 0 recursos remotos,
+  0 endpoints proibidos no DOM, console limpo. clicked=null = não existe
+  mais botão guest/demo (sessão local direta, ganho do lazy init).
+- desktop_e2e_probe_p3.mjs → DESKTOP_E2E_P3_PASS: boot 817ms, W.O. abre,
+  única aba "Local File", 0 texto "Google Drive" no DOM vivo, 0 sync.
+- Artefato canônico: D:/cargo-target/release/solaris-av-engine.exe.
