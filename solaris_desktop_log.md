@@ -1,3 +1,31 @@
+## redesign (t31) — turbo #28 absorvido + regates — 26/08/2026 ~07h45
+
+- **Auditoria**: spec SOLARIS_REDESIGN.md intacta; R1-R4 + wows seguem DONE.
+  Unico delta: origin/main avancou 1 commit (aedb89b = turbo-web #28, guardrail
+  noturno docs-only com relatorios LH/axe regenerados). Worktree limpo ao abrir
+  o tick.
+- **Fusao**: merge 6302e05 absorveu origin/main. Conflitos triviais: relatorios
+  regeneraveis (axe/lh-r1/lh-r2 -> --ours e REGENERADOS neste tick) e entrada
+  docs do turbo #28 no log compartilhado (auto-merge ok). Codigo de app
+  intocado (diff do merge = scripts/append_log_t28.py + log).
+- **GATES pos-merge** (build fresca da lane): tsc --noEmit limpo; vitest
+  **403/403** (38 arquivos); e2e fluxo real **21/21**; build verde byte-estavel
+  — entry **index-CHKfTLey.js**, INITIAL **46,89KB gz** + CSS index-C1l8F6-j
+  **10,12KB gz** (<30KB alvo ok); firebase lazy 97,38KB fora do caminho critico.
+  Zero re-hash vs t25/t28/t29/t30.
+- **Browser gates** (scripts/run_gates_t30.sh: preview efemero porta alta
+  aleatoria + prova de hash antes de cada gate): console probe **0 eventos**;
+  LH x2 **P99/A100/BP100** (FCP 1,5s LCP 1,8s CLS 0,001 TBT 0ms).
+- **axe-core regenerado NA ARVORE MESCLADA** (scripts/axe-scan.mjs):
+  login n/a (build demo sobe direto no app por design pos-t24) / main app **0**
+  / criticalOrSerious **0**.
+- Shots de aceite regenerados ->
+  C:/Yui/data/saas_factory/redesign_shots/r31_merge_{fila,analysis,qc_dialog}.png
+  via scripts/redesign_shot_t25.cjs (hash conferido; PIL dark 95,8/97,9/96,1%,
+  perfil visual identico aos ticks r29/r30).
+- src-tauri/audio-acoustics/pitch intocados. Fila R1-R4 segue DONE aguardando
+  diretiva do dono. Sem Telegram.
+
 ## redesign (t30) — turbo #27 absorvido + regates — 26/08/2026 ~06h55
 
 - **Auditoria**: spec SOLARIS_REDESIGN.md intacta; R1-R4 + wows seguem DONE.
