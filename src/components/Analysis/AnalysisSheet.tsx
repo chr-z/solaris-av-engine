@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { SearchIcon, LinkIcon, ChevronDownIcon, FilterIcon, RefreshIcon, XIcon, WaveformIcon } from '../Core/icons';
 import LoadingIndicator from '../Core/LoadingIndicator';
 import Popover from '../Core/Popover';
 import FilterControls, { FilterState } from './FilterControls';
-import { database, auth } from '../../config/firebase';
+import { getDb, getFirebaseCompat, isFirebaseConfigured, type SnapshotLike } from '../../config/firebase';
+type DbSnapshot = SnapshotLike;
 import { UserProfile } from '../../types';
 import UserAvatar from '../Auth/UserAvatar';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
-import { getVideoIdFromUrl } from '../../utils/videoUtils';
+import { findCachedWaveformForRow, getHeaderIndexMap, ListHeaderKey } from '../../utils/waveformRowStatus';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- structural stand-in for the untyped compat SDK surface
 declare const gapi: any;
 
 type CellData = {
@@ -47,7 +49,8 @@ interface AnalysisSheetListProps {
 }
 
 export const fetchFullRowData = async (rowIndex: number): Promise<RowData> => {
-    const idToken = await auth.currentUser?.getIdToken();
+    const { fbAuth } = await getFirebaseCompat();
+    const idToken = await fbAuth.currentUser?.getIdToken();
     if (!idToken) {
         throw new Error('Not authenticated. Please sign in again.');
     }
@@ -61,7 +64,7 @@ export const fetchFullRowData = async (rowIndex: number): Promise<RowData> => {
     return response.json();
 };
 
-export const updateSheetRow = async (rowIndex: number, rowData: RowData): Promise<any> => {
+export const updateSheetRow = async (rowIndex: number, rowData: RowData): Promise<unknown> => {
     const token = gapi.client.getToken()?.access_token;
     if (!token) {
       throw new Error("User not authenticated. Please sign in again.");
@@ -85,50 +88,42 @@ type RowWithIndex = RowWithSheetIndex;
 
 // --- ListItem Component (Memoized) ---
 interface ListItemProps extends RowWithIndex {
-    headers: string[];
+    headerIdx: Record<ListHeaderKey, number>;
     isSelected: boolean;
     onClick: (index: number, row: RowData) => void;
     lockInfo?: LockInfo | null;
     isLockedByCurrentUser: boolean;
 }
 
-const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, isSelected, onClick, lockInfo, isLockedByCurrentUser }) => {
+const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headerIdx, isSelected, onClick, lockInfo, isLockedByCurrentUser }) => {
     const { cachedVideoIds } = useWaveformCache();
-    const [hasCachedWaveform, setHasCachedWaveform] = useState(false);
 
-    // Using new English Headers
-    const osCell = row[headers.indexOf('W.O.')];
-    const professorCell = row[headers.indexOf('INSTRUCTOR')];
-    const dataCell = row[headers.indexOf('DATE')];
-    const estudioCell = row[headers.indexOf('STUDIO')];
-    const finalCell = row[headers.indexOf('FINAL SCORE')];
+    // turbo-web perf: all derived values computed synchronously during render.
+    // The old version seeded this badge via useEffect+setState, which rendered
+    // every visible row twice on mount and on every cache mutation; the pure
+    // helper below (unit-tested in waveformRowStatus.test.ts) makes it a
+    // single-render derivation. headerIdx also replaces 6x headers.indexOf()
+    // per render with one O(1)-per-column map built once by the parent.
+    const hasCachedWaveform = findCachedWaveformForRow(row, headerIdx, cachedVideoIds);
+
+    const osCell = row[headerIdx.WO];
+    const professorCell = row[headerIdx.INSTRUCTOR];
+    const dataCell = row[headerIdx.DATE];
+    const estudioCell = row[headerIdx.STUDIO];
+    const finalCell = row[headerIdx.FINAL_SCORE];
     
     const infoParts = [estudioCell?.value, dataCell?.value].filter(Boolean);
     const isLockedByOther = lockInfo && !isLockedByCurrentUser;
 
-    useEffect(() => {
-        const osLink = row[headers.indexOf('W.O.')]?.link;
-        const operatorLink = row[headers.indexOf('OPERATOR')]?.link;
-        const potentialLinks = [osLink, operatorLink].filter(Boolean);
-
-        let found = false;
-        for (const link of potentialLinks) {
-            const videoId = getVideoIdFromUrl(link!);
-            if (videoId && cachedVideoIds.has(videoId)) {
-                found = true;
-                break;
-            }
-        }
-        setHasCachedWaveform(found);
-    }, [cachedVideoIds, row, headers]);
-
     const handleForceUnlock = (e: React.MouseEvent) => {
         e.stopPropagation(); 
         if (lockInfo && window.confirm(`Are you sure you want to unlock ${lockInfo.user.givenName}? This might interrupt active work.`)) {
-            database.ref(`locks/${rowIndex}`).set(null).catch(err => {
-                console.error("Failed to remove lock:", err);
-                alert("Could not remove lock. Try again.");
-            });
+            void getDb()
+                .then((db) => db.ref(`locks/${rowIndex}`).set(null))
+                .catch(err => {
+                    console.error("Failed to remove lock:", err);
+                    alert("Could not remove lock. Try again.");
+                });
         }
     };
     
@@ -155,7 +150,7 @@ const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, isSele
                 </div>
                 <div className="text-right flex-shrink-0 ml-2 flex flex-col items-end">
                     {infoParts.length > 0 && (
-                        <p className="text-xs text-gray-500 truncate">
+                        <p className="text-xs text-gray-400 truncate">
                             {infoParts.join(' • ')}
                         </p>
                     )}
@@ -215,13 +210,27 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
     const [isCompletedOpen, setIsCompletedOpen] = useState(false);
     const [activeLocks, setActiveLocks] = useState<{[key: number]: LockInfo}>({});
 
+    // turbo-web perf: column indices for the list derived once per headers
+    // identity instead of 8x headers.indexOf() inside every ListItem render.
+    const headerIdx = useMemo(() => getHeaderIndexMap(headers), [headers]);
+
     useEffect(() => {
-        const locksRef = database.ref('locks');
-        const listener = (snapshot: any) => {
-          setActiveLocks(snapshot.val() || {});
+        // turbo-web: subscribe only after the lazy SDK resolves; skip if unmounted first.
+        let listener: ((snapshot: DbSnapshot) => void) | null = null;
+        let dbRef: ReturnType<Awaited<ReturnType<typeof getDb>>['ref']> | null = null;
+        let cancelled = false;
+        // turbo-web: offline/demo builds have no Firebase config — stay silent.
+        if (!isFirebaseConfigured()) return;
+        getDb().then((db) => {
+            if (cancelled) return;
+            dbRef = db.ref('locks');
+            listener = (snapshot) => setActiveLocks(snapshot.val() || {});
+            dbRef.on('value', listener);
+        }).catch((err) => console.error('Failed to load database module:', err));
+        return () => {
+            cancelled = true;
+            if (dbRef && listener) dbRef.off('value', listener);
         };
-        locksRef.on('value', listener);
-        return () => locksRef.off('value', listener);
       }, []);
 
     const fetchData = useCallback(async (currentFilters: FilterState, forceRefresh = false) => {
@@ -236,7 +245,8 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
         setLoadingMessage('Syncing Data...');
         setError(null);
         try {
-            const idToken = await auth.currentUser?.getIdToken();
+            const { fbAuth } = await getFirebaseCompat();
+            const idToken = await fbAuth.currentUser?.getIdToken();
             if (!idToken) {
                 throw new Error('Session expired. Please sign in again.');
             }
@@ -261,15 +271,17 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
             onDataLoaded(data.headers, data.rows);
             setLoadingMessage('Ready');
 
-        } catch (err: any) {
-            setError(`Sync Error: ${err.message}`);
+        } catch (err: unknown) {
+            setError(`Sync Error: ${err instanceof Error ? err.message : String(err)}`);
         } finally {
             setIsLoading(false);
         }
     }, [onDataLoaded, userProfile]);
 
     useEffect(() => {
-        fetchData(filters);
+        // turbo-web: setState deferred to a microtask — synchronous setState in
+        // the effect body causes cascading renders (react-hooks/set-state-in-effect).
+        queueMicrotask(() => fetchData(filters));
     }, [filters, fetchData]);
     
     const activeFilterCount = (filters.startDate && filters.endDate ? 1 : 0) + filters.inconformities.length + (filters.studio ? 1 : 0);
@@ -282,8 +294,8 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
                 return (
                     <ListItem 
                         key={item.rowIndex} 
-                        {...item} 
-                        headers={headers} 
+                        {...item}
+                        headerIdx={headerIdx} 
                         isSelected={selectedOsIndex === item.rowIndex} 
                         onClick={onRowSelected} 
                         lockInfo={lockInfo}
@@ -351,7 +363,7 @@ const AnalysisSheetList: React.FC<AnalysisSheetListProps> = ({
                             >
                                 <FilterIcon className="w-5 h-5" />
                                 { activeFilterCount > 0 &&
-                                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-solar-accent text-white text-xs rounded-full flex items-center justify-center font-mono">
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-solar-accent text-solar-dark-bg text-xs rounded-full flex items-center justify-center font-mono">
                                         {activeFilterCount}
                                     </span>
                                 }

@@ -34,7 +34,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'short' }
               index > 0 ? 'border-l border-solar-light-border dark:border-solar-dark-border' : ''
             } ${
               isActive
-                ? 'bg-solar-accent text-white'
+                ? 'bg-solar-accent text-solar-dark-bg'
                 : 'text-gray-500 dark:text-gray-400 hover:bg-gray-500/10 hover:text-gray-800 dark:hover:text-gray-200'
             }`}
           >
