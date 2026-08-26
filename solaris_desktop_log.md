@@ -506,3 +506,45 @@ GATES (árvore limpa, build fresca):
 Higiene: wrapper npx do preview morto via process.kill + filho node morto
 por pid via GetNetTCPConnection(4618); porta confirmada livre no fim.
 src-tauri intocado. Sem Telegram.
+
+
+## turbo-web tick #19 — guardrail noturno — 26/08/2026 ~00h30
+
+Estado encontrado: worktree @ main == origin/main (253060e, tick #18),
+zero delta upstream desde o último tick (v2-upgrade ahead 0,
+turbo/web-opt ahead 0; audio/acoustics, desktop, features, redesign em
+suas lanes). Fila original (1-6) segue DONE desde o tick #5.
+
+GATES (árvore limpa, build fresca):
+- build (vite 6.4.3): initial = index 33,86 + react-vendor 45,79 +
+  css 7,60 = 87,25 KB gz — BYTE-ESTÁVEL vs ticks #12..#18 (mesmo hash
+  index-C1mX7UAW.js). Chunks lazy intactos (firebase 97,38 / AdminGate
+  18,99 / AnalysisWorkspace 20,04 / sheetSync 11,19 / ComparePane 1,37
+  + BugReport*).
+- tsc --noEmit limpo; vitest 31 arquivos / 342/342 (~27s);
+- e2e fluxo real: 21/21 asserts ok (YouTube → scoring → fila → export QC);
+- axe-core scan: 0 violações (demo/offline, sem login screen), preview
+  PROVADO nosso antes do scan (entry conferido);
+- console probe (preview dedicado porta 4820 strictPort): 0 eventos de
+  erro/aviso no boot, entry provado igual ao dist;
+- Lighthouse x2 (--headless=new --disable-gpu): R1 E R2 100/100/100/100
+  (FCP 1,4s / LCP 1,5s / CLS 0 / TBT 0ms) — CPU ambiente livre nas duas
+  rondas.
+- npm audit: não re-executado (patamar estável 10 moderate / 0 high nos
+  ticks #10..#18; árvore idêntica).
+
+HIGIENE DE PORTAS (achado novo deste tick):
+- Porta 4477 presa por órfão REAL de 11,2h: wrappers bash/npx/cmd já
+  mortos mas o filho node sobreviveu — servindo build SOLARIS STALE
+  pré-tick-#12 (entry index-DubV40Sq.js), originada da lane
+  solaris-audio. Identidade provada pelo <title>+assets servidos antes
+  de matar (regra: fixed ports guilty until proven innocent). Morto por
+  pid (node 37312); porta confirmada livre.
+- Porta 4188 (órfã de 36,6h): serve build do HEIN ESTHETICS (projeto
+  ZIMNY do Zee) — NÃO tocada, regra de não mexer em Zimny sem ordem.
+- Porta 4599: preview VIVO da lane solaris-redesign (sessão fresca
+  <30min no momento da checagem) — intocada.
+- Meu próprio preview deste tick (porta 4820): wrapper morto via
+  process.kill + filho node morto por pid; porta confirmada livre.
+
+src-tauri intocado. Sem Telegram.
