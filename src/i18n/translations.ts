@@ -138,6 +138,11 @@ export const en = {
   'pwa.offlineBadge': 'Offline — cached mode',
   'pwa.offlineBadgeTitle': 'You are offline. The app shell keeps working; media and cloud features need a connection.',
 
+  // Runtime mode badge (P3 — standalone support)
+  'mode.badgeStandalone': 'Local mode',
+  'mode.badgeTitle': 'Running in local (standalone) mode: no cloud services.',
+  'mode.badgeOriginTitle': 'Local mode — decision source: {origin}. No cloud services.',
+
   // Admin — Sources (Saturno / Alfred / Sheet)
   'admin.sources.title': 'Sources',
   'admin.sources.subtitle': 'Configure where OSs and videos come from.',
@@ -313,6 +318,11 @@ export const pt: Record<TranslationKey, string> = {
   // PWA / offline
   'pwa.offlineBadge': 'Offline — modo cacheado',
   'pwa.offlineBadgeTitle': 'Você está offline. O app continua funcionando; mídia e recursos na nuvem precisam de conexão.',
+
+  // Badge do modo de execução (P3 — suporte standalone)
+  'mode.badgeStandalone': 'Modo local',
+  'mode.badgeTitle': 'Executando em modo local (standalone): sem serviços de nuvem.',
+  'mode.badgeOriginTitle': 'Modo local — origem da decisão: {origin}. Sem serviços de nuvem.',
 
   // Admin — Fontes (Saturno / Alfred / Planilha)
   'admin.sources.title': 'Fontes',

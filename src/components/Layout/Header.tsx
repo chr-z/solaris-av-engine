@@ -8,6 +8,7 @@ import UserAvatar from '../Auth/UserAvatar';
 import LanguageSwitcher from '../../i18n/LanguageSwitcher';
 import { useI18n } from '../../i18n/I18nContext';
 import OfflineIndicator from '../Core/OfflineIndicator';
+import ModeBadge from '../Core/ModeBadge';
 import { QCExportButton } from '../Analysis/QCExportButton';
 import ProUpgradeModal from '../Admin/ProUpgradeModal';
 import { useLicense } from '../../licensing/LicenseContext';
@@ -95,6 +96,10 @@ const Header: React.FC<HeaderProps> = ({
           <div className="h-6 w-px bg-solar-dark-border"></div>
           
           <OfflineIndicator />
+
+          {/* P3: badge de suporte do modo (só aparece em standalone, com a
+              origem da decisão no tooltip). */}
+          <ModeBadge />
 
           {/* S6.1: edition badge + upgrade entry point (free tier only).
               P3 standalone: licenciamento é local-first, mas o upsell de
