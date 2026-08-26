@@ -164,3 +164,32 @@ export async function loadLastReportDesktop(): Promise<LastReportResult | null> 
     return null;
   }
 }
+
+export interface ModeWriteResult {
+  /** Caminho do config.local.json gravado (diagnóstico/suporte). */
+  configPath: string;
+  /** Bytes escritos. */
+  bytesWritten: number;
+}
+
+/**
+ * Grava a escolha de modo do operador no config.local.json da máquina
+ * (set_standalone_mode_command). `null` ⇒ sem ponte ou falha de escrita —
+ * o chamador decide se mostra erro (toggle explícito MERECE feedback, ao
+ * contrário do cache de relatório que é fire-and-forget).
+ */
+export async function setStandaloneModeDesktop(
+  standalone: boolean,
+): Promise<ModeWriteResult | null> {
+  const invoke = getInvoke();
+  if (!invoke) return null;
+  try {
+    const res = (await invoke('set_standalone_mode_command', {
+      req: { standalone },
+    })) as { configPath?: string; bytesWritten?: number } | null;
+    if (!res || typeof res.configPath !== 'string') return null;
+    return { configPath: res.configPath, bytesWritten: res.bytesWritten ?? 0 };
+  } catch {
+    return null;
+  }
+}

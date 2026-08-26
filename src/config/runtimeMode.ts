@@ -42,6 +42,9 @@ const MODE_KEY = 'solaris.runtimeMode';
 /** Opinião remota já aplicada em boot (flag STANDALONE_MODE do ambiente). */
 const APPLIED_REMOTE_KEY = 'solaris.runtimeModeRemoteApplied';
 
+/** Origem legível da opinião aplicada (companhia de APPLIED_REMOTE_KEY). */
+const APPLIED_ORIGIN_KEY = 'solaris.runtimeModeRemoteOrigin';
+
 function fromAppliedRemote(): RuntimeMode | null {
   try {
     const v = window.localStorage.getItem(APPLIED_REMOTE_KEY);
@@ -120,6 +123,28 @@ export function setRuntimeModeOverride(mode: RuntimeMode | null): void {
 }
 
 /**
+ * Origem legível do modo efetivo (badge de suporte na UI). Ordem espelha a
+ * detecção; `null` = cloud sem sinal nenhum (default da web pura).
+ */
+export function getRuntimeModeOrigin(): string | null {
+  if (fromLocalStorage() !== null) return 'user override';
+  if (fromAppliedRemote() !== null) return fromAppliedOrigin();
+  if (fromBuildFlag()) return 'build flag (standalone)';
+  if (fromTauriRuntime()) return 'Tauri runtime';
+  return null;
+}
+
+function fromAppliedOrigin(): string | null {
+  try {
+    const v = window.localStorage.getItem(APPLIED_ORIGIN_KEY);
+    if (typeof v === 'string' && v.length > 0 && v.length <= 200) return v;
+  } catch {
+    /* storage indisponível — segue fluxo */
+  }
+  return null;
+}
+
+/**
  * P3 refinamento (zero affordance de nuvem no standalone): mensagem humana
  * usada quando uma fonte de nuvem (link de planilha YouTube/Drive) é
  * acionada num build sem nuvem. Substitui o comportamento anterior, que
@@ -175,10 +200,17 @@ export async function applyRemoteModeOpinion(): Promise<ModeOpinion> {
   try {
     if (decision === null) {
       window.localStorage.removeItem(APPLIED_REMOTE_KEY);
+      window.localStorage.removeItem(APPLIED_ORIGIN_KEY);
     } else {
       window.localStorage.setItem(
         APPLIED_REMOTE_KEY,
         decision ? 'standalone' : 'cloud',
+      );
+      // Origem da opinião vai junto — badge de suporte mostra DE ONDE o modo
+      // veio (env core / config local / deploy). Falha aqui nunca derruba.
+      window.localStorage.setItem(
+        APPLIED_ORIGIN_KEY,
+        opinion.origin ?? 'remote',
       );
     }
   } catch {
