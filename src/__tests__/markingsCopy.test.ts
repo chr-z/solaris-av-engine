@@ -4,6 +4,7 @@ import {
   planMarkingsCopy,
   applyMarkingsPlan,
   describePlan,
+  findTwinRows,
 } from '../features/qol/markingsCopy';
 
 const HEADERS = [
@@ -105,5 +106,39 @@ describe('applyMarkingsPlan + describePlan', () => {
     const target = row({ 4: 'TRUE' });
     const plan = planMarkingsCopy(HEADERS, source, target);
     expect(describePlan(plan)).toBe('1 marking(s) · 1 already equal · text skipped (1)');
+  });
+});
+
+describe('findTwinRows — aulas gêmeas (mesmo professor/estúdio/dia)', () => {
+  const TWIN_HEADERS = ['W.O.', 'INSTRUCTOR', 'DATE', 'STUDIO'];
+  function twinRow(rowIndex: number, wo: string, instructor: string, date: string, studio: string) {
+    return { rowIndex, row: [{ value: wo }, { value: instructor }, { value: date }, { value: studio }] };
+  }
+  const CURRENT = twinRow(10, 'OS-CUR', 'Prof X', '2026-08-25', 'Studio A').row;
+
+  it('rankeia: professor vale 2; estúdio/dia valem 1 cada; mínimo 2', () => {
+    const rows = [
+      twinRow(1, 'OS-A', 'Prof X', '2099-01-01', 'Studio Z'), // só professor → score 2
+      twinRow(2, 'OS-B', 'Prof Y', '2026-08-25', 'Studio A'), // estúdio+dia → score 2
+      twinRow(3, 'OS-C', 'Prof X', '2026-08-25', 'Studio A'), // tudo → score 4
+      twinRow(4, 'OS-D', 'Prof Y', '2099-01-01', 'Studio Z'), // nada → fora
+    ];
+    const found = findTwinRows(TWIN_HEADERS, CURRENT, rows, 10);
+    expect(found.map(c => c.row.rowIndex)).toEqual([3, 1, 2]); // score desc, empate estável
+    expect(found[0].score).toBe(4);
+    expect(found[0].reasons).toContain('same instructor');
+    expect(found[1].label).toBe('OS-A');
+  });
+
+  it('exclui a própria OS e ignora células vazias como critério', () => {
+    const empty = twinRow(5, 'OS-E', '', '', '').row;
+    const rows = [twinRow(10, 'OS-CUR', 'Prof X', '2026-08-25', 'Studio A'), twinRow(5, 'OS-E', '', '', '')];
+    expect(findTwinRows(TWIN_HEADERS, CURRENT, rows, 10)).toHaveLength(0);
+  });
+
+  it('linha atual sem contexto nenhum → sem candidatos (nada é gêmea de nada)', () => {
+    const rows = [twinRow(1, 'OS-A', 'Prof X', 'd', 's')];
+    expect(findTwinRows(TWIN_HEADERS, [], rows)).toEqual([]);
+    expect(findTwinRows(TWIN_HEADERS, null, rows)).toEqual([]);
   });
 });

@@ -3,6 +3,7 @@ import {
   matchShortcut,
   isSaveCombo,
   ShortcutContext,
+  type ShortcutDef,
 } from '../utils/shortcuts';
 
 interface AnalystActions {
@@ -46,6 +47,11 @@ interface UseAnalystShortcutsOptions extends AnalystActions {
   enabled: boolean;
   /** Scope gating — a scope set to false never matches. */
   scopeEnabled?: Partial<Record<ShortcutContext, boolean>>;
+  /**
+   * QoL A1: EFFECTIVE catalog (user's remapped keyboard). Omitting falls
+   * back to the default ANALYST_SHORTCUTS — fully backwards compatible.
+   */
+  defs?: readonly ShortcutDef[];
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -72,10 +78,12 @@ function isEditableTarget(target: EventTarget | null): boolean {
 export function useAnalystShortcuts({
   enabled,
   scopeEnabled,
+  defs,
   ...actions
 }: UseAnalystShortcutsOptions): void {
   const actionsRef = useRef<AnalystActions>({});
   const scopeRef = useRef(scopeEnabled);
+  const defsRef = useRef(defs);
 
   useEffect(() => {
     actionsRef.current = actions;
@@ -83,6 +91,10 @@ export function useAnalystShortcuts({
 
   useEffect(() => {
     scopeRef.current = scopeEnabled;
+  });
+
+  useEffect(() => {
+    defsRef.current = defs;
   });
 
   useEffect(() => {
@@ -111,6 +123,7 @@ export function useAnalystShortcuts({
       const def = matchShortcut(event, {
         isEditableTarget: isEditableTarget(event.target),
         scopeEnabled: scopeRef.current,
+        defs: defsRef.current, // undefined → catálogo padrão (compat)
       });
       if (!def) return;
 

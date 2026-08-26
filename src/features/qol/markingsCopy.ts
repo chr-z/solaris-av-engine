@@ -133,3 +133,83 @@ export function describePlan(plan: MarkingsCopyPlan): string {
   if (plan.skippedFreeText.length) parts.push(`text skipped (${plan.skippedFreeText.length})`);
   return parts.join(' · ');
 }
+
+// ---------- Gêmeos: candidatas a "aula similar" (mesmo professor/estúdio/dia) ----------
+
+export interface TwinCandidate<TRow> {
+  row: TRow;
+  /** Rótulo legível da OS (W.O. quando existir, senão índice). */
+  label: string;
+  /** Pontuação de similaridade (maior = mais gêmea). */
+  score: number;
+  /** Motivos legíveis ("same instructor", "same studio", "same date"). */
+  reasons: readonly string[];
+}
+
+interface TwinRowInput {
+  rowIndex: number;
+  row: RowData;
+}
+
+const HEADER_ALIASES = {
+  instructor: ['INSTRUCTOR', 'PROFESSOR'],
+  studio: ['STUDIO', 'ESTÚDIO', 'ESTUDIO'],
+  date: ['DATE', 'DATA'],
+  wo: ['W.O.', 'OS', 'WO'],
+} as const;
+
+function firstColumn(headers: readonly string[], aliases: readonly string[]): number {
+  for (const alias of aliases) {
+    const idx = headers.indexOf(alias);
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+function norm(value: string | undefined): string {
+  return (value ?? '').trim().toLowerCase();
+}
+
+/**
+ * Rankeia linhas candidatas a "aula gêmea" da OS atual: mesmo professor
+ * (peso 2), mesmo estúdio (+1), mesmo dia (+1). Exige score mínimo 2
+ * (compartilha o professor OU estúdio+junto no dia) — nada de sugerir
+ * análise aleatória. Puro e determinístico; empate mantém ordem de entrada.
+ */
+export function findTwinRows<TRow extends TwinRowInput>(
+  headers: readonly string[],
+  currentRow: RowData | null | undefined,
+  rows: readonly TRow[],
+  currentRowIndex?: number,
+): Array<TwinCandidate<TRow>> {
+  if (!currentRow) return [];
+  const instructorIdx = firstColumn(headers, HEADER_ALIASES.instructor);
+  const studioIdx = firstColumn(headers, HEADER_ALIASES.studio);
+  const dateIdx = firstColumn(headers, HEADER_ALIASES.date);
+  const woIdx = firstColumn(headers, HEADER_ALIASES.wo);
+
+  const curInstructor = norm(cellValue(currentRow, instructorIdx));
+  const curStudio = norm(cellValue(currentRow, studioIdx));
+  const curDate = norm(cellValue(currentRow, dateIdx));
+  if (!curInstructor && !curStudio && !curDate) return [];
+
+  const candidates: Array<TwinCandidate<TRow>> = [];
+  for (const entry of rows) {
+    if (typeof currentRowIndex === 'number' && entry.rowIndex === currentRowIndex) continue;
+    const reasons: string[] = [];
+    let score = 0;
+    const instructor = norm(cellValue(entry.row, instructorIdx));
+    const studio = norm(cellValue(entry.row, studioIdx));
+    const date = norm(cellValue(entry.row, dateIdx));
+    if (curInstructor && instructor === curInstructor) { score += 2; reasons.push('same instructor'); }
+    if (curStudio && studio === curStudio) { score += 1; reasons.push('same studio'); }
+    if (curDate && date === curDate) { score += 1; reasons.push('same date'); }
+    if (score < 2) continue;
+    const woRaw = cellValue(entry.row, woIdx).trim();
+    const label = woRaw || `#${entry.rowIndex}`;
+    candidates.push({ row: entry, label, score, reasons });
+  }
+
+  // Mais gêmea primeiro; empate mantém a ordem original (estável).
+  return candidates.sort((a, b) => b.score - a.score);
+}
