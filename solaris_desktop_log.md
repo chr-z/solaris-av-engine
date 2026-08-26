@@ -892,3 +892,9 @@ de FP encontrado no caminho.
 - Anti-stop-loop: varredura compare main vs TODAS as heads remotas. v2-upgrade/v2-upgrade-recovery/turbo/web-opt ahead_by 0 (relics). develop = ahead_by 1 mas e "Update README.md" do proprio Christian (bd3a560, fev/2026, sem PR) - decisao do dono, intocada. Lanes irmas com work ativo legitimo (nao me cabem): audio/acoustics ahead 25 (pushed 1239568, directive completa), features/analista-feliz ahead 47, redesign-premium ahead 48. Zero PRs abertos parados.
 - Higiene: zero processos da lane Solaris (exe/vite/http-server servindo dist); 13 nodes antigos pertencem a Hermes UI/outros apps - poupados.
 - Sem merge na main; nada tocado de lanes irmaas; nenhum codigo mudou neste tick.
+
+## Tick 26/08 ~02h20 - desktop worker (cron MODO TURBO SOLARIS): higiene minima sem re-auditoria - fila P1-P3 segue DONE, servidores :8123/:4188 atribuidos a OUTROS produtos (poupados)
+
+- Zero drift: desktop == origin/desktop em 352861b; CI success no commit exato (ci + Vercel Preview Comments, check-runs consultados neste tick). Exe canonico D:/cargo-target/release/solaris-av-engine.exe e instalador NSIS intactos (mtime 25/08 22:23). Nenhum codigo novo nesta lane.
+- ATRIBUICAO DE PORTAS (prova por <title> do HTTP, nao por cmdline): :8123 par http-server/npx com 43h+ serve "LinkForge - Your store in one link"; :4188 vite preview com 43h+ serve "Hein Esthetics Beauty" (Lowell, MA). NENHUM dos tres processos e da lane Solaris -> POUPADOS. NAO matar o :4188: pertence ao ecossistema Zimny, intocavel sem ordem explicita do Zee.
+- Fila P1-P3 permanece fechada desde 25/08 ~22h30 (provas no disco nos ticks anteriores); smoke mais recente ja fresco (01h45, pid 18328) - nao repetido neste tick por anti-stop-loop. Zero trabalho preso fora de lanes irmas; zero PRs abertos parados; develop ahead-1 continua sendo decisao do dono.
