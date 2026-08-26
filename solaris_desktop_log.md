@@ -278,3 +278,38 @@
 - A1 scratchpad (notas rápidas/OS) ENTREGUE: src/features/qol/scratchpad.ts (ScratchpadController, loadScratch, clampScratchText, validade 30d, limite 20k) — best-effort localStorage, não vai pra planilha; paridade com AutosaveController (debounce 200ms).
 - Testes: src/__tests__/shuttleScratchpad.test.ts 7/7 OK; total 527→534; bundle ~102KB gz intacto (lazy, sem chunk novo). Troca #4/#6 documentadas, não alteradas.
 - Sem Telegram; src-tauri, audio-acoustics, redesign (tokens.css) intactos. ( ° ʖ °)
+
+### 2026-08-26 ~01h40 — tick features-worker: WIP destrutivo descartado + F2/A2 tema e Pomodoro FECHADOS (commits 7003880..ee09066)
+- Diagnóstico de abertura: worktree com WIP SUJO de tick anterior cortado no meio —
+  format.ts com função inteira colada DENTRO de string literal (\n fake), App.tsx com
+  import no corpo do componente, pomodoro.ts chamando setState fora do render.
+  tsc provou (TS1127). O log anterior afirmava "677/677 verdes" para esse estado:
+  era impossível — registro corrigido aqui. Probe de processos: zero worker vivo na lane.
+  git checkout dos 4 arquivos + rm do pomodoro quebrado; tsc limpo imediatamente.
+- Tema (A2) refeito direito: núcleo puro features/qol/theme.ts (sanitização — lixo vira
+  system; resolução honesta; leitura/escrita tolerantes) + hook useThemePreference via
+  useSyncExternalStore (padrão AchievementToast; aba cruzada e mudança do sistema ao vivo;
+  classe dark aplicada por EFEITO declarado, não imperativo no setter) + ThemeMenu no
+  Header (radiogroup ARIA, setas movem foco+seleção juntas — bug real pego pelo teste,
+  roving tabindex) + applyInitialTheme() no App substituindo o dark-forçado legado.
+  jsdom TEM matchMedia (sistema claro): asserções iniciais seguem isso, não o fallback.
+- Pomodoro (A2) refeito direito: modelo crash-safe de FIM ÚNICO persistido (epoch ms em
+  solaris.pomodoro; tudo derivado — reload retoma o MESMO bloco sem estado duplo),
+  PomodoroController com storage/clock/agendador injetáveis, resume() rearma sem reiniciar,
+  stale >5min descarta, duplo-stop seguro. Badge no Header: ☕/mm:ss/⏰ (âmbar), popover com
+  status role=status e ações, tick de 500ms SÓ rodando. react-hooks/set-state-in-effect
+  pegou setState em effect → resolvido assinando no mount (snapshot já vem do useState lazy).
+- Testes: themePomodoro.test.ts (21 asserts de borda: sanitização, ceil do relógio, expiração
+  exata, stale, resume entre controllers distintos, onExpire 1x) + themePomodoroUi.test.tsx
+  (7 asserts jsdom: radiogroup, persistência+classe, setas, ☕→start→stop, resume mesmo fim,
+  ⏰ com reinício). Header NÃO montado em jsdom (puxaria Firebase/Realtime inteiro — coberto
+  por tsc/build). Suíte 698/698 (+28), tsc limpo, eslint dos arquivos novos 0/0 (ratchet da
+  lane pré-existente intocado).
+- Bundle: initial 53,56 entry + 44,43 react-vendor = ~98KB gz (budget <500KB intacto; pesados
+  fora do initial: vfs_fonts 454,6 / pdfmake 353,7 / ECharts 163,6 / firebase 95,0). Sem chunk
+  novo — widgets são minúsculos e vivem no entry.
+- Push confirmado via ls-remote (d7d8987..ee09066 → origin/features/analista-feliz).
+- Gotchas: patch tool falha se ancorada em conteúdo que EU mesmo restaurei via checkout depois
+  de ler (re-ler antes); jsdom dispara focus() mas seleção ARIA de radiogroup precisa seguir o
+  foco nas setas; GCM workaround de rede segue essencial no cron.
+- Sem Telegram; src-tauri, audio-acoustics, redesign (tokens.css) intactos. ( ° ʖ °)
