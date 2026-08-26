@@ -188,6 +188,10 @@ export const en = {
   'dash.live.kpiAnalyzing': 'In analysis now',
   'dash.live.kpiQueue': 'Pending queue',
   'dash.live.kpiAvg': 'Average score',
+  'dash.live.kpiSla': 'SLA — avg completion',
+  'dash.live.kpiSlaHours': '{h}h per O.S.',
+  'dash.live.kpiSlaOverdue': '{n} overdue · avg {h}h late',
+  'dash.live.kpiSlaOnTime': 'no overdue O.S.',
   'dash.live.nobody': 'nobody right now',
   'dash.live.throughputDaily': 'Throughput — last 14 days',
   'dash.live.throughputHourly': 'Throughput — by hour (XP events)',
@@ -389,6 +393,12 @@ export const en = {
   'league.team.progress': '{pct}% of {goal} XP',
   'league.team.remaining': '{remaining} XP to go',
   'league.team.met': 'Goal met — great teamwork!',
+  // C4/E: exportação de pódio com opt-in explícito
+  'league.export.shareLabel': 'Allow sharing podium data externally',
+  'league.export.shareHint':
+    'Off by default. When on, podium exports include analyst names and XP.',
+  'league.export.csv': 'Export CSV',
+  'league.export.xlsx': 'Export XLSX',
 
   // F2 QoL: theme preference (A2)
   'theme.label': 'Theme',
@@ -602,6 +612,10 @@ export const pt: Record<TranslationKey, string> = {
   'dash.live.kpiAnalyzing': 'Em análise agora',
   'dash.live.kpiQueue': 'Fila pendente',
   'dash.live.kpiAvg': 'Nota média',
+  'dash.live.kpiSla': 'SLA — conclusão média',
+  'dash.live.kpiSlaHours': '{h}h por O.S.',
+  'dash.live.kpiSlaOverdue': '{n} atrasadas · média {h}h',
+  'dash.live.kpiSlaOnTime': 'nenhuma O.S. atrasada',
   'dash.live.nobody': 'ninguém neste momento',
   'dash.live.throughputDaily': 'Vazão — últimos 14 dias',
   'dash.live.throughputHourly': 'Vazão — por hora (eventos de XP)',
@@ -803,6 +817,12 @@ export const pt: Record<TranslationKey, string> = {
   'league.team.progress': '{pct}% de {goal} XP',
   'league.team.remaining': 'Faltam {remaining} XP',
   'league.team.met': 'Meta batida — ótimo trabalho em equipe!',
+  // C4/E: exportação de pódio com opt-in explícito
+  'league.export.shareLabel': 'Permitir compartilhar dados de pódio externamente',
+  'league.export.shareHint':
+    'Desligado por padrão. Ligado, exportações de pódio incluem nomes e XP dos analistas.',
+  'league.export.csv': 'Exportar CSV',
+  'league.export.xlsx': 'Exportar XLSX',
 
   // F2 QoL: tema (A2)
   'theme.label': 'Tema',

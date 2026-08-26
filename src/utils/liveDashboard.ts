@@ -302,6 +302,78 @@ export function buildAnalystQuality(dataset: Dataset): AnalystQualityRow[] {
   return rows;
 }
 
+// ---------------------------------------------------------------------------
+// SLA (spec B1 — "fila pendente, SLA médio"): honesto com as fontes.
+// ---------------------------------------------------------------------------
+
+/**
+ * Resumo de SLA calculado da FILA VIVA (os_queue / QueueRowLike).
+ * Duas medidas, cada uma só existe quando a fonte sustenta:
+ *   - avgCompletionHours: média (created_at → completed_at) das OSs já
+ *     concluídas COM timestamps parseáveis e coerentes;
+ *   - overdueCount/avgOverdueHours: fila 'queued' com deadline no passado.
+ * Sem dado inventado: sem timestamps → null (o card mostra "—"), nunca zero.
+ */
+export interface SlaSummary {
+  /** Média de horas até concluir (null = nenhuma conclusão datada). */
+  avgCompletionHours: number | null;
+  /** OSs na fila com prazo estourado agora. */
+  overdueCount: number;
+  /** Atraso médio delas em horas (null = nenhuma atrasada). */
+  avgOverdueHours: number | null;
+}
+
+const HOUR_MS_SLA = 3_600_000;
+
+/** Parse tolerante: inválido/vazio = ausente (nunca epoch 0 por acidente). */
+function parseTsOrNull(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const t = Date.parse(value);
+  return Number.isFinite(t) ? t : null;
+}
+
+export function buildSlaSummary(
+  rows: readonly {
+    status: string;
+    deadline?: string | null;
+    created_at: string;
+    completed_at?: string | null;
+  }[],
+  opts: { now?: number } = {},
+): SlaSummary {
+  const now = opts.now ?? Date.now();
+
+  let completionSumMs = 0;
+  let completionN = 0;
+  for (const r of rows) {
+    if (r.status !== 'done') continue;
+    const created = parseTsOrNull(r.created_at);
+    const completed = parseTsOrNull(r.completed_at);
+    // Relógio corrupto (conclusão antes da criação) NÃO entra na média.
+    if (created == null || completed == null || completed < created) continue;
+    completionSumMs += completed - created;
+    completionN++;
+  }
+
+  let overdueSumMs = 0;
+  let overdueN = 0;
+  for (const r of rows) {
+    if (r.status !== 'queued') continue;
+    const deadline = parseTsOrNull(r.deadline);
+    if (deadline == null || deadline >= now) continue;
+    overdueSumMs += now - deadline;
+    overdueN++;
+  }
+
+  const round1 = (ms: number): number => Math.round((ms / HOUR_MS_SLA) * 10) / 10;
+
+  return {
+    avgCompletionHours: completionN > 0 ? round1(completionSumMs / completionN) : null,
+    overdueCount: overdueN,
+    avgOverdueHours: overdueN > 0 ? round1(overdueSumMs / overdueN) : null,
+  };
+}
+
 /**
  * Privacidade (spec B4/E): analista vê só a própria linha detalhada;
  * admin/lead veem todas. O agregado do time continua visível pra todos.

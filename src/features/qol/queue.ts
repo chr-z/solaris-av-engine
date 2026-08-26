@@ -14,6 +14,8 @@ export interface QueueRowLike {
   priority: number;
   deadline?: string | null;
   created_at: string;
+  /** Espelha os_queue.completed_at (migration 0002); ausente = não concluída. */
+  completed_at?: string | null;
 }
 
 /** Motivo da sugestão — o card mostra "por quê esta?" com isso. */

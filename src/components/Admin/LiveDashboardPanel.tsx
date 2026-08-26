@@ -14,6 +14,7 @@ import {
   buildAnalystCards,
   buildAnalystQuality,
   buildLiveKpis,
+  buildSlaSummary,
   buildThroughputByDay,
   buildThroughputByHour,
   mergeFeed,
@@ -370,6 +371,25 @@ export default function LiveDashboardPanel({
     [dataset, todayKey, queue],
   );
 
+  // B1 "SLA médio": da fila viva — média de conclusão + atraso sobre prazo.
+  const sla = useMemo(
+    () => buildSlaSummary(queueState, { now: tickNow }),
+    [queueState, tickNow],
+  );
+  const slaSub: string = useMemo(() => {
+    if (sla.overdueCount > 0) {
+      return t('dash.live.kpiSlaOverdue', {
+        n: String(sla.overdueCount),
+        h: String(sla.avgOverdueHours ?? 0),
+      });
+    }
+    return t('dash.live.kpiSlaOnTime');
+  }, [sla, t]);
+  const slaValue: string =
+    sla.avgCompletionHours != null
+      ? t('dash.live.kpiSlaHours', { h: String(sla.avgCompletionHours) })
+      : '—';
+
   const throughputDays = useMemo(
     () =>
       buildThroughputByDay(dataset.records, {
@@ -587,7 +607,7 @@ export default function LiveDashboardPanel({
       </div>
 
       {/* KPIs topo */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <KpiCard
           label={t('dash.live.kpiToday')}
           value={String(kpis.osToday)}
@@ -611,6 +631,12 @@ export default function LiveDashboardPanel({
             kpis.avgScore != null ? fmtScore(kpis.avgScore, language === 'pt') : '—'
           }
           testId="live-kpi-avg"
+        />
+        <KpiCard
+          label={t('dash.live.kpiSla')}
+          value={slaValue}
+          sub={slaSub}
+          testId="live-kpi-sla"
         />
       </div>
 
