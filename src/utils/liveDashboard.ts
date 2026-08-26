@@ -20,6 +20,7 @@ import {
 import type { Dataset, OsRecord } from './dashboard';
 import { canReadIndividualMetrics, type UserContext } from '../features/db/roles';
 import type { QueueRowLike } from '../features/qol/queue';
+import type { XpEventLike } from '../features/gamification/xp';
 
 // ---------------------------------------------------------------------------
 // KPIs do topo (spec B1)
@@ -593,4 +594,135 @@ export function buildAnalystDrilldown(
     months: monthRows,
     recentOs: osRows.slice(0, 8),
   };
+}
+// ---------------------------------------------------------------------------
+// Qualidade cruzada COMPLETA (spec B3): nota dada vs recebida em auditoria +
+// tempo/O.S. vs média do time — cada métrica existe só quando a fonte sustenta.
+// ---------------------------------------------------------------------------
+
+/** Evento mínimo de XP necessário pra derivar o veredito de auditoria. */
+export interface QualityAuditEvent {
+  userId: string;
+  amount: number;
+  reason: string;
+}
+
+/**
+ * Veredito de auditoria por analista, derivado dos eventos XP (fonte real:
+ * xp_events / perfil gamificado). A auditoria se manifesta como quality_bonus
+ * (+150, zero retrabalho) e/ou rework_penalty (-150, estorno).
+ */
+export interface AuditVerdict {
+  /** Auditorias que confirmaram zero retrabalho (quality_bonus). */
+  auditsOk: number;
+  /** Estornos por retrabalho encontrado (rework_penalty). */
+  reworkEvents: number;
+}
+
+export function auditVerdictFromEvents(
+  events: readonly QualityAuditEvent[],
+): Map<string, AuditVerdict> {
+  const out = new Map<string, AuditVerdict>();
+  for (const e of events) {
+    if (e.reason !== 'quality_bonus' && e.reason !== 'rework_penalty') continue;
+    if (!Number.isFinite(e.amount)) continue;
+    const cur = out.get(e.userId) ?? { auditsOk: 0, reworkEvents: 0 };
+    if (e.reason === 'quality_bonus') cur.auditsOk++;
+    else cur.reworkEvents++;
+    out.set(e.userId, cur);
+  }
+  return out;
+}
+
+/**
+ * Linha B3 enriquecida. Campos novos (auditados/tempo):
+ *   - auditedOs: OSs com veredito de auditoria conhecido;
+ *   - reworkRate: estornos ÷ auditadas (null sem auditoria — NUNCA zero,
+ *     que leria como "perfeito");
+ *   - avgHoursPerOs / teamAvgHoursPerOs: da fila real (assignee → claimed_by);
+ *     null = sem timestamps confiáveis (nunca zero inventado);
+ *   - deltaVsTeamPct: só existe com os DOIS números — null caso contrário.
+ */
+export interface AnalystQualityRowFull extends AnalystQualityRow {
+  auditedOs: number | null;
+  auditsOk: number;
+  reworkEvents: number;
+  reworkRate: number | null;
+  avgHoursPerOs: number | null;
+  /** Média do time (denominador do delta; null sem conclusões datadas). */
+  teamAvgHoursPerOs: number | null;
+  /**
+   * Tempo médio do analista vs média do time, em % (positivo = mais lento).
+   * Contexto de volume (spec B3): a UI mostra o n ao lado — nunca pune volume.
+   */
+  deltaVsTeamPct: number | null;
+}
+
+/**
+ * Versão FULL de buildAnalystQuality: mesma agregação da planilha, cruzada
+ * com auditoria (eventos XP) e tempo real (fila). Pura e determinística.
+ */
+export function buildAnalystQualityFull(
+  dataset: Dataset,
+  opts: {
+    events?: readonly QualityAuditEvent[];
+    queueRows?: readonly QueueRowLike[];
+  } = {},
+): AnalystQualityRowFull[] {
+  // Base idêntica à função simples (mesma ordenação por volume desc).
+  const agg = new Map<string, { n: number; sum: number; marks: number; marked: number }>();
+  for (const rec of dataset.records) {
+    if (!rec.analyst) continue;
+    const a = agg.get(rec.analyst) ?? { n: 0, sum: 0, marks: 0, marked: 0 };
+    if (rec.finalScore !== null) {
+      a.n++;
+      a.sum += rec.finalScore;
+    }
+    if (rec.marks) {
+      a.marks += rec.marks.length;
+      a.marked++;
+    }
+    agg.set(rec.analyst, a);
+  }
+
+  const verdicts = auditVerdictFromEvents(opts.events ?? []);
+  const hours = analystAvgHoursFromQueue(opts.queueRows ?? [], 0);
+
+  // Média do time = média das médias POR ANALISTA (mesmo peso pra cada um,
+  // não ponderada pelo volume — um maratonista não mascara o time).
+  const hourVals = [...hours.values()];
+  const teamAvg =
+    hourVals.length > 0
+      ? Math.round((hourVals.reduce((s, v) => s + v, 0) / hourVals.length) * 10) / 10
+      : null;
+
+  const rows: AnalystQualityRowFull[] = [];
+  for (const [analyst, a] of agg) {
+    const v = verdicts.get(analyst);
+    const audited = v != null ? v.auditsOk + v.reworkEvents : null;
+    const rate =
+      v != null && audited != null && audited > 0 ? v.reworkEvents / audited : null;
+    const own = hours.get(analyst) ?? null;
+    // Delta exige PELO MENOS 2 analistas medidos: um time de um só se
+    // compararia consigo mesmo (0% vazio). Sem pares, sem comparação.
+    const delta =
+      own != null && teamAvg != null && teamAvg > 0 && hourVals.length >= 2
+        ? Math.round(((own - teamAvg) / teamAvg) * 100)
+        : null;
+    rows.push({
+      analyst,
+      analyses: a.n,
+      avgScore: a.n > 0 ? a.sum / a.n : null,
+      avgMarksPerOs: a.marked > 0 ? a.marks / a.marked : null,
+      reworkRate: rate,
+      auditedOs: audited,
+      auditsOk: v?.auditsOk ?? 0,
+      reworkEvents: v?.reworkEvents ?? 0,
+      avgHoursPerOs: own,
+      teamAvgHoursPerOs: teamAvg,
+      deltaVsTeamPct: delta,
+    });
+  }
+  rows.sort((x, y) => y.analyses - x.analyses);
+  return rows;
 }
