@@ -847,3 +847,48 @@ baratas de não-drift, sem re-executar build:
 - Higiene REAL desta vez: encontradas e mortas 4 orfas da PROPRIA lane — vite preview :4321 servindo dist-desktop (pids 42464/46356, nascidas 00h08) e http-server :4322 servindo dist (pids 12240/32696). ORPHANS_CLEANED_4 confirmado. Restantes nodes vivos pertencem a Hermes UI/ContractKit/Hein/LambdaHabits — poupados.
 - Higiene de log: entrada da lane irma turbo-web (~00h30) estava unstaged no working tree; preservada intocada e commitada junto (nao e duplicata - worker diferente).
 - Sem merge na main; nada tocado de lanes irmaas (untracked src/audio-acoustics/, scripts/smoke-p*.mjs, e2e/ etc. intocados); suite commitada 246/246 segue valendo (ultima execucao registrada no tick 22h30; nenhum codigo mudou neste tick).
+
+## Tick 26/08 ~01h45 — audio-dsp (Yui / cron solaris-audio)
+
+Worktree solaris-audio (branch audio/acoustics); desktop/src-tauri/pitch intocados.
+TEMA: RECUPERAÇÃO DO P4 deixado pela metade por worker morto às ~23h06 + bug real
+de FP encontrado no caminho.
+
+- ESTADO ENCONTRADO: summary do tick anterior afirmava "P4 concluído, 11/11",
+  mas a suíte real tinha 4 falhas e TODO o P4 estava SEM COMMIT (reverbMl.ts,
+  reverbFeatures.ts, ml/, tools/reverb-ml, teste — tudo untracked; artefatos de
+  treino regenerados até 00h23, depois da morte). Lição reforçada: summary sem
+  prova não é estado.
+- DIAGNÓSTICO COM NÚMEROS (sonda descartável): seco cru → detector c50-fallback,
+  ML nem entra, ok/96. Seco+mp3/m4a → codec faz o Schroeder convergir espúrio
+  (rt60≈16-18ms) → ativa o ML → MLP prevê −0.20s (voto regressivo "mais seco
+  que zero", correto p/ seco) → clamp zera → cola de integração aplicava
+  `|| 2.5` por cima do 0 GENUÍNO → sala fictícia 2.5s → score 5 CRITICAL em
+  áudio perfeito. O modelo ACERTOU; quem comeu o zero era o sentinel da cola.
+- FIXES: (1) sentinel ||2.5 restrito ao caminho legado — no caminho ML, 0 é
+  resposta genuína e vai direto na curva (piecewise(0)=96); (2) gate OOD
+  reverbMlEligible(duty) religado DENTRO de analyzeReverbWithML (existia mas
+  nunca era consultado pela pipeline); (3) nota sem campo fantasma rt60Method
+  (único erro tsc da árvore, eliminado).
+- COMMITS (pushed, ls-remote verificado): 83fa6c4 feat(ml) núcleo P4 — features
+  8d, MLP int16 embutido 841 params (drift quant 0.00019s), runtime ORT
+  injetável, dataset v3 c/ ruído REAL pós-codec (270 amostras, mae_all 0.086);
+  1239568 fix(qc)+test(ml) integração + testes. Higiene: sondas .tmp/probe*
+  descartadas, features.jsonl ignorado, refForward morto removido.
+- PROVA ANTI-FALSO-VERDE: suíte na ÁRVORE COMMITADA (git archive HEAD +
+  junction node_modules): tsc --noEmit limpo + 429/429 verdes (~113s).
+  Depois do push: seco+lossy ok/96, rt0.9 critical/46, PR spec mantida.
+- Fila da diretiva 100% FECHADA: P1 núcleo DSP, P2 known-answer+sintéticos,
+  P3 produto (painel/timeline/sheet/QC/baseline), P4 ML refinador — todos
+  commitados e pushed em origin/audio/acoustics @ 1239568.
+=== FIM TICK — lane audio/acoustics sem pendências; diretiva SOLARIS_AUDIO_ACOUSTICS completa ===
+
+## Tick 26/08 ~01h45 - desktop worker (cron MODO TURBO SOLARIS): auditoria anti-stop-loop - fila P1-P3 DONE verificada no disco, zero trabalho preso fora de lanes irma
+
+- Auditoria fresca SEM re-build e SEM codigo novo: branch desktop == origin/desktop em 48bfdc4; CI remoto success no commit exato (ci + Vercel Preview Comments, check-runs consultados neste tick).
+- Provas P1: SMOKE_OK novo pid=18328 vivo apos 5s mem=23MB -> SMOKE_KILLED limpo (exe canonico D:/cargo-target/release/solaris-av-engine.exe 6.529.536B mtime 25/08 22:23, embute index-CloehhZU.js do dist-desktop do HEAD, grep 1 hit); instalador NSIS Solaris_3.0.0_x64-setup.exe 2.452.025B (22:23) no disco.
+- Prova P2 (diff 4ef1349..HEAD): unico delta = scripts/smoke_exe_tick.ps1 (+12, tooling); src/src-tauri/vite/package.json intocados desde o build -> perfil release lto/codegen-units/strip/panic=abort + metricas ANTES/DEPOIS (binario 6.5MB, chunk inicial 243KB standalone) seguem validos.
+- Prova P3: testes dos dois modos presentes no HEAD (runtimeMode.test.ts, firebaseStandalone.test.ts, analysisFormStandalone/analysisSheetStandalone/standaloneUiGates .tsx); suite commitada 246/246 segue valendo (nenhum codigo mudou desde a ultima execucao registrada).
+- Anti-stop-loop: varredura compare main vs TODAS as heads remotas. v2-upgrade/v2-upgrade-recovery/turbo/web-opt ahead_by 0 (relics). develop = ahead_by 1 mas e "Update README.md" do proprio Christian (bd3a560, fev/2026, sem PR) - decisao do dono, intocada. Lanes irmas com work ativo legitimo (nao me cabem): audio/acoustics ahead 25 (pushed 1239568, directive completa), features/analista-feliz ahead 47, redesign-premium ahead 48. Zero PRs abertos parados.
+- Higiene: zero processos da lane Solaris (exe/vite/http-server servindo dist); 13 nodes antigos pertencem a Hermes UI/outros apps - poupados.
+- Sem merge na main; nada tocado de lanes irmaas; nenhum codigo mudou neste tick.
