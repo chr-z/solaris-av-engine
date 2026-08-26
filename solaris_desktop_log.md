@@ -633,3 +633,11 @@ src-tauri intocado. Sem Telegram.
 - Higiene: nenhum orfao de preview detectado (varredura = NONE).
 
 src-tauri intocado. Sem Telegram.
+
+## Tick 26/08 ~05h35 — audio-dsp (Yui / cron solaris-audio)
+
+Guardrail barato SEM código novo: fila P1-P4 segue DONE e pushed.
+- Worktree solaris-audio limpo em 9f9f57d == origin/audio/acoustics (fetch com workaround GCM).
+- PR #2 OPEN, head exatamente 9f9f57d; check-runs no commit: ci success + Vercel Preview Comments success. mergeable UNKNOWN (GitHub ainda calculando — não é bloqueio).
+- main avançou +4 desde o merge-base d79079b (turbo-web 7667657), mas merge-tree aponta ZERO "changed in both" → merge limpo quando o dono aprovar.
+- src-tauri/pitch/desktop intocados; sem Telegram.
