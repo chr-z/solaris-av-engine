@@ -14,6 +14,7 @@ import {
   buildAnalystCards,
   buildAnalystDrilldown,
   buildAnalystQuality,
+  buildAnalystQualityFull,
   buildLiveKpis,
   buildSlaSummary,
   buildThroughputByDay,
@@ -37,6 +38,7 @@ import {
   QUEUE_PRIORITIES,
 } from '../../features/qol/queueActions';
 import { getUndoLog } from '../../features/qol/undoStore';
+import type { XpEventLike } from '../../features/gamification/xp';
 import QueueBulkBar from './QueueBulkBar';
 import QueueImportExportBar from './QueueImportExportBar';
 import {
@@ -499,10 +501,47 @@ export default function LiveDashboardPanel({
     [effectiveActivities, datasetWithQueue, todayKey, tickNow],
   );
 
-  const qualityAll = useMemo(() => buildAnalystQuality(dataset), [dataset]);
+  // B3 completo: planilha cruzada com auditoria (eventos XP persistidos) e
+  // tempo real da fila. Papéis continuam no gate (visibleQualityRows).
+  const auditEvents = useMemo(() => {
+    const out: XpEventLike[] = [];
+    try {
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i);
+        if (!key || !key.startsWith('solaris.gamification.profile.')) continue;
+        try {
+          const raw = window.localStorage.getItem(key);
+          if (!raw) continue;
+          const parsed = JSON.parse(raw) as { events?: unknown };
+          if (!Array.isArray(parsed.events)) continue;
+          for (const e of parsed.events) {
+            if (
+              e !== null && typeof e === 'object' &&
+              typeof (e as { userId?: unknown }).userId === 'string' &&
+              typeof (e as { amount?: unknown }).amount === 'number' &&
+              typeof (e as { reason?: unknown }).reason === 'string' &&
+              typeof (e as { ts?: unknown }).ts === 'number'
+            ) {
+              out.push(e as unknown as XpEventLike);
+            }
+          }
+        } catch {
+          /* perfil corrupto: ignora, nunca derruba o painel */
+        }
+      }
+    } catch {
+      /* storage indisponível: painel segue só com a planilha */
+    }
+    return out;
+    // relê uma vez por montagem (mesma linha do hourEvents)
+  }, []);
+  const qualityAllFull = useMemo(
+    () => buildAnalystQualityFull(dataset, { events: auditEvents, queueRows: queueState }),
+    [dataset, auditEvents, queueState],
+  );
   const qualityVisible = useMemo(
-    () => visibleQualityRows(qualityAll, viewerCtx),
-    [qualityAll, viewerCtx],
+    () => visibleQualityRows(qualityAllFull, viewerCtx),
+    [qualityAllFull, viewerCtx],
   );
   const canSeeIndividual = canReadIndividualMetrics(viewerCtx);
 
@@ -1055,6 +1094,15 @@ export default function LiveDashboardPanel({
                 <th scope="col" className="py-1 pr-3 font-medium uppercase tracking-wide">
                   {t('dash.live.colMarks')}
                 </th>
+                <th scope="col" className="py-1 pr-3 font-medium uppercase tracking-wide">
+                  {t('dash.live.colRework')}
+                </th>
+                <th scope="col" className="py-1 pr-3 font-medium uppercase tracking-wide">
+                  {t('dash.live.colAvgTime')}
+                </th>
+                <th scope="col" className="py-1 pr-3 font-medium uppercase tracking-wide">
+                  {t('dash.live.colVsTeam')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -1070,11 +1118,31 @@ export default function LiveDashboardPanel({
                       ? '—'
                       : r.avgMarksPerOs.toFixed(1)}
                   </td>
+                  <td className="py-1.5 pr-3" data-testid={`quality-rework-${r.analyst}`}>
+                    {!canSeeIndividual || r.auditedOs == null || r.auditedOs === 0
+                      ? '—'
+                      : `${(r.reworkRate ?? 0) >= 0 ? Math.round((r.reworkRate ?? 0) * 100) : 0}% (${t('dash.live.reworkOf', { ok: String(r.auditsOk), bad: String(r.reworkEvents) })})`}
+                  </td>
+                  <td className="py-1.5 pr-3">
+                    {!canSeeIndividual || r.avgHoursPerOs == null
+                      ? '—'
+                      : t('dash.live.kpiSlaHours', {
+                          h: String(r.avgHoursPerOs).replace('.', language === 'pt' ? ',' : '.'),
+                        })}
+                  </td>
+                  <td className="py-1.5 pr-3">
+                    {!canSeeIndividual || r.deltaVsTeamPct == null
+                      ? '—'
+                      : t(
+                          r.deltaVsTeamPct > 0 ? 'dash.live.vsTeamSlow' : r.deltaVsTeamPct < 0 ? 'dash.live.vsTeamFast' : 'dash.live.vsTeamEven',
+                          { pct: String(Math.abs(r.deltaVsTeamPct)) },
+                        )}
+                  </td>
                 </tr>
               ))}
               {qualityVisible.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-2 text-gray-500">
+                  <td colSpan={8} className="py-2 text-gray-500">
                     {t('dash.live.noDataToday')}
                   </td>
                 </tr>

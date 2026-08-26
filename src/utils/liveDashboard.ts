@@ -408,10 +408,10 @@ export function buildSlaSummary(
  * Privacidade (spec B4/E): analista vê só a própria linha detalhada;
  * admin/lead veem todas. O agregado do time continua visível pra todos.
  */
-export function visibleQualityRows(
-  rows: readonly AnalystQualityRow[],
+export function visibleQualityRows<T extends AnalystQualityRow>(
+  rows: readonly T[],
   viewer: UserContext,
-): AnalystQualityRow[] {
+): T[] {
   if (canReadIndividualMetrics(viewer)) return [...rows];
   return rows.filter((r) => r.analyst === viewer.userId);
 }
