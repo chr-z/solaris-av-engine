@@ -83,7 +83,7 @@ export interface AxisResult {
 
 export interface TimelineMark {
   tSec: number;
-  axis: 'clipping' | 'reverb' | 'echo' | 'noise' | 'hum';
+  axis: 'clipping' | 'reverb' | 'echo' | 'noise' | 'hum' | 'shift';
   severity: Exclude<Severity, 'ok'>;
   note: string;
 }
@@ -116,8 +116,8 @@ export interface AcousticReport {
   clip: ClipResult;
   noiseFloorDb: number;
   sibilanceRatioDb: number;
-  /** Mudança acústica mid-video (INFO). */
-  acousticShift: { detected: boolean; tSec: number; note: string };
+  /** Mudança acústica mid-video (INFO). kind: 'level' (loudness) ou 'spectral' (timbre/sala). */
+  acousticShift: AcousticShift;
   warnings: string[];
 }
 
@@ -201,6 +201,8 @@ export function analyzeAudioPcm(
   let tonalFrames = 0;
   const thdSamples: number[] = [];
   const sibSamples: number[] = [];
+  // Features por frame para o detector de mudança acústica mid-video (INFO).
+  const shiftAcc = new AcousticShiftAccumulator(sampleRate, fftSize);
 
   const numFrames = Math.max(0, Math.floor((samples.length - fftSize) / hop) + 1);
   for (let f = 0; f < numFrames; f++) {
@@ -234,6 +236,7 @@ export function analyzeAudioPcm(
     // Hum: acumula espectro por frame p/ pente de banda no espectro silencioso
     // (p25 temporal) — imune a bin fracionário e a fala. Cap de memória.
     humAcc.add(mags);
+    shiftAcc.add(mags);
   }
 
   // Pico global.
@@ -367,9 +370,9 @@ export function analyzeAudioPcm(
   const sibilanceScore = clamp01_100(piecewise([[-10, 96], [-6, 86], [-2, 68], [2, 45], [8, 25]], sibDb));
   const sibilanceSev = sevFromScore(sibilanceScore, 70, 45);
 
-  // Mudança acústica mid-video: compara ruído/centroide entre quartis.
+  // Mudança acústica mid-video (INFO): loudness (legado) + timbre espectral.
   report_(94, 'finalize');
-  const acousticShift = detectAcousticShift(frameRmsDb, hop, sampleRate, fftSize);
+  const acousticShift = detectAcousticShift(frameRmsDb, hop, sampleRate, fftSize, shiftAcc);
 
   // ---------- Timeline ----------
   const timelineMarks: TimelineMark[] = [];
@@ -409,6 +412,15 @@ export function analyzeAudioPcm(
       axis: 'hum',
       severity: hum.severity === 'heavy' ? 'critical' : 'warn',
       note: `hum ${hum.fundamentalHz}Hz ${hum.humLevelDb}dBFS`,
+    });
+  }
+  // Mudança acústica mid-video (INFO da spec): marca clicável no segundo exato.
+  if (acousticShift.detected) {
+    timelineMarks.push({
+      tSec: acousticShift.tSec,
+      axis: 'shift',
+      severity: 'warn',
+      note: acousticShift.note,
     });
   }
 
@@ -519,32 +531,172 @@ function detectEchoWindows(samples: Float64Array, sampleRate: number, winSec: nu
   return { delayMs: 0, delaySamples: 0, confidence: 0, isReal: false, hasEcho: false };
 }
 
-/** Shift acústico: queda/descolamento grande entre quartis do RMS-frame. */
+/** Mudança acústica mid-video (INFO na spec): troca de sala/mic no meio do bloco. */
+export interface AcousticShift {
+  detected: boolean;
+  tSec: number;
+  note: string;
+  /** 'level' = queda/salto de loudness; 'spectral' = timbre muda com nível estável. */
+  kind?: 'level' | 'spectral';
+}
+
+/**
+ * Acumula features espectrais por frame durante a varredura STFT (custo
+ * O(bins), mesmo domínio dos acumuladores existentes) para viabilizar a
+ * detecção de troca de sala/mic SEM mudança de loudness — o caso que interessa
+ * ao produto (a sala reverberando diferente com o gain certinho passa batido
+ * num detector só de RMS).
+ *
+ * Memória: 3 números por frame (~172k frames/h ⇒ ~4MB) — dentro do orçamento.
+ */
+export class AcousticShiftAccumulator {
+  private readonly midLo: number;
+  private readonly midHi: number;
+  private readonly sibLo: number;
+  private readonly sibHi: number;
+  private readonly centroidDb: number[] = [];
+  private readonly flatnessDb: number[] = [];
+  private readonly sibilanceDb: number[] = [];
+
+  constructor(sampleRate: number, fftSize: number) {
+    const binHz = sampleRate / fftSize;
+    this.midLo = Math.max(1, Math.round(500 / binHz));
+    this.midHi = Math.max(this.midLo + 1, Math.round(2000 / binHz));
+    this.sibLo = Math.max(1, Math.round(5000 / binHz));
+    this.sibHi = Math.min(fftSize / 2, Math.round(10000 / binHz));
+  }
+
+  get count(): number {
+    return this.centroidDb.length;
+  }
+
+  /** Chamado uma vez por frame STFT com o espectro de magnitude. */
+  add(mags: Float64Array): void {
+    const n = mags.length - 1;
+    // Centroide espectral em bins (proxy linear de frequência; bins = Hz/BIN_HZ).
+    let num = 0;
+    let den = 0;
+    for (let k = 1; k <= n; k++) {
+      num += k * mags[k];
+      den += mags[k];
+    }
+    this.centroidDb.push(10 * Math.log10(Math.max(num, 1e-30) / Math.max(den, 1e-30)));
+    // Flatness espectral (geo/arith da potência) em dB.
+    let logSum = 0;
+    let powSum = 0;
+    for (let k = 1; k <= n; k++) {
+      const p = mags[k] * mags[k];
+      logSum += Math.log(p > 1e-30 ? p : 1e-30);
+      powSum += p;
+    }
+    const geo = Math.exp(logSum / n);
+    const arith = powSum / n;
+    this.flatnessDb.push(10 * Math.log10(Math.max(geo, 1e-30) / Math.max(arith, 1e-30)));
+    // Razão sibilância 5-10kHz vs mid 500-2kHz em dB (mesmas bandas do eixo).
+    let hi = 0;
+    let mid = 0;
+    const hiEnd = Math.min(this.sibHi, n);
+    for (let k = this.sibLo; k <= hiEnd; k++) hi += mags[k] * mags[k];
+    for (let k = this.midLo; k <= Math.min(this.midHi, n); k++) mid += mags[k] * mags[k];
+    this.sibilanceDb.push(10 * Math.log10(Math.max(hi, 1e-30) / Math.max(mid, 1e-30)));
+  }
+
+  /** Fatias [fromFrame,toFrame) das três séries (para mediana por janela). */
+  slice(fromFrame: number, toFrame: number): {
+    centroidDb: number[];
+    flatnessDb: number[];
+    sibilanceDb: number[];
+  } {
+    return {
+      centroidDb: this.centroidDb.slice(fromFrame, toFrame),
+      flatnessDb: this.flatnessDb.slice(fromFrame, toFrame),
+      sibilanceDb: this.sibilanceDb.slice(fromFrame, toFrame),
+    };
+  }
+}
+
+const SHIFT_LEVEL_JUMP_DB = 9;
+const SHIFT_SPECTRAL_JUMP_DB = 6;
+
+/**
+ * Shift acústico mid-video, duas camadas:
+ * 1) LEGADO — salto ≥9dB na mediana de RMS entre quartis (troca de ganho);
+ * 2) NOVO — salto SUSTENTADO ≥6dB em ≥2 de 3 features espectrais (centroide,
+ *    flatness, sibilância), medido por mediana em janelas móveis com 50% de
+ *    overlap. Mediana+móvel imuniza contra palavras isoladas e transientes:
+ *    só uma mudança persistente de timbre (sala/mic diferentes) empurra todas
+ *    as janelas de um lado da fronteira.
+ */
 function detectAcousticShift(
   frameRmsDb: number[],
   hop: number,
   sampleRate: number,
-  fftSize: number
-): { detected: boolean; tSec: number; note: string } {
+  fftSize: number,
+  feats?: AcousticShiftAccumulator
+): AcousticShift {
   const q = 4;
-  const per = Math.max(1, Math.floor(frameRmsDb.length / q));
+  const nf = frameRmsDb.length;
+  if (nf < q * 8) return { detected: false, tSec: 0, note: '' }; // curto demais p/ concluir
+
+  const per = Math.max(1, Math.floor(nf / q));
+
+  // 1) Loudness (comportamento legado preservado).
   const medians: number[] = [];
   for (let i = 0; i < q; i++) {
-    const slice = frameRmsDb.slice(i * per, Math.min(frameRmsDb.length, (i + 1) * per));
+    const slice = frameRmsDb.slice(i * per, Math.min(nf, (i + 1) * per));
     medians.push(slice.length ? percentile(slice, 50) : -120);
   }
   for (let i = 1; i < q; i++) {
     const jump = Math.abs(medians[i] - medians[i - 1]);
-    if (jump >= 9) {
+    if (jump >= SHIFT_LEVEL_JUMP_DB) {
       const tSec = Math.round(((i * per * hop + fftSize / 2) / sampleRate) * 10) / 10;
       return {
         detected: true,
         tSec,
+        kind: 'level',
         note: `Nível médio mudou ${jump.toFixed(1)}dB entre blocos ${i - 1}→${i} (possível troca de sala/mic)`,
       };
     }
   }
+
+  // 2) Timbre: janelas móveis de mediana sobre as séries espectrais.
+  if (!feats || feats.count < nf) return { detected: false, tSec: 0, note: '' };
+  const win = Math.max(8, Math.floor(nf / 16));
+  const step = Math.max(1, Math.floor(win / 2));
+  const movC = movingMedian(feats.slice(0, nf).centroidDb, win, step);
+  const movF = movingMedian(feats.slice(0, nf).flatnessDb, win, step);
+  const movS = movingMedian(feats.slice(0, nf).sibilanceDb, win, step);
+
+  const fmt = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}`;
+  for (let j = 1; j < movC.length; j++) {
+    const dC = movC[j] - movC[j - 1];
+    const dF = movF[j] - movF[j - 1];
+    const dS = movS[j] - movS[j - 1];
+    const votes =
+      (Math.abs(dC) >= SHIFT_SPECTRAL_JUMP_DB ? 1 : 0) +
+      (Math.abs(dF) >= SHIFT_SPECTRAL_JUMP_DB ? 1 : 0) +
+      (Math.abs(dS) >= SHIFT_SPECTRAL_JUMP_DB ? 1 : 0);
+    if (votes >= 2) {
+      const frameIdx = j * step + Math.floor(win / 2);
+      const tSec = Math.round(((frameIdx * hop + fftSize / 2) / sampleRate) * 10) / 10;
+      return {
+        detected: true,
+        tSec,
+        kind: 'spectral',
+        note: `Perfil espectral mudou (centroid ${fmt(dC)}dB, flatness ${fmt(dF)}dB, sibilância ${fmt(dS)}dB; corte ≥${SHIFT_SPECTRAL_JUMP_DB}dB em ≥2 métricas) — possível troca de sala/mic com nível parecido`,
+      };
+    }
+  }
   return { detected: false, tSec: 0, note: '' };
+}
+
+/** Mediana em janelas deslizantes (passo `step`). Janelas sempre completas. */
+function movingMedian(x: number[], win: number, step: number): number[] {
+  const out: number[] = [];
+  for (let s = 0; s + win <= x.length; s += step) {
+    out.push(percentile(x.slice(s, s + win), 50));
+  }
+  return out;
 }
 
 // ---------- explicações ----------
