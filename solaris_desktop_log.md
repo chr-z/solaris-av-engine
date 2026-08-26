@@ -1080,3 +1080,56 @@ Unico artefato desatualizado: instalador NSIS (25/08 ~03h, sem o exe P3).
   inalterado — nenhum codigo Rust mudou neste tick).
 - Instalador: D:/cargo-target/release/bundle/nsis/Solaris_3.0.0_x64-setup.exe
   (2.461.979 B, 08:18) — agora contem toggle de modo + ModeBadge do P3.
+
+---
+
+## Tick 26/08 ~12h30 — Fila turbo reaberta; fix de guarda P3 (presence goOnline em boot local) + artefatos ressincronizados
+
+**Estado na abertura:** tick 08h35 havia auditado P1-P3 como entregues e
+regenerado o instalador. Auditoria deste tick achou o único furo restante do
+contrato "zero rede executada": o efeito de presence do App.tsx só saía cedo
+para `guest-reviewer-id` — o revisor local standalone (`local-reviewer`)
+passava direto e chamava `database.goOnline()` em TODO boot do exe (sob stub
+é no-op; num sabor cloud com override manual tocaria RTDB real).
+TimestampDock com `orderByChild` ausente no stub é código ÓRFÃO (nenhum
+importador, nem entra no bundle). Firebase real confirmado AUSENTE do bundle
+desktop (grep @firebase/|identitytoolkit|firebasedatabase = 0; aliases do
+vite.config -> firebaseStandalone.ts operantes) — item "tree-shake firebase"
+do P2 já satisfeito por design.
+
+### Feito
+- **6ffb7de** fix(desktop): helper puro `src/config/cloudGuards.ts`
+  (`isLocalOnlySession`: null/sem id/guest/local-reviewer) + guarda no efeito
+  presence (`isStandalone() || !userProfile || isLocalOnlySession(...)`) +
+  vitest 3/3 cobrindo os dois modos.
+- Gates pré-push: vitest 271/271 (28 arquivos) + tsc --noEmit limpo.
+- Ressincronização de artefatos (chunk inicial mudou com a guarda):
+  - `npm run build:desktop` -> index-BkS8xMhD.js (107.67 kB / gzip 32.49 kB);
+    chunk inicial ~287 kB brutos (~90 kB gz com react-vendor) — alvo <500KB
+    mantido; monitores pesados seguem lazy (AnalysisWorkspace 89.92 kB).
+  - `cargo tauri build --no-bundle` (gnu+winlibs_full, CARGO_TARGET_DIR fora
+    do OneDrive): 2m02s. Forense anti-stale: grep BkS8xMhD no exe = 1.
+    (grep localhost:5173 = 1 é config serializada/CSP embutida, presente em
+    todo build canônico — a prova viva é o E2E abaixo.)
+- **Provas vivas do exe novo:**
+  - smoke_desktop.ps1: SMOKE_OK pid=45968 vivo 5s mem=23.3MB.
+  - desktop_e2e_probe_p3b.mjs: VERDICT PASS — toggle->arquivo REAL em
+    %APPDATA% (29B {"standaloneMode":true}) -> reload 429ms -> badge origem
+    "file (core)" -> restauração p/ "build flag (standalone)";
+    remoteResources=[], forbiddenHits=[], consoleErrors=[].
+  - boot_time_desktop.ps1: BOOT_WINDOW_OK ms=170 WS 19.6MB (série ~185ms,
+    sem regressão).
+- Instalador NSIS regenerado (2.462.551B @09h25, contém o exe da guarda):
+  install_smoke.ps1 INSTALLSMOKE_PASS (instala -> app INSTALADO vivo 5s
+  23.6MB -> desinstala, exit 0; sobra conhecida limpa pelo próprio script).
+
+### Artefatos canônicos
+- Exe: D:/cargo-target/release/solaris-av-engine.exe — 6.560.768B @09h20.
+- Instalador: D:/cargo-target/release/bundle/nsis/Solaris_3.0.0_x64-setup.exe
+  — 2.462.551B @09h25.
+
+### Métricas P2 (mantidas)
+- Binário release 6.560.768B (lto=true, codegen-units=1, panic=abort,
+  strip=true desde o perfil release do Cargo.toml).
+- Bundle total dist-desktop ~488KB (13 assets); code-splitting ativo
+  (react-vendor/index/workspace separados); boot 170ms.
