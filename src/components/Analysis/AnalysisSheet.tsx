@@ -169,7 +169,7 @@ const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headerIdx, isSe
                 </div>
             </div>
             {isLockedByOther && lockInfo && (
-                <div className="mt-3 pt-3 border-t border-hairline/30 flex items-center justify-between gap-3">
+                <div className="mt-3 pt-3 border-t border-hairline flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                         <UserAvatar user={lockInfo.user} className="w-8 h-8 flex-shrink-0" />
                         <div className="min-w-0">

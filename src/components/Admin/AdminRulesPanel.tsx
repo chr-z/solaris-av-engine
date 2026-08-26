@@ -288,7 +288,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
           </thead>
           <tbody>
             {config.rules.map((rule) => (
-              <tr key={rule.id} className={`border-b border-hairline/50 ${rule.active ? '' : 'opacity-50'}`}>
+              <tr key={rule.id} className={`border-b border-hairline ${rule.active ? '' : 'opacity-50'}`}>
                 <td className="py-2 pr-2">{rule.name}</td>
                 <td className="py-2 pr-2">{rule.categoryId}</td>
                 <td className="py-2 pr-2">{rule.grade}</td>

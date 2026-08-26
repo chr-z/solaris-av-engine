@@ -136,7 +136,7 @@ const BugReportViewer: React.FC<BugReportViewerProps> = ({ isOpen, onClose }) =>
                     
                     <ul className="p-2 space-y-2">
                         {reports.map(report => (
-                            <li key={report.id} className="bg-surface-raised/50 rounded-lg transition-all duration-150">
+                            <li key={report.id} className="bg-surface rounded-lg border border-hairline transition-all duration-150">
                                 <button onClick={() => setSelectedReportId(selectedReportId === report.id ? null : report.id)} className="w-full text-left p-3 flex justify-between items-center">
                                     <div className="flex-1 min-w-0">
                                         <p className="truncate font-semibold">{report.description}</p>

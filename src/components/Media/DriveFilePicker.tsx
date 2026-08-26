@@ -104,16 +104,16 @@ const DriveFilePicker: React.FC<DriveFilePickerProps> = ({ folderId, onFileSelec
             aria-labelledby="drive-picker-title"
         >
             <div 
-                className="bg-solar-dark-content w-full max-w-lg rounded-lg shadow-xl flex flex-col"
+                className="bg-surface w-full max-w-lg rounded-lg shadow-pop flex flex-col"
                 onClick={e => e.stopPropagation()}
             >
-                <header className="p-4 border-b border-solar-dark-border">
+                <header className="p-4 border-b border-hairline">
                     <h3 id="drive-picker-title" className="font-bold text-lg">Select Drive Media</h3>
                 </header>
                 <div className="p-2">
                     {renderContent()}
                 </div>
-                <footer className="p-4 border-t border-solar-dark-border flex justify-end">
+                <footer className="p-4 border-t border-hairline flex justify-end">
                     <button onClick={onCancel} className="px-4 py-2 rounded-md hover:bg-gray-500/20 transition-colors">
                         Cancel
                     </button>

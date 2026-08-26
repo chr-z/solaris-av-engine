@@ -14,7 +14,7 @@ const Dock: React.FC<DockProps> = ({ children, className = '', title, onZoom }) 
   return (
     <div className={`bg-surface/90 backdrop-blur-md rounded-lg shadow-sm flex flex-col border border-hairline h-full ${className}`}>
       {(title || onZoom) && (
-        <header className="flex-shrink-0 flex justify-between items-center p-2 border-b border-solar-dark-border/50 h-9">
+        <header className="flex-shrink-0 flex justify-between items-center p-2 border-b border-hairline h-9">
           <h3 className="font-bold text-xs uppercase text-ink-secondary">{title}</h3>
           {onZoom && (
             <button

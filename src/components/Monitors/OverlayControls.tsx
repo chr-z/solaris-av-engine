@@ -42,7 +42,7 @@ const OverlayControls: React.FC<OverlayControlsProps> = ({ settings, setSettings
   };
 
   return (
-    <div className="bg-solar-light-content dark:bg-solar-dark-content rounded-lg p-2">
+    <div className="bg-surface rounded-lg p-2">
       <h3 className="text-xs font-bold uppercase text-white px-2 mb-2">Overlays</h3>
       <div className="flex justify-around gap-1">
         <TypeButton type="none" label="None" icon={<NoSymbolIcon className="w-5 h-5"/>} active={settings.type === 'none'} onSelect={handleTypeChange} />

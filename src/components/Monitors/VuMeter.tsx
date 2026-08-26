@@ -94,7 +94,7 @@ const VuMeter: React.FC<VuMeterProps> = ({ volume, isReady, onZoom }) => {
 
   return (
     <div className="h-full w-12 bg-surface/90 backdrop-blur-md rounded-lg shadow-sm flex flex-col border border-hairline">
-      <header className="flex-shrink-0 flex justify-between items-center p-2 border-b border-solar-dark-border/50 h-9">
+      <header className="flex-shrink-0 flex justify-between items-center p-2 border-b border-hairline h-9">
         <h3 className="font-bold text-xs uppercase text-ink-secondary">VU</h3>
         {onZoom && (
           <button
@@ -108,7 +108,7 @@ const VuMeter: React.FC<VuMeterProps> = ({ volume, isReady, onZoom }) => {
         )}
       </header>
       <div className="flex-1 min-h-0 flex flex-col items-center px-2 pt-1 pb-2">
-        <div className="w-full flex-1 relative border-2 border-solar-light-border dark:border-solar-dark-border rounded bg-gray-200 dark:bg-gray-800 overflow-hidden">
+        <div className="w-full flex-1 relative border-2 border-hairline rounded bg-gray-800 overflow-hidden">
           {/* Main Bar */}
           <div 
             className="absolute bottom-0 left-0 right-0 transition-height duration-75 ease-out"

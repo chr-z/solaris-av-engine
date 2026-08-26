@@ -32,7 +32,7 @@ const PresetSelector: React.FC<PresetSelectorProps> = ({ settings, setSettings }
 
   return (
     <div
-      className="mt-2 pt-2 border-t border-solar-dark-border/60"
+      className="mt-2 pt-2 border-t border-hairline"
       role="group"
       aria-label={t('preset.title')}
     >

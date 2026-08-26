@@ -47,11 +47,11 @@ const OnlineUsers: React.FC = () => {
                 <UserAvatar 
                     key={user.id} 
                     user={user} 
-                    className="w-8 h-8 rounded-full border-2 border-solar-dark-content" 
+                    className="w-8 h-8 rounded-full border-2 border-surface" 
                 />
             ))}
             {onlineUsers.length > 5 && (
-                 <div className="w-8 h-8 rounded-full border-2 border-solar-dark-content bg-gray-600 flex items-center justify-center text-xs font-bold">
+                 <div className="w-8 h-8 rounded-full border-2 border-surface bg-gray-600 flex items-center justify-center text-xs font-bold">
                     +{onlineUsers.length - 5}
                 </div>
             )}

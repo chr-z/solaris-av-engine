@@ -40,7 +40,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
     const calculatedFields = new Set([...resultFields, 'FINAL SCORE']);
 
     const localVideoPathComponent = (
-        <div className="p-6 pt-4 border-b border-solar-dark-border bg-solar-dark-bg/30">
+        <div className="p-6 pt-4 border-b border-hairline bg-bg/30">
             <label htmlFor="local-video-path" className="flex items-center gap-2 text-xs font-medium text-gray-300 mb-1">
                 <VideoIcon className="w-4 h-4 text-solar-accent"/>
                 Network Video Path (Optional)
@@ -60,7 +60,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
     return (
         <div className="flex flex-col h-full">
             {/* Tab Navigation Bar */}
-            <div className="flex-shrink-0 border-b border-solar-light-border dark:border-solar-dark-border sticky top-0 bg-solar-light-content dark:bg-solar-dark-content z-10">
+            <div className="flex-shrink-0 border-b border-hairline sticky top-0 bg-surface z-10">
                 <nav className="-mb-px flex space-x-2 overflow-x-auto px-4" aria-label="Tabs">
                     {Object.keys(formSections).map(sectionTitle => (
                         <button
@@ -119,7 +119,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                         type="text"
                                         value={value?.toString() ?? '0.00'}
                                         readOnly
-                                        className="w-full bg-surface dark:bg-solar-dark-bg border border-hairline dark:border-surface-raised rounded-md px-3 py-1.5 text-sm text-ink font-bold focus:outline-none focus:ring-2 focus:ring-accent cursor-default dark:text-ink"
+                                        className="w-full bg-surface dark:bg-surface border border-hairline dark:border-surface-raised rounded-md px-3 py-1.5 text-sm text-ink font-bold focus:outline-none focus:ring-2 focus:ring-accent cursor-default dark:text-ink"
                                     />
                                 </div>
                             );
@@ -200,7 +200,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                             id={fieldName}
                                             value={value?.toString() ?? ''}
                                             readOnly
-                                            className="w-full bg-surface dark:bg-solar-dark-bg border border-hairline dark:border-surface-raised rounded-md px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent dark:text-ink cursor-default"
+                                            className="w-full bg-surface dark:bg-surface border border-hairline dark:border-surface-raised rounded-md px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent dark:text-ink cursor-default"
                                         />
                                         <button
                                             onClick={() => folderId && onOpenPicker(folderId)}
@@ -226,7 +226,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                         id={fieldName}
                                         value={value?.toString() ?? ''}
                                         onChange={(e) => onDataChange(colIndex, e.target.value)}
-                                        className="w-full bg-solar-light-bg dark:bg-solar-dark-bg border border-solar-light-border dark:border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200"
+                                        className="w-full bg-surface-raised border border-hairline rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent text-ink"
                                     >
                                         <option value="" disabled={!!value}>Select...</option>
                                         {dropdownOptions.map(option => (
@@ -250,7 +250,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                     value={value?.toString() ?? ''}
                                     onChange={(e) => onDataChange(colIndex, e.target.value)}
                                     rows={isTextarea ? 3 : undefined}
-                                    className="w-full bg-solar-light-bg dark:bg-solar-dark-bg border border-solar-light-border dark:border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200"
+                                    className="w-full bg-surface-raised border border-hairline rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent text-ink"
                                 />
                             </div>
                         );

@@ -19,7 +19,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'short' }
     <div
       role="group"
       aria-label={t('header.changeLanguage')}
-      className="flex items-center rounded-md border border-solar-light-border dark:border-solar-dark-border overflow-hidden"
+      className="flex items-center rounded-md border border-hairline overflow-hidden"
     >
       {LOCALES.map(({ id, shortLabel, fullLabel }, index) => {
         const isActive = locale === id;
@@ -31,7 +31,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'short' }
             aria-pressed={isActive}
             lang={id}
             className={`px-2 py-1 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-solar-accent ${
-              index > 0 ? 'border-l border-solar-light-border dark:border-solar-dark-border' : ''
+              index > 0 ? 'border-l border-hairline' : ''
             } ${
               isActive
                 ? 'bg-solar-accent text-bg'
