@@ -701,3 +701,47 @@ build --no-bundle, 4m52s warm)
 - desktop_e2e_probe_p3.mjs → DESKTOP_E2E_P3_PASS: boot 817ms, W.O. abre,
   única aba "Local File", 0 texto "Google Drive" no DOM vivo, 0 sync.
 - Artefato canônico: D:/cargo-target/release/solaris-av-engine.exe.
+
+## Tick 25/08 ~22h30 - desktop worker (cron turbo): auditoria da fila P1-P3 + instalador NSIS realinhado ao HEAD
+
+Fila literal P1-P3 auditada por leitura fresca de disco/log (sem re-execucao):
+DONE desde antes - HEAD 9865221 == origin/desktop, CI remoto success (ci +
+Vercel Preview Comments) no commit exato. Nenhum escopo re-verificado.
+
+### Unico drift real encontrado e corrigido neste tick
+Instalador NSIS estava STALE: Solaris_3.0.0_x64-setup.exe de 13h45, anterior
+aos commits da noite (sessao local lazy init + gate de fonte de nuvem
+4ef1349) - quem instalasse recebia codigo velho. Correcao:
+
+- `cargo tauri build` com bundle ATIVO (env winlibs_full + RUSTUP_TOOLCHAIN=
+  stable-gnu + CARGO_TARGET_DIR='D:/cargo-target'), beforeBuildCommand rodou
+  npm run build:desktop -> dist-desktop 21h32 (front do HEAD).
+- Build release 2m25s warm; warnings so dead_code conhecidos (db.rs) +
+  .rsrc manifest cosmetico.
+- Artefatos frescos 22:23: exe canonico D:/cargo-target/release/solaris-av-
+  engine.exe 6.529.536B; bundle D:/cargo-target/release/bundle/nsis/
+  Solaris_3.0.0_x64-setup.exe 2.452.025B.
+- Embutimento provado por grep dos hashes do dist-desktop DENTRO do binario:
+  index-CloehhZU.js / AnalysisWorkspace-T-On_-F1.js / react-vendor-C-Z3vozT.js
+  (1 hit cada).
+- Bundler RE-PATCHOU o exe canônico ("bundle type information: nsis") ->
+  re-smoke obrigatorio feito: SMOKE_OK pid=39748 vivo apos 5s mem=23.4MB,
+  kill limpo (scripts/smoke_desktop.ps1 -Exe).
+
+### Estado final da fila da diretiva turbo
+- P1 BUILD TAURI: ok - config (identifier dev.chr-z.solaris, productName
+  Solaris, frontendDist ../dist-desktop, CSP restritiva) + exe RODANDO +
+  instalador NSIS agora alinhado ao HEAD.
+- P2 OTIMIZACOES: ok - perfil release lto=true/codegen-units=1/panic=abort/
+  strip; code-splitting com React.lazy (AnalysisWorkspace/SourcesAdmin/
+  monitores separados do entry); bundle inicial ~245KB brutos (~77KB gz)
+  < alvo 500KB; metricas ANTES/DEPOIS ja registradas neste log (binario
+  6,95MB -> 6,05MB na epoca; boot serie ~185-198ms).
+- P3 STANDALONE: ok - alias firebase->stub offline, __SOLARIS_STANDALONE__,
+  gate de fonte de nuvem na linha (4ef1349), testes dos DOIS modos,
+  E2E DESKTOP_E2E_PASS/_P3_PASS no exe (21h40).
+
+Regras respeitadas: sem merge na main; nada tocado de src-tauri de lanes
+irmas nem src/audio-acoustics/ untracked; suíte commitada 246/246 verde
+(última execução registrada no tick anterior; nenhum código mudou neste
+tick - só artefato regenerado + este log).
