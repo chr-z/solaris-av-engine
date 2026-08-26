@@ -1068,3 +1068,23 @@ NOVO NESTE TICK:
   por regra; suíte vitest ativa da lane features vista rodando — intocada.
 
 src-tauri intocado. Sem Telegram.
+
+## Tick #21 26/08 01h32 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
+- Upstream auditado SEM DELTA: origin/main == HEAD (c42bb8d7, tick #20);
+  nenhuma lane avancou desde o ultimo tick. Guardrail = re-provar gates.
+- vitest: 31 arquivos / 342/342 (~37s) VERDE;
+- e2e fluxo real (YouTube -> scoring -> fila -> export QC): 21/21 asserts;
+- build medido com NOVO scripts/chunk_report.mjs (gzip level 9 por chunk):
+  TOTAL dist 940,3KB raw / 233,2KB gz; INITIAL (entry index-C1mX7UAW.js
+  33,0KB gz + CSS 7,4KB gz) = 40,35KB gz - alvo <500KB gz amplamente
+  atendido; entry BYTE-ESTAVEL vs ticks #12..#20 (index-C1mX7UAW.js);
+  maiores chunks: firebase 94,8 / react-vendor 44,7 / index 33,0 /
+  AnalysisWorkspace 19,5 / AdminGate 18,5 / sheetSync 10,9 KB gz.
+- axe-core scan: 0 violacoes (demo/offline), identidade do preview provada
+  (entry hash == dist); axe-report.json regenerado;
+- console probe: 0 eventos de erro/aviso no boot;
+- Lighthouse x2 (--headless=new --disable-gpu): R1 E R2 100/100/100
+  perf/a11y/bp (FCP 1,4s / LCP 1,5s / CLS 0,000 / TBT 0ms).
+- Higiene: nenhum orfao novo detectado neste tick.
+
+src-tauri intocado. Sem Telegram.
