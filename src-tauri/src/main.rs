@@ -6,6 +6,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod db;
+mod runtime_config;
 mod scan_alfred;
 
 use serde::{Deserialize, Serialize};
@@ -49,6 +50,16 @@ async fn scan_alfred_command(req: ScanRequest) -> Result<ScanResponse, String> {
 #[derive(Debug, Serialize)]
 pub struct FolderPickResponse {
     pub path: Option<String>,
+}
+
+/// Comando Tauri: opinião de modo do ambiente de execução (P3 — flag
+/// STANDALONE_MODE). Lê a env `STANDALONE_MODE` e o arquivo
+/// `%APPDATA%\dev.chr-z.solaris\config.local.json` (`"standaloneMode"`).
+/// A aplicação fica no front com guarda anti-rebaixamento — nenhum flag
+/// desliga o standalone de um artefato que já nasceu sem nuvem.
+#[tauri::command]
+async fn get_runtime_config_command() -> Result<runtime_config::RuntimeConfigResponse, String> {
+    Ok(runtime_config::load_runtime_config())
 }
 
 /// Comando Tauri: diálogo nativo de seleção de pasta (Admin → Fontes).
@@ -172,7 +183,8 @@ fn main() {
             scan_alfred_command,
             pick_folder_command,
             save_last_report_command,
-            load_last_report_command
+            load_last_report_command,
+            get_runtime_config_command
         ])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o Solaris desktop")
