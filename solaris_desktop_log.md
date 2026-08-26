@@ -477,3 +477,32 @@ cedo e o node filho ficou vivo — matado direto por pid via
 Get-NetTCPConnection; porta confirmada livre depois).
 
 src-tauri intocado. Sem Telegram.
+
+## turbo-web tick #18 — guardrail noturno — 25/08/2026 ~22h00
+
+Estado encontrado: worktree @ main == origin/main (bdc4633, tick #17),
+zero delta upstream desde o último tick (v2-upgrade segue contida em main;
+turbo/web-opt ahead 0; audio/acoustics e desktop em suas lanes próprias).
+Fila original (1-6) segue DONE desde o tick #5.
+
+GATES (árvore limpa, build fresca):
+- build (vite 6.4.3): initial = index 33,86 + react-vendor 45,79 +
+  css 7,60 = 87,25 KB gz — BYTE-ESTÁVEL vs ticks #12..#17 (mesmo hash de
+  entry index-C1mX7UAW.js). Chunks lazy intactos (firebase 97,38 /
+  AdminGate 18,99 / AnalysisWorkspace 20,04 / sheetSync 11,19 /
+  ComparePane 1,37 + BugReport*).
+- tsc --noEmit limpo; vitest 31 arquivos / 342/342 (~23s);
+- e2e fluxo real: 21/21 asserts ok (YouTube → scoring → fila → export QC);
+- axe-core scan: 0 violações main app (build demo/offline sem tela de
+  login), preview PROVADO nosso antes do scan (entry conferido);
+- console probe (preview dedicado porta 4618 strictPort): 0 erros/avisos
+  no boot, entry provado igual ao dist;
+- Lighthouse x2 limpas (--headless=new --disable-gpu): R1 E R2
+  100/100/100/100 (FCP 1,4s / LCP 1,5s / CLS 0 / TBT 0ms) — CPU ambiente
+  livre nas duas rondas.
+- npm audit: não re-executado neste tick (patamar estável 10 moderate /
+  0 high nos ticks #12..#17; nenhuma dependência mudou — árvore idêntica).
+
+Higiene: wrapper npx do preview morto via process.kill + filho node morto
+por pid via GetNetTCPConnection(4618); porta confirmada livre no fim.
+src-tauri intocado. Sem Telegram.
