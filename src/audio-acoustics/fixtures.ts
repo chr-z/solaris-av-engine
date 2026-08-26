@@ -160,3 +160,31 @@ export function makeSpeechLike(
   for (let i = 0; i < x.length; i++) out[i] = x[i];
   return out;
 }
+
+/**
+ * Receita CANÔNICA de "aula falada" usada pelos testes do refinador ML (P4):
+ * padrão rígido de 10 palavras 0.5s / pausas 0.3s, amplitude 0.5, reverb
+ * sintético opcional e ruído branco em SNR opcional.
+ *
+ * Fonte única de verdade entre os testes do produto e o gerador de dataset
+ * (tools/reverb-ml): o modelo só promete precisão dentro da distribuição em
+ * que foi treinado, então treino e teste têm que falar da MESMA receita.
+ */
+export function buildSpeechSignal(opts: {
+  truthRt60: number;
+  snrDb?: number | null;
+  sampleRate?: number;
+  seed?: number;
+}): Float64Array {
+  const sr = opts.sampleRate ?? 44100;
+  const seed = opts.seed ?? 42;
+  let sig = makeSpeechLike(
+    Array.from({ length: 10 }, () => ({ word: 0.5, pause: 0.3 })),
+    sr,
+    0.5,
+    seed
+  );
+  if (opts.truthRt60 > 0) sig = addReverb(sig, opts.truthRt60, sr);
+  if (opts.snrDb != null) sig = addWhiteNoise(sig, opts.snrDb, seed + 1);
+  return sig;
+}

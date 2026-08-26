@@ -34,6 +34,20 @@ export {
   type ReverbResult,
 } from './reverb';
 export {
+  extractReverbFeatureVector,
+  extractReverbFeaturesDetailed,
+  REVERB_ML_FEATURE_COUNT,
+  type Rt60DetectorSnapshot,
+} from './reverbFeatures';
+export {
+  analyzeReverbWithML,
+  reverbMlPredict,
+  reverbMlEligible,
+  setReverbMlRuntime,
+  type ReverbMlResult,
+  type ReverbMlRuntime,
+} from './reverbMl';
+export {
   classifyReverb,
   type ReverbResult as ReverbResultType,
 } from './reverb';

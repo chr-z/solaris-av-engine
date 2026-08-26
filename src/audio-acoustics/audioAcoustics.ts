@@ -19,6 +19,7 @@ import {
 } from './noise';
 import { detectEcho, type EchoResult } from './echo';
 import { analyzeReverb, type ReverbResult } from './reverb';
+import { analyzeReverbWithML } from './reverbMl';
 
 export interface StudioBaseline {
   /** RT60 alvo do estúdio (s). Desvios para cima penalizam mais cedo. */
@@ -102,6 +103,14 @@ export interface AcousticReport {
   overallScore: number;
   timelineMarks: TimelineMark[];
   reverb: ReverbResult;
+  /** Refinamento ML do RT60 (P4). Presente quando o trecho é elegível. */
+  reverbMl?: {
+    rt60Final: number;
+    rt60Detector: number | null;
+    rt60Ml: number;
+    engine: 'embedded' | 'ort';
+    note: string;
+  };
   echo: EchoResult;
   hum: ReturnType<typeof detectHum>;
   clip: ClipResult;
@@ -244,6 +253,15 @@ export function analyzeAudioPcm(
   // Reverb (prioridade máxima).
   report_(76, 'reverb');
   const reverb = analyzeReverb(samples, sampleRate);
+  // P4 — refinamento ML do RT60 (ADITIVO): quando o trecho é elegível (fala
+  // na distribuição de treino), o RT60 fundido ML+Schroeder substitui a
+  // estimativa crua do detector NA PONTUAÇÃO. O campo reverb.rt60 bruto é
+  // preservado (compatibilidade/testes); fora da elegibilidade o comportamento
+  // legado (`reverb.rt60 || 2.5`) permanece idêntico.
+  const mlRefine = analyzeReverbWithML(samples, sampleRate, {
+    rt60: reverb.rt60Method === 'schroeder' ? reverb.rt60 : null,
+    c50: reverb.c50,
+  });
   const rt60Target = opts?.baseline?.rt60Target ?? 0.4;
   // Calibração 25/08 ~17h (tick subtle0.45): com o estimador Schroeder maduro
   // (mediana-âncora + escada VAD dupla), o erro relativo na banda sutil caiu
@@ -253,9 +271,15 @@ export function analyzeAudioPcm(
   // Nova curva: 0.45 → 76 (warn), 0.55 → 66; seca continua ≥96 e crítica <20.
   const reverbScore = clamp01_100(piecewise(
     [[Math.min(rt60Target, 0.3), 96], [0.4, 86], [0.45, 76], [0.55, 66], [0.7, 50], [1.2, 18], [2.0, 5]],
-    reverb.rt60 || 2.5
+    // Sentinel ||2.5 SÓ para o caminho legado (detector sem RT60). No caminho
+    // ML, rt60Final=0 é resposta GENUÍNA ("seco" — o MLP prevê negativo p/
+    // salas secas e o clamp zera): 0||2.5 fabricava sala de 2.5s → FP crítico
+    // em seco+codec lossy (mp3/m4a fazem o Schroeder convergir espúrio).
+    mlRefine.mlApplied ? mlRefine.rt60Final : (reverb.rt60 || 2.5)
   ));
   const reverbSev = sevFromScore(reverbScore, 82, 58);
+  const reverbExplanation = explainReverb(reverb, rt60Target, opts?.baseline?.name)
+    + (mlRefine.mlApplied ? ` ${mlRefine.note}` : '');
 
   // Clipping: evidência absoluta + flat-top em qualquer teto é checada aqui em cima
   // do pico global (sub-ceil clipping) — passamos threshold dinâmico.
@@ -390,8 +414,7 @@ export function analyzeAudioPcm(
 
   // ---------- Scores finais + explicações ----------
   const axes = {
-    reverb: makeAxis(reverbScore, reverbSev, reverb.rt60,
-      explainReverb(reverb, rt60Target, opts?.baseline?.name)),
+    reverb: makeAxis(reverbScore, reverbSev, reverb.rt60, reverbExplanation),
     clipping: makeAxis(clippingScore, clippingSev, clipRatio,
       explainClipping(clipAbs, subCeilClip, clipRatio, crest)),
     distortion: makeAxis(distortionScore, distortionSev, distortionValue,
@@ -420,6 +443,13 @@ export function analyzeAudioPcm(
     overallScore,
     timelineMarks,
     reverb,
+    reverbMl: {
+      rt60Final: mlRefine.rt60Final,
+      rt60Detector: mlRefine.rt60Detector,
+      rt60Ml: mlRefine.rt60Ml,
+      engine: mlRefine.engine,
+      note: mlRefine.note,
+    },
     echo,
     hum,
     clip: clipAbs,

@@ -56,3 +56,6 @@ lerna-debug.log*
 # Exception: template without real secrets is versioned
 !.env.example
 !.env.e2e.example
+
+# Lane audio/acoustics: features extraidas sao intermediario de treino regeneravel
+tools/reverb-ml/out/features.jsonl
