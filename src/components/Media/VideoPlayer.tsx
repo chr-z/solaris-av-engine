@@ -7,6 +7,9 @@ import WaveformTimeline from '../Monitors/WaveformTimeline';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { pulseShuttle, formatRate, SHUTTLE_RATES, INITIAL_SHUTTLE_STATE } from '../../features/qol/shuttle';
+// F2 QoL A2: conforto do playback — pular silêncios + volume normalize leve.
+import { useMediaComfort } from '../../features/qol/useMediaComfort';
+import MediaComfortToggle from '../Layout/MediaComfortToggle';
 
 // Import SVGs as URLs
 import tetoPresencialUrl from '../svg/homestudio.svg';
@@ -62,7 +65,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     // A2 QoL: shuttle adaptativo (cada pulso mesma direção sobe/desce degrau).
     const [shuttleState, setShuttleState] = useState(INITIAL_SHUTTLE_STATE);
 
-    const { waveform, isLoading: isWaveformLoading } = useAudioWaveform(src, videoId);
+    const { waveform, peakDbfs, isLoading: isWaveformLoading } = useAudioWaveform(src, videoId);
     // Waveform cache bookkeeping: when the waveform just finished loading
     // (loading → loaded transition), register the id in the shared cache.
     // Tracked via an effect-updated ref instead of render-time reads.
@@ -107,6 +110,19 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         video.currentTime = time;
         setCurrentTime(time);
     }, [internalVideoRef]);
+
+    // A2 QoL: conforto do playback (skip silêncio + normalize). O ganho vive
+    // no grafo WebAudio do hook — o volume/mute nativos seguem livres pro
+    // usuário; o skip é efeito sobre currentTime com seek estável.
+    const comfort = useMediaComfort(
+        waveform,
+        duration,
+        currentTime,
+        src,
+        internalVideoRef,
+        handleSeek,
+        { peakDbfs },
+    );
     
     const handleSeekOffset = useCallback((offset: number) => {
         const video = internalVideoRef.current;
@@ -502,6 +518,8 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
                   {formatRate(SHUTTLE_RATES[shuttleState.index] || 1)}
                 </span>
               </div>
+              {/* A2 QoL: conforto do playback (skip silêncio / normalize). */}
+              <MediaComfortToggle api={comfort} />
               <span className="font-mono text-sm">{formatTime(currentTime)} / {formatTime(duration)}</span>
                 </div>
                 <button onClick={toggleFullscreen} title="Fullscreen (f)" className="p-1 rounded-full hover:bg-white/10 transition-colors">

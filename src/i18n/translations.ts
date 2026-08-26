@@ -403,6 +403,17 @@ export const en = {
   'pomodoro.restart': 'Restart 25 min focus block',
   'pomodoro.runningTitle': 'Focus block running — stretch when it hits zero',
   'pomodoro.expiredTitle': "Time's up — take a short break",
+  'density.label': 'Interface density',
+  'density.comfortable': 'Comfortable density',
+  'density.compact': 'Compact density',
+  'mediaComfort.label': 'Playback comfort',
+  'mediaComfort.skipSilence': 'Skip long silences',
+  'mediaComfort.minSilence': 'Pauses of {seconds}s or more are skipped automatically.',
+  'mediaComfort.normalize': 'Gentle volume normalize',
+  'mediaComfort.normalizeHint':
+    'Brings quiet recordings closer to −16 dBFS (peak-based, capped at ×3).',
+  'mediaComfort.noEnvelope':
+    'Waveform not available yet — silence detection needs the audio decoded first.',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -806,6 +817,17 @@ export const pt: Record<TranslationKey, string> = {
   'pomodoro.restart': 'Reiniciar bloco de foco de 25 min',
   'pomodoro.runningTitle': 'Bloco de foco rodando — alongue quando zerar',
   'pomodoro.expiredTitle': 'Deu o tempo — faça uma pausa curta',
+  'density.label': 'Densidade da interface',
+  'density.comfortable': 'Densidade confortável',
+  'density.compact': 'Densidade compacta',
+  'mediaComfort.label': 'Conforto do playback',
+  'mediaComfort.skipSilence': 'Pular silêncios longos',
+  'mediaComfort.minSilence': 'Pausas de {seconds}s ou mais são puladas automaticamente.',
+  'mediaComfort.normalize': 'Volume normalize leve',
+  'mediaComfort.normalizeHint':
+    'Aproxima gravações baixinhas de −16 dBFS (por pico, teto de ×3).',
+  'mediaComfort.noEnvelope':
+    'Waveform ainda indisponível — a detecção de silêncio precisa do áudio decodificado primeiro.',
 };
 
 export const dictionaries = { en, pt } as const;

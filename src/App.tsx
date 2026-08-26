@@ -30,6 +30,7 @@ import { applyUndo, registerUndoApplier, clearUndoAppliers } from './features/qo
 import { getUndoLog } from './features/qol/undoStore';
 // F2 QoL A2: pintura inicial do tema (claro/escuro/sistema) antes do 1º paint.
 import { applyInitialTheme } from './features/qol/theme';
+import { applyInitialDensity } from './features/qol/density';
 // F4 Gamificação: premiação de conclusões e celebrações.
 import { classifyRow } from './utils/rowFiltering';
 import { useGamification } from './hooks/useGamification';
@@ -869,6 +870,8 @@ const App: React.FC = () => {
   // F2 QoL A2: tema persistente — o hook do Header aplica a classe por
   // efeito (pref + sistema); aqui só garantimos a pintura inicial coerente.
   applyInitialTheme();
+  // F2 QoL A2: densidade (confortável/compacta) — mesmo contrato da pintura.
+  applyInitialDensity();
 
   // ── F2: busca universal (Ctrl+K) ─────────────────────────────────────
   // Docs derivados das linhas carregadas + settings conhecidos. Memoizado:

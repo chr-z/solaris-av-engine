@@ -133,3 +133,22 @@
 .solaris-confetti {
   animation: solaris-confetti-fall 1.6s ease-in forwards;
 }
+
+/* ── F2 QoL A2: densidade compacta (html.solaris-density-compact) ──────── */
+/* Espelha o dark: a classe vive no <html>, aplicada por efeito declarado do
+   useDensityPreference. Mira elementos comuns (tabelas, listas, botões de
+   menu) para reduzir respiro vertical sem tocar em tokens do redesign. */
+html.solaris-density-compact table td,
+html.solaris-density-compact table th {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+html.solaris-density-compact [role='menuitem'],
+html.solaris-density-compact [role='option'] {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+html.solaris-density-compact button,
+html.solaris-density-compact input[type='range'] {
+  line-height: 1.15;
+}
