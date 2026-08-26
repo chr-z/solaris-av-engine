@@ -1,3 +1,22 @@
+## redesign (tick 20) — fusão turbo #14–#19 absorvida + regates — 26/08/2026 ~00h50
+
+- **Fusão primeiro**: merge aab73c7 absorveu origin/main (6 commits, todos
+  docs-only do guardrail turbo-web #14–#19). Conflito do log compartilhado
+  resolvido em ordem cronológica dentro do bloco (t16 → turbo #14 → t17 →
+  t18 → turbo #17/#18 → t19 → turbo #19); axe-report.json ficou do lado main
+  e foi REGENERADO na build local desta lane.
+- **GATES pós-merge** (build fresca da lane): tsc --noEmit limpo;
+  vitest **403/403** (38 arquivos); build verde — CSS **10,21KB gz**
+  (<30KB orçamento intacto); initial JS inalterado (index 38,29 + react-vendor
+  45,79 gz; firebase lazy 97,38).
+- **axe-core regenerado localmente** (scripts/axe-scan.mjs, protocolo de portas
+  aleatórias): login **0** / main app **0** / criticalOrSerious **0** —
+  report agora prova a build DESTA lane, não mais a da main.
+- Zero mudança visual/funcional neste tick (merge docs-only): nenhuma tela
+  alterada, sem screenshots novos necessários — shots valem desde o t19
+  (t19_login/fila/analysis em redesign_shots/).
+- src-tauri/audio-acoustics/pitch intocados. Sem Telegram.
+
 
 ## redesign (tick 10) — R2 remanescente: checklist de inconformidades com kit animado — 25/08/2026 ~10h20
 
