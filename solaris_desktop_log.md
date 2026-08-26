@@ -1,5 +1,27 @@
 # SOLARIS — log de trabalho
 
+
+## Tick 26/08 ~08h10 — audio-dsp (Yui / cron solaris-audio)
+
+Worktree solaris-audio (branch audio/acoustics); desktop/src-tauri/pitch intocados.
+TEMA: MERGE PREVENTIVO da origin/main na lane (aedb89b, tick #28 turbo-web) +
+PROVAS FRESCAS pos-merge. Fila P1-P4 continua 100% fechada; PR #2 aberto,
+mergeable=CLEAN, aguardando decisao do dono (nada merged por mim).
+
+- MERGE PREVENTIVO: origin/main andou 1 commit desde o ultimo merge (dea3422);
+  aedb89b e so docs/gates do turbo-web (scripts/lh-report-r*.json, axe-report,
+  append_log_t28.py, bloco de log). Merge limpo SEM conflito desta vez (o
+  protocolo de prepend do log compartilhado funcionou: ambos os blocos vivos).
+- PROVAS FRESCAS NA ARVORE MESCLADA (execucao propria, nao herdada): vitest
+  446/446 VERDES, 46 arquivos, 131s. Zero codigo de produto afetado pelo merge
+  (diff so toca scripts/ e log) - risco de regressao ~nulo, provas mesmo assim.
+- AUDITORIA RAPIDA DE FRAQUEZAS (busca de trabalho real p/ o tick): clamp de
+  RT60 final ja existe (reverbMl.ts:183 Math.max(fused,0)); big_errors_audit do
+  train-report (ML negativo em dry) e caso coberto pelo clamp; integracao P3
+  re-confirmada viva (qcReport injeta secao acustica; sheetSync tem as 5
+  colunas Reverb/Clip/Ruido/Distorcao/Eco com aliases). Nenhum gap novo.
+- Push via workaround GCM; src-tauri e pitch intocados; sem Telegram.
+=== FIM TICK - lane audio/acoustics sincronizada com main, PR #2 pronto ===
 ## Tick #28 26/08 ~07h05 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
 
 - Estado: HEAD 661cb50 == origin/main provado pos-fetch; rev-list 0/0 nos dois
