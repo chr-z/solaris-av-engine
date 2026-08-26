@@ -1,3 +1,33 @@
+## redesign (t34) — turbo #31 absorvido + regates — 26/08/2026 ~10h55
+
+- **Auditoria**: spec SOLARIS_REDESIGN.md intacta (mtime 24/08); R1-R4 + wows
+  seguem DONE. Único delta: origin/main avançou 1 commit (43c7641 = turbo-web
+  #31, guardrail noturno docs-only). Worktree limpo ao abrir o tick;
+  lane == origin/redesign-premium (syncada até 0960829/t33).
+- **Fusão**: merge b7baca8 absorveu origin/main. Conflitos triviais: relatórios
+  regeneráveis (axe/lh-r1/lh-r2 -> --ours e REGENERADOS neste tick); log
+  compartilhado auto-mesclado (bloco do turbo #31 preservado). Código de app
+  intocado (diff do merge = apenas solaris_desktop_log.md; 0 arquivos em src/).
+- **GATES pós-merge** (build fresca da lane): tsc --noEmit limpo; vitest
+  **403/403** (38 arquivos, 27s); e2e fluxo real **21/21**; build verde
+  byte-estável — entry **index-CHKfTLey.js** 38,09KB gz + CSS index-C1l8F6-j
+  **9,79KB gz** (alvo <30KB ok); INITIAL **46,89KB gz** zero re-hash vs
+  t25..t33; firebase lazy 94,82KB fora do caminho crítico.
+- **Browser gates** (scripts/run_gates_t30.sh: preview efêmero porta alta +
+  prova de hash antes de cada gate): console probe **0 eventos**; LH x2
+  **P99/A100/BP100** (FCP 1,5s / LCP 1,8s / CLS 0,001 / TBT 10ms→0ms).
+- **axe-core regenerado NA ÁRVORE MESCLADA** (scripts/axe-scan.mjs):
+  login n/a (build demo sobe direto no app por design pós-t24) / main app **0**
+  / criticalOrSerious **0**. Nota de higiene: 1ª rodada via wrapper background
+  devolveu exit=1 SEM stdout (artefato do harness, não do scan); rerun em
+  foreground provou 0 violações com dist verificado (index-CHKfTLey servido).
+- Shots de aceite regenerados ->
+  C:/Yui/data/saas_factory/redesign_shots/r34_merge_{fila,analysis,qc_dialog}.png
+  via scripts/redesign_shot_t25.cjs (hash conferido; PIL dark 97,9/95,9/96,2%,
+  stdev 19,3-29,7 — perfil visual idêntico aos ticks r29..r33).
+- src-tauri/audio-acoustics/pitch intocados. Fila R1-R4 segue DONE aguardando
+  diretiva do dono. Sem Telegram.
+
 ## redesign (t32) — turbo #29 absorvido + regates — 26/08/2026 ~08h50
 
 - **Auditoria**: spec SOLARIS_REDESIGN.md intacta (mtime 24/08, md5 870180dc);
