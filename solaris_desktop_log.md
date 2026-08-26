@@ -313,3 +313,36 @@
   de ler (re-ler antes); jsdom dispara focus() mas seleção ARIA de radiogroup precisa seguir o
   foco nas setas; GCM workaround de rede segue essencial no cron.
 - Sem Telegram; src-tauri, audio-acoustics, redesign (tokens.css) intactos. ( ° ʖ °)
+
+### 2026-08-26 ~05h30 — tick features-worker: F2/A2 densidade + conforto de mídia FECHADOS (commits 11b5a5e..0b741cd)
+- Abertura: WIP do tick anterior ~90% pronto (núcleos density/mediaComfort + UI + wiring + i18n +
+  CSS) porém VERMELHO — tsc TS18047 em useMediaComfort.ts:171 e ganho de normalize HARDCODADO
+  (`computeNormalizeGain(0, ...)` → atenuação cega fixa de −9,5dB ignorando o pico real).
+  `_empty.txt` (rascunho órfão) descartado.
+- Correção central (normalize honesto): o envelope da waveform é normalizado pelo pico global no
+  pipeline (silêncio relativo some), então NÃO serve pra normalize. O `maxPeakOverall` bruto já era
+  calculado e JOGADO FORA no pass 2 — agora `processAudioBufferProgressively` retorna
+  `{peaks, peakDbfs}` (dbfsFromChannel sobre o PCM cru), `useAudioWaveform` expõe `peakDbfs`
+  (cache LRU solaris.mediapeak.* em hit de cache; write após decode) e o VideoPlayer injeta no
+  hook: ganho = min(×3, 10^((−16−pico)/20)); sem medição → neutro (nunca inventa). O grafo WebAudio
+  só nasce com ganho real ≠1 (elemento <video> nativo permanece intocado no default).
+- Bug real a mais consertado: skip podia disparar seeks repetidos sob re-render defasado dentro da
+  mesma pausa (pai cujo currentTime não acompanha o seek) → guarda lastSkipTargetRef: mesmo alvo
+  não repete; sair da pausa desarma; voltar de propósito RE-SALTA (correto). Erro de tsc sumiu junto.
+- Testes: +33 asserts (densityMediaHook.test.tsx novo: ganho do pico real ×3, neutro sem medição,
+  persistência, guarda via harness laggy/reativo; jsdom dos componentes já existentes do WIP).
+  Suíte 698→738/738, tsc limpo. ESLint ratchet: useAudioWaveform já carregava os mesmos 4 problemas
+  NO HEAD (provado com baseline copiado) — zero introduzido; MediaComfortToggle limpo (wrapper morto
+  removido, imports/vars não usados).
+- Bundle: entry 53,56→55,31KB gz (+1,75; widgets vivem no entry), initial ≈108KB gz — budget <500KB
+  intacto; pesados lazy (vfs_fonts 454,6 / pdfmake 353,7 / ECharts 163,6 / firebase 95,0).
+- Push confirmado via ls-remote (58fcf00..0b741cd → origin/features/analista-feliz); check Vercel
+  Preview success; CI remoto não roda nesta branch (gatilhos só no desktop) — contrato da lane é a
+  validação local completa, feita.
+- Gotchas: vitest.config include só casa src/** (probe fora de src falha "No test files found");
+  act() manual EM TORNO do render inicial em teste de hook engole o render inteiro sob RTL+Vitest 4
+  (onReady x0, componente nunca montou) — montar FORA de act() e usar act() só nos eventos;
+  snapshot capturado de api vira stale após act() (objeto muda por render) — ler sempre via getter;
+  patch idempotente falha quando old_string == new_string (usar replace direto com âncoras de linha
+  única em arquivo CRLF — blocos multi-linha do heredoc casam LF-only e falham silenciosamente).
+- Sem Telegram; src-tauri, audio-acoustics, redesign (tokens.css) intactos. ( ° ʖ °)
