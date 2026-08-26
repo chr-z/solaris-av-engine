@@ -914,3 +914,38 @@ de FP encontrado no caminho.
 - Diff 4ef1349..HEAD em src/, src-tauri/, package.json, vite.config.ts, index.html = VAZIO (so docs/log/tooling) -> metricas P2 seguem validas (binario 6,5MB, chunk inicial standalone ~104KB/31KB gz, serie boot ~185ms, hoje 220ms dentro da serie). Metrica de boot pedida no P2 ja instrumentada (scripts/boot_time_desktop.ps1) e registrada.
 - Anti-stop-loop: unico PR aberto = #2 (audio/acoustics -> main, decisao do dono); features/analista-feliz e redesign-premium sao trabalho legitimo de lanes irmas; relics ahead_by 0; develop ahead-1 = README do proprio Christian. Zero trabalho preso desta lane.
 - Nenhum codigo tocado nesta lane neste tick; sem merge na main.
+
+## Tick 26/08 ~04h55 — audio-dsp (Yui / cron solaris-audio)
+
+Worktree solaris-audio (branch audio/acoustics); desktop/src-tauri/pitch intocados.
+TEMA: FECHAMENTO DA ÚLTIMA LINHA RASA DA SPEC — mudança acústica mid-video
+(tabela da spec: severidade INFO). A fila da diretiva P1-P4 já estava 100%
+pushed (1239568); auditoria contra a spec mostrou que o detector existente só
+olhava mediana de RMS por quartil — troca de sala/mic com nível IGUAL passava.
+
+- IMPLEMENTAÇÃO (commit 27e5446): AcousticShiftAccumulator acumula centroid,
+  flatness e sibilância POR FRAME durante a varredura STFT existente (custo
+  O(bins) por frame, ~4MB/h de áudio). detectAcousticShift virou 2 camadas:
+  (1) legado preservado — salto ≥9dB de RMS entre quartis (kind='level');
+  (2) nova — degrau SUSTENTADO ≥6dB em ≥2 de 3 features espectrais, medido
+  por mediana em janelas móveis com 50% overlap (kind='spectral'). Mediana+
+  móvel imuniza contra palavras isoladas: só mudança persistente de timbre
+  empurra as janelas. Timeline ganhou marca axis='shift' clicável no segundo
+  exato (painel renderiza genericamente, zero UI nova necessária).
+- TESTES known-answer sintéticos (7 casos): limpo / só reverb RT60 0.9 /
+  ruído uniforme SNR10 NÃO disparam (anti-FP); queda -12dB aos 8s dispara
+  kind='level' no corte ±2s; troca de timbre com loudness IGUALADA dispara
+  kind='spectral' (o caso que o detector antigo errava); timbre sutil
+  (lowpass 1 passada) também; entrada curta sem crash. 7/7 verdes.
+- FLAKE REAL ELIMINADO (commit 9f9f57d): useAcousticAnalysis.test
+  'idle→running→done' falhava 1/4 no HEAD LIMPO (prova com stash) — o
+  fixture era tão rápido que chegava a 'done' antes do assert de 40ms.
+  Determinizado com PCM bloqueado em deferred controlado pelo teste +
+  waitFor por polling; 5/5 estável após o fix.
+- GATES: tsc --noEmit limpo; suíte completa 446/46 arquivos / 446 testes
+  VERDES (~111s, inclui bench de performance — custo do acumulador dentro
+  do orçamento <3s/2min); eslint limpo nos 4 arquivos tocados.
+- PUSH verificado: 7bf0e2e..9f9f57d ls-remote OK em origin/audio/acoustics.
+  ATENÇÃO: PR #2 (audio/acoustics -> main) agora aponta head 9f9f57d —
+  segue aguardando decisão do dono, nada merged.
+=== FIM TICK — spec SOLARIS_AUDIO_ACOUSTICS 100% coberta linha a linha ===
