@@ -15,7 +15,11 @@ import { logCaptureService } from './utils/logCapture';
 import { DEMO_HEADERS, DEMO_ROWS } from './utils/demoData';
 import { useI18n } from './i18n/I18nContext';
 import { computeFilteredRows } from './utils/rowFiltering';
-import { isStandalone } from './config/runtimeMode';
+import {
+    isStandalone,
+    STANDALONE_CLOUD_SOURCE_MESSAGE,
+    describeCloudSource,
+} from './config/runtimeMode';
 
 // Code splitting (S3.1): the heavy analysis workspace (player + monitors + form)
 // is only fetched when an OS row is opened for the first time.
@@ -50,6 +54,17 @@ const COLS = {
 };
 
 type AuthStatus = 'initializing' | 'signedOut' | 'signedIn' | 'error';
+
+// STANDALONE (desktop/on-premise): perfil fixo do revisor local. Usado pelos
+// inicializadores lazy dos estados de sessão — a sessão standalone NASCE
+// pronta, sem setState dentro de efeito (react-hooks/set-state-in-effect).
+const createLocalReviewerProfile = (): UserProfile => ({
+    id: 'local-reviewer',
+    name: 'Revisor Local',
+    givenName: 'Revisor',
+    picture: '',
+    email: 'revisor@local.solaris',
+});
 type MediaSource = { source: File | string; info?: { name?: string; isDriveLink?: boolean; isYoutube?: boolean } };
 
 const getInitialDateRange = (): { startDate: string; endDate: string } => {
@@ -83,8 +98,8 @@ const App: React.FC = () => {
 
   // Data State
   const [selectedOsIndex, setSelectedOsIndex] = useState<number | null>(null);
-  const [headers, setHeaders] = useState<string[]>([]);
-  const [allRows, setAllRows] = useState<RowWithSheetIndex[]>([]); 
+  const [headers, setHeaders] = useState<string[]>(isStandalone() ? DEMO_HEADERS : []);
+  const [allRows, setAllRows] = useState<RowWithSheetIndex[]>(isStandalone() ? DEMO_ROWS : []);
   const [fullRowData, setFullRowData] = useState<RowData | null>(null); 
   const [isRowLoading, setIsRowLoading] = useState(false);
   const [videoChoices, setVideoChoices] = useState<VideoChoice[]>([]);
@@ -94,10 +109,15 @@ const App: React.FC = () => {
   const [pickerFolderId, setPickerFolderId] = useState<string | null>(null);
 
   // Auth State
-  const [authStatus, setAuthStatus] = useState<AuthStatus>('initializing');
+  const [authStatus, setAuthStatus] = useState<AuthStatus>(
+    // STANDALONE: sessão nasce pronta (lazy init) — sem setState em efeito.
+    isStandalone() ? 'signedIn' : 'initializing',
+  );
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(
+    isStandalone() ? createLocalReviewerProfile() : null,
+  );
   const [initialLoadingMessage, setInitialLoadingMessage] = useState(t('loading.initializing'));
 
   // Filters
@@ -124,7 +144,7 @@ const App: React.FC = () => {
           setHeaders(loadedHeaders);
           setAllRows(loadedRows);
       }
-  }, [userProfile]);
+  }, [userProfile, setHeaders, setAllRows]);
 
   // --- MEDIA HANDLING ---
   const handleSourceSelected = useCallback(async (source: File | string, info?: { name?: string; isDriveLink?: boolean; isYoutube?: boolean }) => {
@@ -141,6 +161,19 @@ const App: React.FC = () => {
     setIsLocalVideo(false);
 
     try {
+        // P3 refinamento (zero-nuvem no standalone): fontes remotas Google
+        // não têm caminho aqui — os loaders gapi/GIS nem existem no shell
+        // desktop, então o fluxo antigo estourava ReferenceError e exibia
+        // erro genérico. Gate explícito com mensagem humana.
+        const cloudKind = typeof source === 'string' ? describeCloudSource(info) : null;
+        if (cloudKind) {
+            setVideoSrc(null);
+            setCurrentVideoId(null);
+            setVideoTitle(cloudKind === 'youtube' ? 'YouTube Video (local mode)' : 'Google Drive Video (local mode)');
+            setErrorMessage(STANDALONE_CLOUD_SOURCE_MESSAGE);
+            setIsMediaLoading(false);
+            return;
+        }
         let videoId: string | null = null;
         if (typeof source === 'string') {
             const isYoutubeLink = info?.isYoutube;
@@ -351,7 +384,10 @@ const App: React.FC = () => {
         setFullRowData(local);
 
         const localChoices = findVideoUrlsInData(local, headers);
-        const driveFolderChoice = localChoices.find(c => c.type === 'driveFolder');
+        // P3 refinamento: pastas do Drive exigem picker+proxy na nuvem; no
+        // standalone não abrimos o picker — caimos no gate de fonte de nuvem
+        // com mensagem humana (mesmo caminho do handleSourceSelected).
+        const driveFolderChoice = isStandalone() ? undefined : localChoices.find(c => c.type === 'driveFolder');
         if (driveFolderChoice) {
             const match = driveFolderChoice.url.match(DRIVE_FOLDER_REGEX);
             if (match && match[1]) {
@@ -600,16 +636,8 @@ const App: React.FC = () => {
   // entra direto como revisor local com os dados demo. Nenhum poll de gapi.
   useEffect(() => {
     if (isStandalone()) {
-      setUserProfile({
-        id: 'local-reviewer',
-        name: 'Revisor Local',
-        givenName: 'Revisor',
-        picture: '',
-        email: 'revisor@local.solaris',
-      });
-      setHeaders(DEMO_HEADERS);
-      setAllRows(DEMO_ROWS);
-      setAuthStatus('signedIn');
+      // Sessão local nasce pronta no lazy init dos estados (sem setState em
+      // efeito); nada a orquestrar aqui — este efeito é do sabor cloud.
       return;
     }
     const initializeGapiForUser = async (user: firebase.User) => {
@@ -739,7 +767,7 @@ const App: React.FC = () => {
         setAuthStatus('signedIn');
         setIsAuthLoading(false);
     }, 800);
-  }, []);
+  }, [setUserProfile, setHeaders, setAllRows, setAuthError, setAuthStatus, setIsAuthLoading]);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -751,18 +779,12 @@ const App: React.FC = () => {
         setHeaders([]);
         // STANDALONE: sem tela de login — volta direto pra sessão local.
         if (isStandalone()) {
-            setUserProfile({
-                id: 'local-reviewer',
-                name: 'Revisor Local',
-                givenName: 'Revisor',
-                picture: '',
-                email: 'revisor@local.solaris',
-            });
+            setUserProfile(createLocalReviewerProfile());
             setHeaders(DEMO_HEADERS);
             setAllRows(DEMO_ROWS);
         }
     } catch (error) { console.error("Sign out error", error); }
-  }, []);
+  }, [setSelectedOsIndex, setVideoSrc, setAllRows, setHeaders, setUserProfile]);
 
   useEffect(() => {
     document.documentElement.classList.add('dark');

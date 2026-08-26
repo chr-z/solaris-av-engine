@@ -87,3 +87,27 @@ export function setRuntimeModeOverride(mode: RuntimeMode | null): void {
     /* ambiente sem storage — override ignorado */
   }
 }
+
+/**
+ * P3 refinamento (zero affordance de nuvem no standalone): mensagem humana
+ * usada quando uma fonte de nuvem (link de planilha YouTube/Drive) é
+ * acionada num build sem nuvem. Substitui o comportamento anterior, que
+ * estourava ReferenceError de `gapi` ausente (os loaders Google nem existem
+ * no shell desktop) e exibia erro genérico ao usuário.
+ */
+export const STANDALONE_CLOUD_SOURCE_MESSAGE =
+  'This video lives on Google\u2019s cloud and Solaris is running in local mode ' +
+  '(no cloud). Open the file from disk or register a local path/file on the row.';
+
+/** Classifica uma fonte remota de nuvem a partir das flags de descoberta. */
+export type CloudSourceKind = 'youtube' | 'drive' | null;
+
+export function describeCloudSource(info?: {
+  isYoutube?: boolean;
+  isDriveLink?: boolean;
+}): CloudSourceKind {
+  if (!info) return null;
+  if (info.isYoutube) return 'youtube';
+  if (info.isDriveLink) return 'drive';
+  return null;
+}

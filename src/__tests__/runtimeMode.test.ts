@@ -4,6 +4,8 @@ import {
   isStandalone,
   hasDesktopBridge,
   setRuntimeModeOverride,
+  describeCloudSource,
+  STANDALONE_CLOUD_SOURCE_MESSAGE,
 } from '../config/runtimeMode';
 
 const TAURI_KEY = '__TAURI_INTERNALS__';
@@ -52,5 +54,19 @@ describe('runtimeMode — dois modos de build', () => {
     setRuntimeModeOverride('standalone');
     expect(hasDesktopBridge()).toBe(false); // sem bridge ipc
     expect(isStandalone()).toBe(true); // mas regra de negócio standalone
+  });
+});
+
+describe('runtimeMode — classificação de fonte de nuvem (P3 refinamento)', () => {
+  it('describeCloudSource: youtube/drive/null conforme as flags', () => {
+    expect(describeCloudSource({ isYoutube: true })).toBe('youtube');
+    expect(describeCloudSource({ isDriveLink: true })).toBe('drive');
+    expect(describeCloudSource({})).toBeNull();
+    expect(describeCloudSource(undefined)).toBeNull();
+    expect(describeCloudSource({ isYoutube: true, isDriveLink: true })).toBe('youtube');
+  });
+
+  it('mensagem standalone é estável e não vazia', () => {
+    expect(STANDALONE_CLOUD_SOURCE_MESSAGE.length).toBeGreaterThan(20);
   });
 });

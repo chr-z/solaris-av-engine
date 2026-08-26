@@ -163,7 +163,7 @@ const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headers, isSele
                 <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-base truncate flex items-center gap-2">
                         {osCell?.value || 'N/A'}
-                        {osCell?.link && <LinkIcon className="w-3 h-3 text-solar-accent flex-shrink-0" />}
+                        {osCell?.link && !isStandalone() && <LinkIcon className="w-3 h-3 text-solar-accent flex-shrink-0" />}
                         {hasCachedWaveform && <WaveformIcon title="Cached Waveform" className="w-4 h-4 text-solar-accent/70 flex-shrink-0" />}
                     </h3>
                     <p className="text-sm text-gray-400 truncate mt-1">{professorCell?.value || 'No Instructor'}</p>

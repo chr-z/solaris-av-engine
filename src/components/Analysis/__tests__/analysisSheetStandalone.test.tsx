@@ -200,3 +200,102 @@ describe('AnalysisSheetList — sync de nuvem por modo de runtime', () => {
         expect(fetchMock).not.toHaveBeenCalled();
     });
 });
+
+describe('AnalysisSheetList — affordance de link de nuvem por modo (P3 refinamento)', () => {
+    let fetchMock: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+        setRuntimeModeOverride(null);
+        fetchMock = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
+    });
+
+    afterEach(() => {
+        unmount();
+        vi.unstubAllGlobals();
+    });
+
+    function rowWithCloudLink(): RowWithSheetIndex {
+        return {
+            rowIndex: 2,
+            row: [
+                { value: 'WO-LINKED', link: 'https://drive.google.com/file/d/FILE123/view' },
+                { value: 'Doe' },
+                { value: '2026-08-25' },
+                { value: 'Studio A' },
+                { value: '' },
+            ],
+        };
+    }
+
+    function mountSheetWithCloudLink(): void {
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        root = createRoot(container);
+        const props = {
+            onRowSelected: () => {},
+            onDataLoaded: () => {},
+            selectedOsIndex: null,
+            userProfile: {
+                id: 'local-reviewer',
+                name: 'Revisor Local',
+                givenName: 'Revisor',
+                picture: '',
+                email: 'revisor@local.solaris',
+            },
+            headers: HEADERS,
+            filteredPendingRows: [rowWithCloudLink()],
+            filteredCompletedRows: [],
+            filteredSpecialRows: [],
+            searchTerm: '',
+            setSearchTerm: () => {},
+            filters: { startDate: '', endDate: '', inconformities: [], studio: '' },
+            setFilters: () => {},
+        } as never;
+        act(() => {
+            root!.render(
+                React.createElement(I18nProvider, null, React.createElement(AnalysisSheetList, props)),
+            );
+        });
+    }
+
+    it('cloud: célula W.O. com link de nuvem mantém o ícone indicador', async () => {
+        // Fluxo real de cloud: sessão válida + sync OK (lista vem das props).
+        authState.currentUser = { getIdToken: async () => 'tok-test' };
+        fetchMock.mockResolvedValue({
+            ok: true,
+            json: async () => ({ headers: HEADERS, rows: [] }),
+        } as Response);
+
+        await act(async () => {
+            mountSheetWithCloudLink();
+        });
+        await act(async () => {
+            await Promise.resolve();
+        });
+
+        const text = document.body.textContent || '';
+        expect(text).toContain('WO-LINKED');
+        // O ícone de link vive DENTRO do item da lista (único SVG do <li>,
+        // sem waveform em cache aqui).
+        expect(document.querySelectorAll('li svg').length).toBeGreaterThan(0);
+    });
+
+    it('standalone: mesmo conteúdo, NENHUM ícone de link de nuvem', async () => {
+        setRuntimeModeOverride('standalone');
+        authState.currentUser = null;
+
+        await act(async () => {
+            mountSheetWithCloudLink();
+        });
+        await act(async () => {
+            await Promise.resolve();
+        });
+
+        const text = document.body.textContent || '';
+        expect(text).toContain('WO-LINKED');
+        // Zero affordance de nuvem: nenhum SVG (link/waveform) dentro do item.
+        expect(document.querySelectorAll('li svg').length).toBe(0);
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+});
