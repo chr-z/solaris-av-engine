@@ -131,7 +131,6 @@ describe('findTwinRows — aulas gêmeas (mesmo professor/estúdio/dia)', () => 
   });
 
   it('exclui a própria OS e ignora células vazias como critério', () => {
-    const empty = twinRow(5, 'OS-E', '', '', '').row;
     const rows = [twinRow(10, 'OS-CUR', 'Prof X', '2026-08-25', 'Studio A'), twinRow(5, 'OS-E', '', '', '')];
     expect(findTwinRows(TWIN_HEADERS, CURRENT, rows, 10)).toHaveLength(0);
   });

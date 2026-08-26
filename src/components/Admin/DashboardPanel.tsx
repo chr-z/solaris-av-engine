@@ -78,6 +78,7 @@ import {
   heatmapXlsxFilename,
 } from "../../utils/markHeatmap";
 import { useAnalystShortcuts } from "../../hooks/useAnalystShortcuts";
+import { useShortcutPrefs } from "../../hooks/useShortcutPrefs";
 import {
   buildComparison,
   deltaDirection,
@@ -1155,9 +1156,13 @@ const DashboardPanel: React.FC = () => {
     setSideB({ dimension: dim, label });
   };
 
+  // QoL A1: remapeamento do teclado também vale nos dashboards (hot-reload).
+  const { effectiveDefs } = useShortcutPrefs();
+
   useAnalystShortcuts({
     enabled: true,
     scopeEnabled: { player: false, workspace: false, dashboard: true },
+    defs: effectiveDefs,
     nextDashSection: useCallback(() => {
       // v3 P17: leaving Recurring Issues resets the category scope.
       if (section === "inconformities") setCategoryFilter("");

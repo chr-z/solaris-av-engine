@@ -21,8 +21,8 @@ import {
 import { ANALYST_SHORTCUTS } from '../utils/shortcuts';
 
 interface UseShortcutPrefsOptions {
-  /** Storage injetável (jsdom/localStorage real/Tauri store). */
-  storage?: Pick<Storage, 'getItem' | 'setItem'> | null;
+  /** Storage injetável (jsdom/localStorage real/Tauri store). Omitir = window.localStorage; null explícito = sem storage. */
+  storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null;
 }
 
 export interface ShortcutPrefsApi {
@@ -37,7 +37,10 @@ export interface ShortcutPrefsApi {
  * acontecem noutra camada — ambas terminam recarregando do storage.
  */
 export function useShortcutPrefs({ storage }: UseShortcutPrefsOptions = {}): ShortcutPrefsApi {
-  const [stableStorage] = useState(storage ?? null);
+  // undefined = "usa o padrão da plataforma"; null EXPLÍCITO = desacoplado.
+  const [stableStorage] = useState<Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null>(() =>
+    storage !== undefined ? storage : typeof window !== 'undefined' ? window.localStorage : null,
+  );
   const [map, setMap] = useState<ShortcutMap>(() => loadShortcutMap(stableStorage));
 
   useEffect(() => {
@@ -66,7 +69,7 @@ export function persistBinding(
   map: ShortcutMap,
   id: string,
   key: string,
-  storage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof window !== 'undefined'
+  storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null = typeof window !== 'undefined'
     ? window.localStorage
     : null,
 ) {

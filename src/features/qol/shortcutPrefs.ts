@@ -82,7 +82,7 @@ export function sanitizeMap(raw: unknown): ShortcutMap {
 
 /** Lê o mapa persistido; storage ausente/corrompido = padrões. */
 export function loadShortcutMap(storage: Pick<Storage, 'getItem'> | null): ShortcutMap {
-  let raw: string | null = null;
+  let raw: string | null;
   try {
     raw = storage?.getItem(SHORTCUT_PREFS_KEY) ?? null;
   } catch {
@@ -96,14 +96,16 @@ export function loadShortcutMap(storage: Pick<Storage, 'getItem'> | null): Short
   }
 }
 
-/** Grava best-effort; dispara o evento de hot-reload quando conseguiu. */
+/** Grava best-effort; mapa vazio REMOVE a chave (storage enxuto). Dispara o evento de hot-reload quando conseguiu. */
 export function saveShortcutMap(
-  storage: Pick<Storage, 'setItem'> | null,
+  storage: Pick<Storage, 'setItem' | 'removeItem'> | null,
   map: ShortcutMap,
   target: Pick<typeof window, 'dispatchEvent'> | null = typeof window !== 'undefined' ? window : null,
 ): boolean {
   try {
-    storage?.setItem(SHORTCUT_PREFS_KEY, JSON.stringify(map));
+    const empty = Object.keys(map).length === 0;
+    if (empty) storage?.removeItem?.(SHORTCUT_PREFS_KEY);
+    else storage?.setItem(SHORTCUT_PREFS_KEY, JSON.stringify(map));
   } catch {
     return false;
   }
@@ -137,10 +139,14 @@ export function validateBinding(id: string, key: string, map: ShortcutMap): Bind
     return { ok: false, reason: 'invalid' };
   }
   if (RESERVED_KEYS.has(normalized)) return { ok: false, reason: 'reserved' };
-  const owner = Object.entries(map).find(
-    ([otherId, otherKey]) => otherId !== id && otherKey === normalized,
-  );
-  if (owner) return { ok: false, reason: 'conflict', ownerId: owner[0] };
+  // Conflito contra a tecla EFETIVA dos outros atalhos (mapa do usuário OU
+  // padrão) — bindar 't' quando o markTime ainda usa o padrão 't' colide.
+  for (const [otherId, defKey] of DEFAULTS) {
+    if (otherId === id) continue;
+    if ((map[otherId] ?? defKey) === normalized) {
+      return { ok: false, reason: 'conflict', ownerId: otherId };
+    }
+  }
   // Igual ao padrão → remove do mapa (mapa enxuto = menos superfície de drift).
   if (DEFAULTS.get(id) === normalized) {
     const next = { ...map };
