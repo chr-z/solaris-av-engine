@@ -1,3 +1,33 @@
+## redesign (t32) — turbo #29 absorvido + regates — 26/08/2026 ~08h50
+
+- **Auditoria**: spec SOLARIS_REDESIGN.md intacta (mtime 24/08, md5 870180dc);
+  R1-R4 + wows seguem DONE. Único delta: origin/main avançou 2 commits
+  (c00b64c + 2379323 = turbo-web #29, guardrail noturno docs-only; higiene:
+  lh_report.mjs morto removido da própria lane turbo). Worktree limpo ao abrir
+  o tick; lane == origin/redesign-premium.
+- **Fusão**: merge 6e18910 absorveu origin/main. Conflitos triviais: relatórios
+  regeneráveis (axe/lh-r1/lh-r2 -> --ours e REGENERADOS neste tick); log
+  compartilhado auto-mesclado (bloco do turbo #29 após o t31). Código de app
+  intocado (diff do merge = scripts do turbo + log).
+- **GATES pós-merge** (build fresca da lane): tsc --noEmit limpo; vitest
+  **403/403** (38 arquivos); e2e fluxo real **21/21**; build verde byte-estável
+  — entry **index-CHKfTLey.js** 38,09KB gz + CSS index-C1l8F6-j **10,12KB gz**
+  (alvo <30KB ok); firebase lazy 97,38KB fora do caminho crítico. Zero re-hash
+  vs t25/t28/t29/t30/t31.
+- **Browser gates** (scripts/run_gates_t30.sh: preview efêmero porta alta
+  aleatória + prova de hash antes de cada gate): console probe **0 eventos**;
+  LH x2 **P99/A100/BP100** (FCP 1,5s / LCP 1,8s / CLS 0,001 / TBT 0ms);
+  leitor de scores scripts/read_lh_t32.cjs adicionado.
+- **axe-core regenerado NA ÁRVORE MESCLADA** (scripts/axe-scan.mjs):
+  login n/a (build demo sobe direto no app por design pós-t24) / main app **0**
+  / criticalOrSerious **0**.
+- Shots de aceite regenerados ->
+  C:/Yui/data/saas_factory/redesign_shots/r32_merge_{fila,analysis,qc_dialog}.png
+  via scripts/redesign_shot_t25.cjs (hash conferido; PIL dark 98,0/96,1/96,5%,
+  stdev 19,3-29,7 — perfil visual idêntico aos ticks r29..r31).
+- src-tauri/audio-acoustics/pitch intocados. Fila R1-R4 segue DONE aguardando
+  diretiva do dono. Sem Telegram.
+
 ## redesign (t31) — turbo #28 absorvido + regates — 26/08/2026 ~07h45
 
 - **Auditoria**: spec SOLARIS_REDESIGN.md intacta; R1-R4 + wows seguem DONE.
