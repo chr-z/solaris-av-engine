@@ -613,3 +613,23 @@ src-tauri intocado. Sem Telegram.
 - Higiene: nenhum orfao novo detectado neste tick.
 
 src-tauri intocado. Sem Telegram.
+
+## Tick #22 26/08 ~02h20 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
+- Upstream auditado SEM DELTA: origin/main == HEAD (6933b0b, tick #21);
+  nenhuma lane mergeou na main desde o ultimo tick (desktop/redesign/
+  features/audio seguem adiantadas em branches proprias, sem colisao).
+- vitest: 31 arquivos / 342/342 (~30s) VERDE; tsc --noEmit limpo;
+- e2e fluxo real (YouTube -> scoring -> fila -> export QC): 21/21 asserts;
+- build + chunk_report.mjs (gzip level 9): TOTAL 940,3KB raw / 233,2KB gz;
+  INITIAL (entry index-C1mX7UAW.js 33,0KB gz + CSS 7,6KB gz) = 40,35KB gz -
+  byte-ESTAVEL vs ticks #12..#21; maiores chunks inalterados:
+  firebase 94,8 / react-vendor 44,7 / index 33,0 / AnalysisWorkspace 19,5 /
+  AdminGate 18,5 KB gz;
+- axe-core scan: 0 violacoes (main app demo/offline), identidade do preview
+  provada (entry hash == dist), axe-report.json regenerado;
+- console probe: 0 eventos de erro/aviso no boot;
+- Lighthouse x2 (--headless=new --disable-gpu): R1 E R2 100/100/100
+  perf/a11y/bp (FCP 1,4s / LCP 1,5s / CLS 0,000 / TBT 0ms);
+- Higiene: nenhum orfao de preview detectado (varredura = NONE).
+
+src-tauri intocado. Sem Telegram.
