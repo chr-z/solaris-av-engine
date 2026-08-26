@@ -20,6 +20,7 @@ import {
     STANDALONE_CLOUD_SOURCE_MESSAGE,
     describeCloudSource,
 } from './config/runtimeMode';
+import { isLocalOnlySession } from './config/cloudGuards';
 
 // Code splitting (S3.1): the heavy analysis workspace (player + monitors + form)
 // is only fetched when an OS row is opened for the first time.
@@ -606,8 +607,11 @@ const App: React.FC = () => {
   }, [authStatus, t]);
 
   // Presence System
+  // P3 (tick 26/08 ~12h): o guard antigo só cobria o guest — o revisor local
+  // standalone (`local-reviewer`) passava direto e executava goOnline() em
+  // todo boot. isLocalOnlySession cobre TODAS as sessões não-Google.
   useEffect(() => {
-    if (authStatus !== 'signedIn' || !userProfile || userProfile.id === 'guest-reviewer-id') {
+    if (isStandalone() || !userProfile || isLocalOnlySession(userProfile)) {
         if (database) database.goOffline();
         return;
     }
