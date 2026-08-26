@@ -1179,3 +1179,27 @@ src-tauri intocado. Sem Telegram.
   chrome no exit).
 - src-tauri/pitch intocados; suite commitada continua valendo (commits da lane
   sao docs-only desde 6933b0b). Sem Telegram.
+
+## Tick #27 26/08 ~04h25 - redesign-premium worker (cron MODO TURBO SOLARIS): absorcao do main (turbo #24, docs-only) + gates frescos na arvore mesclada
+
+- MERGE origin/main -> redesign-premium (3b686bb): conteudo-only (commit docs
+  ce02b29 do turbo #24 + relatorios LH/axe regenerados la). Conflitos triviais
+  em scripts/lh-report-r1.json, lh-report-r2.json, axe-report.json (mantidos os
+  nossos; regenerados neste tick) e solaris_desktop_log.md (append, ambas as
+  entradas preservadas). Nenhum codigo de app mudou; zero mudanca visual/funcional.
+- Gates frescos NA ARVORE MESCLADA: tsc --noEmit limpo; vitest 403/403 (~53s);
+  e2e fluxo real (YouTube -> scoring -> fila -> export QC) 21/21; axe-core
+  0/0 violacoes (login + main app demo/offline, entry index-CHKfTLey.js ==
+  dist); console probe 0 eventos; Lighthouse x2 (--headless=new --disable-gpu):
+  R1 e R2 ambos P99/A100/BP100 (FCP 1,5s / LCP 1,8s / CLS 0,001 / TBT 0ms).
+- Bundle (chunk_report.mjs gzip level 9): INITIAL 46,89KB gz byte-estavel vs
+  t25 (entry index-CHKfTLey.js 38,09 + CSS index-C1l8F6-j 9,79 gz); CSS
+  10,12KB gz no build (alvo <30KB mantido ~3x folga); TOTAL 1128,34KB raw /
+  401KB gz; firebase 94,82 gz lazy fora do caminho critico. Zero re-hash de
+  assets vs t25 (mesma base de codigo).
+- Screenshots de aceite regenerados da arvore mesclada ->
+  C:/Yui/data/saas_factory/redesign_shots/r27_merge_{fila,analysis,qc_dialog}.png
+  via scripts/redesign_shot_t25.cjs (hash do entry conferido antes de cada captura).
+- Higiene: chrome/preview de probe mortos pelos proprios runners (exit hooks);
+  src-tauri/audio-acoustics/pitch intocados. Fila R1-R4 segue DONE aguardando
+  diretiva do dono; proximos ticks so com main avancando de novo ou ordem nova.
