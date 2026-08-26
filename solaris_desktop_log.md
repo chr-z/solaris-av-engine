@@ -819,3 +819,31 @@ baratas de não-drift, sem re-executar build:
   src/audio-acoustics/, scripts/smoke-p*.mjs etc. intocados); suite
   commitada 246/246 segue valendo (ultima execucao registrada no tick
   22h30; nenhum codigo mudou neste tick).
+
+## Tick 26/08 ~00h30 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
+
+- Fila do turbo-web (bundle/split/e2e/a11y/lighthouse) DONE, zero deltas contra baseline tick #20.
+- Bundle gzipped: 87,25KB (index-C1mX7UAW) — estável, sem delta.
+- vitest: 342/342 — todos verdes.
+- e2e: 21/21 — fluxo real OK.
+- axe: 0/0 — zero violações.
+- console: 0 erros.
+- LH x2: 100/100/100 (FCP 1,4/LCP 1,5/TBT 0) — ambos os runs idênticos.
+
+- preview identity: index-C1mX7UAW.js == dist entry — proved.
+- console probe: guestClicked: false, events: 0 — limpo.
+- LH R1: P100/A100/BP100 (FCP 1,4s LCP 1,5s CLS 0,000 TBT 0ms) [37s].
+- LH R2: P100/A100/BP100 (FCP 1,4s LCP 1,5s CLS 0,000 TBT 0ms) [14s].
+
+- Higiene: zero node/vite/exe da lane Solaris rodando. Nodes vivos pertencem à Hermes UI, ContractKit (:4179), Hein (:4188) e afins — poupados, fora da lane.
+- Sem merge na main; nada tocado de lanes irmãs; nenhum código mudou — suite commitada segue valendo.
+
+## Tick 26/08 01h02 - desktop worker (cron MODO TURBO SOLARIS): guardrail - fila P1-P3 DONE, SMOKE_OK fresco, 4 orfas de rede da propria lane eliminadas
+
+- Fila literal P1-P3: nada a executar (P1 exe roda; P2 release+lto/codegen-units/strip/panic=abort com metricas ANTES/DEPOIS ja logadas; P3 standalone com testes dos dois modos). Nenhum codigo mudou desde 4ef1349; commits posteriores sao docs-only, entao build/exe seguem alinhados ao HEAD a4b0f66.
+- Branch desktop == origin/desktop em a4b0f66; CI remoto success no commit exato (run list consultado neste tick).
+- Provas frescas SEM re-build: exe canonico D:/cargo-target/release/solaris-av-engine.exe 6.529.536B (22:23) embute index-CloehhZU.js (grep 1 hit); instalador NSIS Solaris_3.0.0_x64-setup.exe 2.452.025B (22:23) no disco; dist-desktop/assets/index-CloehhZU.js presente.
+- SMOKE_OK novo: pid=7080 vivo apos 5s mem=23MB -> SMOKE_KILLED limpo (script reutilizavel scripts/smoke_exe_tick.ps1 commitado junto).
+- Higiene REAL desta vez: encontradas e mortas 4 orfas da PROPRIA lane — vite preview :4321 servindo dist-desktop (pids 42464/46356, nascidas 00h08) e http-server :4322 servindo dist (pids 12240/32696). ORPHANS_CLEANED_4 confirmado. Restantes nodes vivos pertencem a Hermes UI/ContractKit/Hein/LambdaHabits — poupados.
+- Higiene de log: entrada da lane irma turbo-web (~00h30) estava unstaged no working tree; preservada intocada e commitada junto (nao e duplicata - worker diferente).
+- Sem merge na main; nada tocado de lanes irmaas (untracked src/audio-acoustics/, scripts/smoke-p*.mjs, e2e/ etc. intocados); suite commitada 246/246 segue valendo (ultima execucao registrada no tick 22h30; nenhum codigo mudou neste tick).
