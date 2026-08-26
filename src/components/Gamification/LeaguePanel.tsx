@@ -9,7 +9,7 @@
 // O F5 (dashboard) trocará a fonte por users_roles/xp_events do backend —
 // os núcleos puros permanecem idênticos.
 
-import React, { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useI18n } from '../../i18n/I18nContext';
 // Troca D #3: rótulo i18n de chaves de período ('2026-03' → 'março de 2026').
 import { formatPeriodLabel } from '../../features/i18n/format';
@@ -33,7 +33,18 @@ import {
   historyKeys,
   analystsFromEvents,
 } from '../../features/gamification/podiumFreeze';
-import { SAO_PAULO_CLOCK } from '../../features/gamification/periods';
+import {
+  SAO_PAULO_CLOCK,
+  currentPeriodKey,
+  closedPeriodRange,
+} from '../../features/gamification/periods';
+import {
+  loadTeamGoal,
+  saveTeamGoal,
+  teamProgress,
+  goalStatus,
+  type TeamGoalConfig,
+} from '../../features/gamification/teamGoal';
 
 // Relógio FORA do render (purity): o valor muda sem re-render do React.
 let nowMsCached = 0;
@@ -150,6 +161,44 @@ const LeaguePanel: React.FC<LeaguePanelProps> = ({ userProfile }) => {
   );
   // Aba ativa do pódio ao vivo (default: Semana — o coração da meritocracia).
   const [podiumPeriod, setPodiumPeriod] = useState<PodiumPeriod>('week');
+
+  // ── C4 Modo time: meta mensal do grupo vs XP somado ─────────────────
+  const [goal, setGoal] = useState<TeamGoalConfig | null>(() => loadTeamGoal(storage));
+  const [goalInput, setGoalInput] = useState('');
+  const [goalError, setGoalError] = useState(false);
+  const storageRef = useRef(storage);
+  storageRef.current = storage;
+  // Hot-reload: gravação aqui mesma, outra aba ('storage') ou outro lugar da
+  // aba (evento 'solaris:team-goal-changed' emitido pelo saveTeamGoal).
+  useEffect(() => {
+    const reload = () => setGoal(loadTeamGoal(storageRef.current));
+    window.addEventListener('solaris:team-goal-changed', reload);
+    window.addEventListener('storage', reload);
+    return () => {
+      window.removeEventListener('solaris:team-goal-changed', reload);
+      window.removeEventListener('storage', reload);
+    };
+  }, []);
+  // Roster do time = mesmos analistas do pódio ao vivo + o usuário atual.
+  const teamMemberIds = useMemo(
+    () => [
+      ...new Set([
+        ...analystsFromEvents(events, userProfile).map((a) => a.userId),
+      ]),
+    ],
+    [events, userProfile],
+  );
+  const monthRange = useMemo(
+    () => closedPeriodRange('month', currentPeriodKey('month', nowMsCached, SAO_PAULO_CLOCK), SAO_PAULO_CLOCK),
+    [], // mês corrente no boot — virada de mês re-monta o painel inteiro.
+  );
+  const teamMonth = useMemo(
+    () => teamProgress(events, teamMemberIds, monthRange.fromMs, monthRange.toMs),
+    [events, teamMemberIds, monthRange],
+  );
+  const goalStatusNow = goal
+    ? { ...goalStatus(teamMonth.total, goal.monthlyXp), monthlyXp: goal.monthlyXp }
+    : null;
   const liveTop3 =
     podiumPeriod === 'week' ? top3
       : podiumPeriod === 'month' ? podiumMonth.slice(0, 3)
@@ -308,6 +357,106 @@ const LeaguePanel: React.FC<LeaguePanelProps> = ({ userProfile }) => {
               );
             })}
           </div>
+        )}
+      </section>
+
+      {/* ── C4 Modo time: meta mensal do grupo ────────────────────── */}
+      <section className="max-w-5xl mx-auto px-4 mt-8" aria-labelledby="league-team-title">
+        <h2 id="league-team-title" className="text-base font-bold text-gray-100">
+          {t('league.team.title')}
+        </h2>
+        {goalStatusNow ? (
+          <div data-testid="league-team-progress" className="mt-3 rounded-lg border border-solar-dark-border p-4">
+            <div className="flex items-baseline justify-between gap-2 text-sm">
+              <p className={goalStatusNow.met ? 'font-semibold text-emerald-300' : 'text-gray-100'}>
+                {goalStatusNow.met
+                  ? t('league.team.met')
+                  : goalStatusNow.pct > 0
+                    ? t('league.team.remaining', { remaining: formatNumber(Math.ceil(goalStatusNow.remaining), lang) })
+                    : ''}
+              </p>
+              <p className="tnum text-gray-300">
+                {t('league.team.progress', {
+                  pct: Math.floor(goalStatusNow.pct),
+                  goal: formatNumber(goalStatusNow.monthlyXp, lang),
+                })}
+              </p>
+            </div>
+            <div
+              role="progressbar"
+              aria-valuenow={Math.min(100, Math.floor(goalStatusNow.pct))}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={t('league.team.title')}
+              className="mt-2 h-2 w-full overflow-hidden rounded-full bg-solar-dark-border"
+            >
+              <div
+                className={`h-full rounded-full transition-all duration-700 motion-reduce:transition-none ${goalStatusNow.met ? 'bg-emerald-400' : 'bg-solar-accent'}`}
+                style={{ width: `${Math.min(100, Math.max(0, goalStatusNow.pct))}%` }}
+              />
+            </div>
+          </div>
+        ) : (
+          <p data-testid="league-team-nogoal" className="mt-3 text-sm text-gray-400">
+            {t('league.team.noGoal')}
+          </p>
+        )}
+        {isAdmin && (
+          <form
+            data-testid="league-team-form"
+            className="mt-3 flex flex-wrap items-center gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const parsed = Number(goalInput);
+              if (!Number.isFinite(parsed) || parsed < 1 || !Number.isInteger(parsed)) {
+                setGoalError(true);
+                return;
+              }
+              if (saveTeamGoal(storage, parsed)) {
+                setGoal(loadTeamGoal(storage));
+                setGoalInput('');
+                setGoalError(false);
+              }
+            }}
+          >
+            <label htmlFor="team-goal-input" className="text-xs text-gray-400">
+              {t('league.team.setLabel')}
+            </label>
+            <input
+              id="team-goal-input"
+              type="number"
+              min={1}
+              step={1}
+              value={goalInput}
+              onChange={(e) => {
+                setGoalInput(e.target.value);
+                setGoalError(false);
+              }}
+              className="w-32 rounded-md border border-solar-dark-border bg-solar-dark-surface px-2 py-1 text-sm text-gray-100"
+            />
+            <button
+              type="submit"
+              className="px-3 py-1 text-xs font-semibold rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover"
+            >
+              {t('league.team.save')}
+            </button>
+            {goal != null && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (saveTeamGoal(storage, null)) setGoal(null);
+                }}
+                className="px-3 py-1 text-xs rounded-md border border-red-500/50 text-red-300 hover:bg-red-500/10 transition-colors"
+              >
+                {t('league.team.remove')}
+              </button>
+            )}
+          </form>
+        )}
+        {isAdmin && goalError && (
+          <p role="alert" className="mt-2 text-xs text-red-300">
+            {t('league.team.invalid')}
+          </p>
         )}
       </section>
 

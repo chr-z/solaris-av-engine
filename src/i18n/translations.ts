@@ -380,6 +380,15 @@ export const en = {
   'league.disable': 'Disable gamification',
   'league.toastUnlocked': 'Achievement unlocked!',
   'league.levelUp': 'Level up: {level}!',
+  'league.team.title': 'Team goal of the month',
+  'league.team.setLabel': 'Monthly goal (XP)',
+  'league.team.save': 'Set goal',
+  'league.team.remove': 'Remove goal',
+  'league.team.invalid': 'Enter a whole number of 1 or more.',
+  'league.team.noGoal': 'No monthly goal set yet.',
+  'league.team.progress': '{pct}% of {goal} XP',
+  'league.team.remaining': '{remaining} XP to go',
+  'league.team.met': 'Goal met — great teamwork!',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -760,6 +769,15 @@ export const pt: Record<TranslationKey, string> = {
   'league.disable': 'Desligar gamificação',
   'league.toastUnlocked': 'Conquista desbloqueada!',
   'league.levelUp': 'Subiu de nível: {level}!',
+  'league.team.title': 'Meta do mês do time',
+  'league.team.setLabel': 'Meta mensal (XP)',
+  'league.team.save': 'Definir meta',
+  'league.team.remove': 'Remover meta',
+  'league.team.invalid': 'Digite um número inteiro maior ou igual a 1.',
+  'league.team.noGoal': 'Nenhuma meta mensal definida ainda.',
+  'league.team.progress': '{pct}% de {goal} XP',
+  'league.team.remaining': 'Faltam {remaining} XP',
+  'league.team.met': 'Meta batida — ótimo trabalho em equipe!',
 };
 
 export const dictionaries = { en, pt } as const;
