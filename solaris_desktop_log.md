@@ -906,3 +906,11 @@ de FP encontrado no caminho.
 - NOVIDADE para revisao do dono: PR #2 aberto (~02h35 UTC-3) por audio/acoustics -> main ('feat(acoustics): motor de analise acustica v3 - P1-P4 completos + merge turbo-web', head 7bf0e2e, ahead_by 28). Regra da lane: sem merge na main sem aprovacao do dono - aguardando decisao dele.
 - Varredura anti-stop-loop: features/analista-feliz ahead 47 e redesign-premium ahead 50 (trabalho legitimo de lanes irmas, pushed, intocados); turbo/web-opt, v2-upgrade, v2-upgrade-recovery ahead_by 0 (relics); develop ahead 1 segue sendo o README do proprio Christian. Zero PRs parados alem do #2 aguardando dono.
 - Nenhum codigo tocado nesta lane neste tick; sem merge na main.
+
+## Tick 26/08 ~04h30 - desktop worker (cron MODO TURBO SOLARIS): zero drift - smoke de boot renovado, fila P1-P3 segue DONE
+
+- Tick barato SEM codigo novo: branch desktop == origin/desktop em 7c643a4 (fetch com workaround GCM); CI remoto success no commit exato (ci + Vercel Preview Comments).
+- Provas renovadas AGORA: exe canonico D:/cargo-target/release/solaris-av-engine.exe 6.529.536B mtime 25/08 22:23, grep index-CloehhZU.js = 1 hit (embute o dist-desktop do HEAD); instalador NSIS Solaris_3.0.0_x64-setup.exe 2.452.025B (22:23). Smoke boot_time_desktop.ps1 -> BOOT_WINDOW_OK ms=220 WS_MB=19.6 (janela apareceu e processo morto limpo).
+- Diff 4ef1349..HEAD em src/, src-tauri/, package.json, vite.config.ts, index.html = VAZIO (so docs/log/tooling) -> metricas P2 seguem validas (binario 6,5MB, chunk inicial standalone ~104KB/31KB gz, serie boot ~185ms, hoje 220ms dentro da serie). Metrica de boot pedida no P2 ja instrumentada (scripts/boot_time_desktop.ps1) e registrada.
+- Anti-stop-loop: unico PR aberto = #2 (audio/acoustics -> main, decisao do dono); features/analista-feliz e redesign-premium sao trabalho legitimo de lanes irmas; relics ahead_by 0; develop ahead-1 = README do proprio Christian. Zero trabalho preso desta lane.
+- Nenhum codigo tocado nesta lane neste tick; sem merge na main.
