@@ -573,6 +573,26 @@ const App: React.FC = () => {
     if (lastMediaSource) handleSourceSelected(lastMediaSource.source, lastMediaSource.info);
   }, [lastMediaSource, handleSourceSelected]);
 
+    // QoL A1 (copiar marcações): espelha a linha gêmea aplicada no pool vivo —
+    // o mesmo caminho do handleSaveSuccess, só que ANTES do save oficial.
+    const handleCommitCopiedRow = useCallback((nextRow: RowData) => {
+      setAllRows(prevRows => {
+        if (selectedOsIndex === null) return prevRows;
+        const arrayIndexToUpdate = prevRows.findIndex(item => item.rowIndex === selectedOsIndex);
+        if (arrayIndexToUpdate === -1) return prevRows;
+        const newRows = [...prevRows];
+        const originalItem = newRows[arrayIndexToUpdate];
+        const updatedPartialRow = [...originalItem.row];
+        nextRow.forEach((cell, index) => {
+          if (cell !== undefined && index < updatedPartialRow.length) {
+            updatedPartialRow[index] = cell;
+          }
+        });
+        newRows[arrayIndexToUpdate] = { ...originalItem, row: updatedPartialRow };
+        return newRows;
+      });
+    }, [selectedOsIndex]);
+
   const handleSaveSuccess = (savedRow: RowData) => {
     setAllRows(prevRows => {
         const newRows = [...prevRows];
@@ -1056,6 +1076,8 @@ const App: React.FC = () => {
                       onToggleFocusMode={toggleFocusMode}
                       onToggleKeepMonitors={toggleKeepMonitors}
                       focusKeepMonitors={focusKeepMonitors}
+                      allRowsForTwins={allRows}
+                      onCommitCopiedRow={handleCommitCopiedRow}
                         onClose={handleUnloadMedia}
                       />
                     </React.Suspense>

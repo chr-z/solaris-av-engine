@@ -17,7 +17,10 @@ import OverlayControls from '../Monitors/OverlayControls';
 import Dock from '../Layout/Dock';
 import UserAvatar from '../Auth/UserAvatar';
 import Popover from '../Core/Popover';
+import CopyMarkingsPopover from './CopyMarkingsPopover';
+import type { MarkingsCopyPlan } from '../../features/qol/markingsCopy';
 import ShortcutHelpModal from '../Core/ShortcutHelpModal';
+import { useShortcutPrefs } from '../../hooks/useShortcutPrefs';
 import { SaveIcon, ClipboardCheckIcon, YouTubeIcon, GoogleDriveIcon, XIcon, GridIcon, ClockIcon, PencilIcon, InfoIcon, ColumnsIcon, RowsIcon, RefreshIcon, FocusIcon } from '../Core/icons';
 
 // Imports locais (mesma pasta Analysis)
@@ -321,6 +324,12 @@ interface AnalysisWorkspaceProps {
   onToggleKeepMonitors?: () => void;
   /** F2: preferência do analista de manter monitores no modo foco. */
   focusKeepMonitors?: boolean;
+  /**
+   * QoL A1 (copiar marcações): pool de linhas carregadas p/ achar aulas
+   * gêmeas + callback p/ commit da linha nova no App (persistência viva).
+   */
+  allRowsForTwins?: readonly { rowIndex: number; row: RowData }[];
+  onCommitCopiedRow?: (nextRow: RowData) => void;
   onClose: () => void;
 }
 
@@ -397,6 +406,8 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   onToggleFocusMode,
   onToggleKeepMonitors,
   focusKeepMonitors = false,
+  allRowsForTwins,
+  onCommitCopiedRow,
   onClose,
 }) => {
   const { t, locale } = useI18n();
@@ -522,6 +533,9 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
     return () => { playerControlsRef.current = null; };
   }, []);
 
+  // QoL A1: catálogo EFETIVO de atalhos (remapeamento do analista, hot-reload).
+  const { effectiveDefs } = useShortcutPrefs();
+
   // Latest save handler lives in a ref so Ctrl+S always saves current data
   // (assigned right after handleSave below).
   const saveViaShortcutRef = useRef<() => void>(() => {});
@@ -531,6 +545,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
   useAnalystShortcuts({
     enabled: true,
     scopeEnabled: { player: !!videoSrc },
+    defs: effectiveDefs,
     togglePlay: useCallback(() => playerControlsRef.current?.togglePlay(), []),
     seekBy: useCallback((seconds: number) => playerControlsRef.current?.seekBy(seconds), []),
     seekToStart: useCallback(() => playerControlsRef.current?.seekToStart(), []),
@@ -655,6 +670,25 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
       return newData;
     });
   }, [headers, recordCellEdit, scheduleSave]);
+
+  // ── QoL A1: copiar marcações de aula gêmea ────────────────────────────
+  /** Aplica o plano da gêmea: undo snapshot + score recalculado + auto-save. */
+  const handleCopyApplied = useCallback((nextRow: RowData, summary: { sourceLabel: string; plan: MarkingsCopyPlan }) => {
+    setLocalRowData(prev => {
+      const base = prev ?? nextRow;
+      if (base !== nextRow) {
+        // Snapshot ANTES da cópia p/ Ctrl+Z reverter (mesmo kind do edit-cell,
+        // cujo applier restaura RowData inteira; label conta a história real).
+        getUndoLog().record('edit-cell', t('qol.copyMarkings.undo', { os: summary.sourceLabel }), { prevData: base });
+      }
+      // Marcações mudaram → scores precisam recalcular (mesma via de 1 clique).
+      const { cellUpdates } = recalculateScoresWithEngine(nextRow, headers);
+      const withScores = applyScoreUpdatesLocal(nextRow, cellUpdates);
+      scheduleSave(withScores, videoRef.current?.currentTime ?? 0);
+      return withScores;
+    });
+    onCommitCopiedRow?.(nextRow);
+  }, [headers, t, scheduleSave, onCommitCopiedRow]);
 
   const handleSave = async () => {
     if (!localRowData || selectedOsIndex === null) return;
@@ -1105,6 +1139,16 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = ({
                     >
                         <GoogleDriveIcon className="w-5 h-5" />
                     </button>
+                  )}
+                  {/* QoL A1: copiar marcações de aula gêmea (só com pool carregado). */}
+                  {allRowsForTwins && allRowsForTwins.length > 0 && (
+                    <CopyMarkingsPopover
+                      headers={headers}
+                      targetRow={localRowData ?? selectedRow ?? []}
+                      rows={allRowsForTwins}
+                      currentRowIndex={selectedOsIndex}
+                      onApply={handleCopyApplied}
+                    />
                   )}
                   {renderSaveButton()}
                   {renderSyncButton()}
