@@ -641,3 +641,118 @@ Guardrail barato SEM código novo: fila P1-P4 segue DONE e pushed.
 - PR #2 OPEN, head exatamente 9f9f57d; check-runs no commit: ci success + Vercel Preview Comments success. mergeable UNKNOWN (GitHub ainda calculando — não é bloqueio).
 - main avançou +4 desde o merge-base d79079b (turbo-web 7667657), mas merge-tree aponta ZERO "changed in both" → merge limpo quando o dono aprovar.
 - src-tauri/pitch/desktop intocados; sem Telegram.
+
+## Tick #23 26/08 ~03h05 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail + resgate de residuos do worker morto do tick #22
+
+- FORENSE DO WORKER MORTO (#22 ~02h20): ele NAO morreu antes do push - d79079b ==
+  origin/main e CI remoto success no commit exato (check-runs consultado). O que
+  sobrou na arvore eram so relatorios LH regenerados pos-commit + 2 descartaveis
+  nao-commitados (scripts/tick22_build.mjs, scripts/append_log_t22.py) removidos
+  neste tick. Zero trabalho preso na lane.
+- Bateria fresca propria (nao herdada): tsc --noEmit limpo; vitest 342/342
+  (~33s); e2e fluxo real (YouTube -> scoring -> fila -> export QC) 21/21;
+  axe-core 0 violacoes (login + main app demo/offline, identidade provada
+  entry index-C1mX7UAW.js == dist); console probe 0 eventos;
+  Lighthouse x2 (--headless=new --disable-gpu): R1 P99/A100/BP100 (FCP 1,4s /
+  LCP 1,6s / TBT 10ms - ruido de run fria) e R2 P100/A100/BP100 (FCP 1,4s /
+  LCP 1,5s / CLS 0,000 / TBT 0ms) = baseline mantido.
+- Bundle (chunk_report.mjs gzip level 9): INITIAL 40,35KB gz byte-estavel vs
+  ticks #12..#22 (entry index-C1mX7UAW.js 32,98KB gz + CSS 7,37KB gz); TOTAL
+  940,32KB raw / 233,16KB gz; maiores chunks: firebase 94,82 (lazy, fora do
+  caminho critico) / react-vendor 44,65 / AnalysisWorkspace 19,49 / AdminGate
+  18,49 KB gz. Alvo initial <500KB gz mantido com folga (~12x).
+- Higiene (ps1 dedicado deste tick): zero orfaos da lane - varredura cmdline
+  node/vite/chrome so achou ContractKit (:4179) e Hein/Zimny (:4188,
+  intocavel sem ordem explicita), atribuidos por PATH+porta e POUPADOS;
+  chrome de probe/LH zerado pelo proprio runner no exit.
+- Sem merge de lanes irmaas na main; src-tauri/pitch intocados; suite commitada
+  segue valendo (nenhum codigo mudou desde 6933b0b - commits da lane sao docs-only).
+
+## Tick #24 26/08 ~04h00 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
+
+- Estado: HEAD 15ae5f5 == origin/main provado por rev-parse pos-fetch; develop segue
+  relic fev/2026; nenhum codigo novo de lanes irma para absorver. Zero deltas.
+- Bateria fresca propria: tsc --noEmit limpo; vitest 342/342 (~36s); e2e fluxo real
+  (YouTube -> scoring -> fila -> export QC) 21/21; axe-core 0 violacoes (fase login +
+  main app demo/offline, identidade provada entry index-C1mX7UAW.js == dist);
+  console probe 0 eventos; Lighthouse x2 (--headless=new --disable-gpu):
+  R1 e R2 ambos P100/A100/BP100 (FCP 1,4s / LCP 1,5s / CLS 0,000 / TBT 0ms).
+- Bundle (chunk_report.mjs, gzip level 9): INITIAL 40,35KB gz byte-estavel vs
+  ticks #12..#23 (entry index-C1mX7UAW.js 32,98KB gz + CSS 7,37KB gz); TOTAL
+  940,32KB raw / 233,16KB gz; maiores chunks: firebase 94,82 (lazy) /
+  react-vendor 44,65 / AnalysisWorkspace 19,49 / AdminGate 18,49 KB gz.
+  Alvo initial <500KB gz mantido (~12x folga).
+- Higiene (hygiene_tick23.ps1): zero orfaos da lane - so ContractKit (:4179,
+  work_ck_repo) e Hein/Zimny (:4188, intocavel sem ordem explicita), atribuidos
+  por PATH+porta e POUPADOS; CHROME_PROBE_ORPHANS NONE (runner mata o proprio
+  chrome no exit).
+- src-tauri/pitch intocados; suite commitada continua valendo (commits da lane
+  sao docs-only desde 6933b0b). Sem Telegram.
+
+## Tick #25 26/08 ~04h30 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
+
+- Estado: HEAD ce02b29 == origin/main provado por rev-parse pos-fetch; turbo/web-opt
+  confirmada relíquia (0 ahead / 19 behind da main); develop relic fev/2026.
+  Nenhum código novo de lanes irmã para absorver. Zero deltas.
+- Bateria fresca própria: tsc --noEmit limpo; vitest 342/342 (~44s); e2e fluxo real
+  (YouTube -> scoring -> fila -> export QC) 21/21; axe-core 0 violações
+  ({loginRules:0, mainAppRules:0, criticalOrSeriousMainApp:0}, entry index-C1mX7UAW.js
+  == dist provado); console probe 0 eventos; Lighthouse x2 (--headless=new --disable-gpu):
+  R1 e R2 ambos P100/A100/BP100 (FCP 1,4s / LCP 1,5s / CLS 0,000 / TBT 0ms).
+- Bundle (chunk_report.mjs, gzip level 9): INITIAL 40,35KB gz byte-estável vs
+  ticks #12..#24 (entry index-C1mX7UAW.js 32,98KB gz + CSS 7,37KB gz); TOTAL
+  940,32KB raw / 233,16KB gz; maiores chunks: firebase 94,82 (lazy, fora do caminho
+  crítico) / react-vendor 44,65 / AnalysisWorkspace 19,49 / AdminGate 18,49 KB gz.
+  Alvo initial <500KB gz mantido com folga (~12x).
+- Higiene (kill_turbo_orphans.ps1): NONE - zero órfãos de preview da lane; runners
+  matam o próprio chrome no exit.
+- src-tauri/pitch intocados (do outro worker); suite commitada segue valendo
+  (nenhum código mudou desde 6933b0b - commits da lane são docs-only). Sem Telegram.
+## Tick #26 26/08 ~05h05 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
+
+- Estado: HEAD 81daa81 == origin/main provado por rev-parse pos-fetch; turbo/web-opt
+  segue reliquia; develop relic fev/2026. Nenhum codigo novo de lanes irma para
+  absorver (audio/acoustics aguarda decisao do dono em PR #2). Zero deltas.
+- Bateria fresca propria (nao herdada): tsc --noEmit limpo; vitest 342/342 (~18s);
+  e2e fluxo real (YouTube -> scoring -> fila -> export QC) 21/21; axe-core 0 violacoes
+  (main app demo/offline - build sem login screen, identidade provada entry
+  index-C1mX7UAW.js == dist); console probe 0 eventos; Lighthouse x2
+  (--headless=new --disable-gpu): R1 e R2 ambos P100/A100/BP100 (FCP 1,4s /
+  LCP 1,5s / CLS 0,000 / TBT 0ms) = baseline mantido.
+- Bundle (chunk_report.mjs, gzip level 9): INITIAL 40,35KB gz byte-estavel vs
+  ticks #12..#25 (entry index-C1mX7UAW.js 32,98KB gz + CSS 7,37KB gz); TOTAL
+  940,32KB raw / 233,16KB gz; maiores chunks: firebase 94,82 (lazy, fora do caminho
+  critico) / react-vendor 44,65 / AnalysisWorkspace 19,49 / AdminGate 18,49 KB gz.
+  Alvo initial <500KB gz mantido com folga (~12x).
+- Higiene (hygiene_tick23.ps1): zero orfaos da lane - so ContractKit (:4179,
+  work_ck_repo) e Hein/Zimny (:4188, intocavel sem ordem explicita), atribuidos
+  por PATH+porta e POUPADOS; vitest visto no solaris-features e a lane irma desktop
+  trabalhando (idade 0min, nao mexer); CHROME_PROBE_ORPHANS NONE (runner mata o
+  proprio chrome no exit).
+- src-tauri/pitch intocados (do outro worker); suite commitada segue valendo
+  (nenhum codigo mudou desde 6933b0b - commits da lane sao docs-only). Sem Telegram.
+
+## Tick #27 26/08 ~06h20 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
+
+- Estado: HEAD 7667657 == origin/main provado por rev-parse pos-fetch --prune;
+  turbo/web-opt segue reliquia (0 ahead); develop relic fev/2026 (README bd3a560);
+  NOVA branch remota auditada este tick: v2-upgrade-recovery CONTIDA em main
+  (0 ahead) - nada a sincronizar de nenhuma lane. Zero deltas.
+- Bateria fresca propria (nao herdada): tsc --noEmit limpo; vitest 31 arquivos /
+  342/342 (~25s); e2e fluxo real (YouTube -> scoring -> fila -> export QC) 21/21;
+  axe-core 0 violacoes ({loginRules:0, mainAppRules:0, criticalOrSeriousMainApp:0},
+  identidade provada entry index-C1mX7UAW.js == dist); console probe 0 eventos;
+  Lighthouse x2 (--headless=new --disable-gpu): R1 e R2 ambos P100/A100/BP100
+  (FCP 1,4s / LCP 1,5s / CLS 0,000 / TBT 0ms) = baseline mantido.
+- Bundle (chunk_report.mjs, gzip level 9): INITIAL 40,35KB gz byte-estavel vs
+  ticks #12..#26 (entry index-C1mX7UAW.js 32,98KB gz + CSS 7,37KB gz); TOTAL
+  940,32KB raw / 233,16KB gz; maiores chunks: firebase 94,82 (lazy, fora do caminho
+  critico) / react-vendor 44,65 / AnalysisWorkspace 19,49 / AdminGate 18,49 KB gz.
+  Alvo initial <500KB gz mantido com folga (~12x).
+- Deps: npm audit --omit=dev segue 10 moderates major-gated (0 high/critical),
+  sem advisory nova desde o tick #12.
+- Higiene: zero orfaos da lane - so ContractKit (:4179, work_ck_repo) e
+  Hein/Zimny (:4188, intocavel sem ordem explicita), atribuidos por PATH+porta e
+  POUPADOS (varredura manual Win32_Process por cmdline 'vite').
+- src-tauri/pitch intocados (do outro worker); suite commitada segue valendo
+  (nenhum codigo mudou desde 6933b0b - commits da lane sao docs-only). Sem Telegram.
