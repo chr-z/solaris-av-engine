@@ -442,3 +442,38 @@ HIGIENE (achado novo, SEM acao fora da lane):
   igual ao dist local antes de qualquer medicao e foi morto no fim.
 
 src-tauri intocado. Sem Telegram.
+
+## turbo-web tick #17 — guardrail noturno — 25/08/2026 ~21h25
+
+Estado encontrado: worktree @ main == origin/main (17039f1), zero delta
+upstream desde o tick #16 (v2-upgrade segue contida em main; turbo/web-opt
+ahead 0 do merge-base). Fila original (1-6) segue DONE desde o tick #5.
+
+GATES (arvore limpa, build fresca):
+- build (vite 6.4.3): initial = index 33,86 + react-vendor 45,79 +
+  css 7,60 = 87,25 KB gz — BYTE-ESTAVEL vs ticks #12..#16 (mesmo hash de
+  entry index-C1mX7UAW.js). Chunks lazy intactos (firebase 97,38 /
+  AdminGate 18,99 / AnalysisWorkspace 20,04 / sheetSync 11,19 /
+  ComparePane 1,37).
+- tsc --noEmit limpo; vitest 31 arquivos / 342/342 (~32s);
+- e2e fluxo real: 21/21 asserts ok;
+- axe-core scan: 0 violacoes main app (build demo/offline sem tela de
+  login), preview PROVADO nosso antes do scan. Nota: a primeira tentativa
+  falhou FECHADO na prova de identidade (index servido veio sem o entry
+  esperado — consistente com colisao da porta aleatoria com um dos
+  servidores estranhos conocidos; strictPort mata o nosso e a prova
+  detecta). Re-run em nova porta aleatoria passou e provou o entry.
+- Lighthouse x2 limpas (--headless=new --disable-gpu): R1 E R2
+  100/100/100/100 (FCP 1,4s / LCP 1,5s / CLS 0 / TBT 0ms) — melhor ronda
+  da noite (CPU ambiente livre nas duas).
+- console probe: 0 erros/avisos no boot (build demo abre direto no app,
+  sem botao guest — comportamento estavel desde tick #14);
+- npm audit prod: 10 moderate, 0 high/critical — mesmo patamar estavel
+  de #12/#13/#15/#16.
+
+Preview deste tick subiu na porta alta 4652 (strictPort), entry provado
+igual ao dist antes das medicoes e foi morto no fim (wrapper bash saiu
+cedo e o node filho ficou vivo — matado direto por pid via
+Get-NetTCPConnection; porta confirmada livre depois).
+
+src-tauri intocado. Sem Telegram.
