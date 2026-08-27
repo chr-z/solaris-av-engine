@@ -150,14 +150,7 @@ const ShortcutHelpModal: React.FC<ShortcutHelpModalProps> = ({ isOpen, onClose }
       <section aria-label={t(titleKey)}>
         <h3 className="text-xs font-bold uppercase text-solar-accent mb-2">{t(titleKey)}</h3>
         <ul className="space-y-1 mb-4">
-          {defs.map(def => (
-            <li key={def.id} className="flex items-center justify-between gap-4 text-sm">
-              <span className="text-gray-300">{t(def.descriptionKey as never)}</span>
-              <kbd className="flex-shrink-0 font-mono text-xs bg-bg border border-hairline rounded px-1.5 py-0.5 text-gray-200">
-                {def.display ?? def.keys}
-              </kbd>
-            </li>
-          ))}
+          {defs.map(renderRow)}
 
         </ul>
       </section>

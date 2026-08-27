@@ -3,7 +3,8 @@ import { DriveFile } from '../Analysis/AnalysisSheet';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
 import { WaveformIcon } from '../Core/icons';
 
-declare const gapi: any;
+// GAPI injetado via <script> externo (apis.google.com) — sem tipos próprios.
+declare const gapi: { client: { getToken: () => unknown } | undefined };
 
 interface DriveFilePickerProps {
     folderId: string;
@@ -45,9 +46,9 @@ const DriveFilePicker: React.FC<DriveFilePickerProps> = ({ folderId, onFileSelec
                 } else {
                     setError("No video or audio files found in this folder, or you do not have permission.");
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("Error fetching files from proxy:", err);
-                setError(err.message || "Failed to load files.");
+                setError(err instanceof Error ? err.message : "Failed to load files.");
             } finally {
                 setIsLoading(false);
             }
@@ -56,8 +57,12 @@ const DriveFilePicker: React.FC<DriveFilePickerProps> = ({ folderId, onFileSelec
         if (gapi.client && gapi.client.getToken()) {
             fetchFiles();
         } else {
-             setError("Google Authentication not ready. Please try opening the picker again.");
-             setIsLoading(false);
+            // agenda em microtask: setState síncrono no effect causa cascata
+            const raf = requestAnimationFrame(() => {
+                setError("Google Authentication not ready. Please try opening the picker again.");
+                setIsLoading(false);
+            });
+            return () => cancelAnimationFrame(raf);
         }
     }, [folderId]);
 

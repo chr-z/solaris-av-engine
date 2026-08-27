@@ -182,9 +182,12 @@ export default function LiveDashboardPanel({
   // Dataset: usa entradas herdadas ou carrega as próprias (uma vez).
   useEffect(() => {
     if (entries && entries.length > 0) {
-      setOwnEntries(entries);
-      setLoaded(true);
-      return undefined;
+      // setState adiado — evita cascata de renders no effect
+      const raf = requestAnimationFrame(() => {
+        setOwnEntries(entries);
+        setLoaded(true);
+      });
+      return () => cancelAnimationFrame(raf);
     }
     if (loaded || ownEntries.length > 0) return undefined;
     let cancelled = false;
@@ -241,11 +244,12 @@ export default function LiveDashboardPanel({
   );
 
   // Relógio: agora real (ou injetado), atualizado a cada tick de refresh.
-  const [tickNow, setTickNow] = useState(nowMs ?? Date.now());
+  const [tickNow, setTickNow] = useState(() => nowMs ?? Date.now());
   useEffect(() => {
     if (nowMs != null) {
-      setTickNow(nowMs);
-      return undefined;
+      // setState adiado (evita cascata)
+      const raf = requestAnimationFrame(() => setTickNow(nowMs));
+      return () => cancelAnimationFrame(raf);
     }
     const id = window.setInterval(() => setTickNow(Date.now()), REFRESH_MS);
     return () => window.clearInterval(id);
@@ -410,7 +414,8 @@ export default function LiveDashboardPanel({
   );
 
   // Eventos XP do perfil local alimentam o throughput por hora (offline-first).
-  const hourEvents = useMemo(() => {
+  // Lê uma vez na montagem (lazy initializer — sem impureza no render).
+  const [hourEvents] = useState<Array<{ ts: number }>>(() => {
     try {
       const raw = window.localStorage.getItem('solaris.gamification.events');
       if (!raw) return [] as Array<{ ts: number }>;
@@ -423,8 +428,7 @@ export default function LiveDashboardPanel({
     } catch {
       return [];
     }
-    // relê uma vez por montagem; feed ao vivo cobre o resto
-  }, []);
+  });
 
   const hourlyOptions = useMemo(() => {
     const points = buildThroughputByHour(hourEvents);

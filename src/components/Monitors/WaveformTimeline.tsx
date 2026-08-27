@@ -62,21 +62,6 @@ const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
     const [hoverPosition, setHoverPosition] = useState<number | null>(null);
     const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
 
-    // F6: estado do renderer wavesurfer. Se o chunk falhar (rede/offline
-    // extrema), caímos PERMANENTEMENTE nas barras legadas até trocar de mídia.
-    const [wsFailed, setWsFailed] = useState(false);
-    useEffect(() => {
-        const onFallback = () => setWsFailed(true);
-        window.addEventListener('solaris:waveform-fallback', onFallback);
-        return () => window.removeEventListener('solaris:waveform-fallback', onFallback);
-    }, []);
-    // Nova mídia = nova chance para o renderer v7.
-    useEffect(() => {
-        setWsFailed(false);
-    }, [waveform]);
-
-    const useWsRenderer = !wsFailed && !isLoading && waveform.length > 0 && duration > 0;
-
     const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         if (!timelineRef.current || !duration) return;
         const rect = timelineRef.current.getBoundingClientRect();
@@ -131,7 +116,7 @@ const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
 
     // Pins empilhados (puro, testado) + régua com passo "bonito".
     const laidOutMarkers = useMemo(
-        () => layoutTimelinePins(markers, duration, timelineRef.current?.clientWidth ?? 600),
+        () => layoutTimelinePins(markers, duration, 600),
         [markers, duration],
     );
     const markerById = useMemo(

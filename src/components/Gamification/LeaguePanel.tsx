@@ -176,18 +176,17 @@ const LeaguePanel: React.FC<LeaguePanelProps> = ({ userProfile }) => {
   const [goal, setGoal] = useState<TeamGoalConfig | null>(() => loadTeamGoal(storage));
   const [goalInput, setGoalInput] = useState('');
   const [goalError, setGoalError] = useState(false);
-  const storageRef = useRef(storage);
-  storageRef.current = storage;
   // Hot-reload: gravação aqui mesma, outra aba ('storage') ou outro lugar da
   // aba (evento 'solaris:team-goal-changed' emitido pelo saveTeamGoal).
   useEffect(() => {
-    const reload = () => setGoal(loadTeamGoal(storageRef.current));
+    const reload = () => setGoal(loadTeamGoal(storage));
     window.addEventListener('solaris:team-goal-changed', reload);
     window.addEventListener('storage', reload);
     return () => {
       window.removeEventListener('solaris:team-goal-changed', reload);
       window.removeEventListener('storage', reload);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // Roster do time = mesmos analistas do pódio ao vivo + o usuário atual.
   const teamMemberIds = useMemo(

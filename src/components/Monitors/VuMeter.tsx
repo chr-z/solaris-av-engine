@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ExpandIcon } from '../Core/icons';
 
+const MIN_DB = -60;
+const MAX_DB = 0;
+
 interface VuMeterProps {
   volume: number;
   isReady: boolean;
@@ -14,10 +17,11 @@ const VuMeter: React.FC<VuMeterProps> = ({ volume, isReady, onZoom }) => {
   const peakHoldTimeoutRef = useRef<number | null>(null);
   const peakFalloffIntervalRef = useRef<number | null>(null);
   const smoothedDbRef = useRef(smoothedDb);
-  smoothedDbRef.current = smoothedDb;
+  // Sincroniza o ref fora do render (efeito dedicado) — leitura em interval/decay.
+  useEffect(() => {
+    smoothedDbRef.current = smoothedDb;
+  }, [smoothedDb]);
 
-  const MIN_DB = -60;
-  const MAX_DB = 0;
 
   // Linear (0-1) to Logarithmic (dB) conversion
   const db = volume > 0 ? 20 * Math.log10(volume) : -Infinity;
@@ -25,28 +29,33 @@ const VuMeter: React.FC<VuMeterProps> = ({ volume, isReady, onZoom }) => {
 
   useEffect(() => {
     if (!isReady) {
-      setSmoothedDb(-Infinity);
-      return;
+      // agenda em microtask: reset síncrono no effect causa cascata de renders
+      const raf = requestAnimationFrame(() => setSmoothedDb(-Infinity));
+      return () => cancelAnimationFrame(raf);
     }
-    // Fast attack smoothing
-    const smoothingFactor = 0.6;
-    setSmoothedDb(prev => {
+    // Fast attack smoothing via RAF (loop de animação, não setState direto)
+    const raf = requestAnimationFrame(() => {
+      const smoothingFactor = 0.6;
+      setSmoothedDb(prev => {
         if (!isFinite(prev)) return clampedDb;
         return prev * (1 - smoothingFactor) + clampedDb * smoothingFactor;
+      });
     });
+    return () => cancelAnimationFrame(raf);
   }, [clampedDb, isReady]);
 
   // Peak Hold Logic
   useEffect(() => {
     if (!isReady) {
-      setPeakDb(-Infinity);
+      const raf = requestAnimationFrame(() => setPeakDb(-Infinity));
       if (peakHoldTimeoutRef.current) clearTimeout(peakHoldTimeoutRef.current);
       if (peakFalloffIntervalRef.current) clearInterval(peakFalloffIntervalRef.current);
-      return;
+      return () => cancelAnimationFrame(raf);
     }
 
     if (clampedDb >= peakDb) {
-      setPeakDb(clampedDb);
+      // peak hold também via RAF — setState nunca síncrono no effect
+      const raf = requestAnimationFrame(() => setPeakDb(clampedDb));
       
       if (peakHoldTimeoutRef.current) clearTimeout(peakHoldTimeoutRef.current);
       if (peakFalloffIntervalRef.current) clearInterval(peakFalloffIntervalRef.current);
@@ -65,6 +74,7 @@ const VuMeter: React.FC<VuMeterProps> = ({ volume, isReady, onZoom }) => {
           });
         }, 50);
       }, 1500);
+      return () => cancelAnimationFrame(raf);
     }
   }, [clampedDb, isReady, peakDb]);
 

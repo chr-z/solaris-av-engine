@@ -45,7 +45,7 @@ import { OverlaySettings, VideoChoice, UserProfile, Timestamp } from '../../type
 import { useI18n } from '../../i18n/I18nContext';
 import { dropdownFields, inconformityToCategoryMap, resultFields, inconformityScores, categoryMaxScores } from '../../utils/constants';
 // F2 QoL Core: auto-save/retomada, modo foco e undo global.
-import { useAutosaveResume, autosaveKeyFor } from '../../hooks/useAutosaveResume';
+import { useAutosaveResume } from '../../hooks/useAutosaveResume';
 import { focusLayout, applyFocusPreferences } from '../../features/qol/focusMode';
 import { registerUndoApplier } from '../../features/qol/undoApply';
 import { getUndoLog, resetUndoLog } from '../../features/qol/undoStore';
@@ -458,7 +458,6 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
   userProfile,
   isFocusMode = false,
   onToggleFocusMode,
-  onToggleKeepMonitors,
   focusKeepMonitors = false,
   allRowsForTwins,
   onCommitCopiedRow,
@@ -640,7 +639,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
     let active = true;
     let ref: ReturnType<Awaited<ReturnType<typeof getDb>>['ref']> | null = null;
     let unsub: UnsubscribeFn | null = null;
-    const applySnapshot = (snapshot: any) => {
+    const applySnapshot = (snapshot: { val: () => Record<string, unknown> | null }) => {
       const data = snapshot.val();
       if (data) {
         const list: Timestamp[] = Object.keys(data).map(key => ({ id: key, ...data[key] }));
@@ -886,9 +885,6 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
       setIsSyncing(false);
     }
   };
-
-  const osIdentifier = localRowData ? (localRowData[headers.indexOf('W.O.')]?.value || '') : '';
-
 
   // Solaris v3 P3: acoustic analysis engine (reverb/clip/noise/distortion/echo).
   // PCM getter re-fetches the current media and decodes to mono via

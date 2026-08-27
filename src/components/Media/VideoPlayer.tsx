@@ -190,6 +190,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         if (!video) return;
         const rate = SHUTTLE_RATES[shuttleState.index] ?? 1;
         if (video.playbackRate !== rate) video.playbackRate = rate;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [shuttleState]);
 
     useEffect(() => {

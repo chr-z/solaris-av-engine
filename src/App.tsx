@@ -1114,7 +1114,6 @@ const App: React.FC = () => {
                 <div
                   className={`absolute top-0 right-0 h-full bg-surface transition-transform duration-500 ease-in-out ${isWorkspaceOpen ? 'translate-x-0' : 'translate-x-full'}`}
                   style={{ width: isFocusMode ? '100%' : 'calc(100% - 320px)' }}
-/redesign-premium
                 >
                   {isWorkspaceOpen && (
                     <React.Suspense

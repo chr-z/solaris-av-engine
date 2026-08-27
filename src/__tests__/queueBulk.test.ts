@@ -4,7 +4,7 @@
 // prioridades clamped, retorno sem dono recusa, atribuição igual ao dono,
 // integração com undoStorage existente.
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { applyBulk, planBulk, type BulkAction, type BulkSkipReason } from '../features/qol/queueBulk';
+import { applyBulk, planBulk, type BulkSkipReason } from '../features/qol/queueBulk';
 import type { QueueRowLike } from '../features/qol/queue';
 
 const NOW = Date.UTC(2026, 7, 25, 15, 0, 0);
@@ -110,7 +110,6 @@ describe('bulk actions da fila', () => {
 
   it('dry-run não altera linhas; apply muda só linhas elegíveis', () => {
     const rows = [row({ os_id: 'Q-D', status: 'queued' })];
-    const before = JSON.stringify(rows);
     const res = applyBulk(rows, ['Q-D'], { kind: 'assign', userId: 'a' });
     // A referência dos objetos internos muda (map retorna novos), mas o conteúdo anterior não é mutado.
     expect(res.events.length).toBeGreaterThanOrEqual(0);

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { database } from '../config/firebase';
 // A2 QoL: cache do pico absoluto (normalize) + medição dBFS de canal.
 import { dbfsFromChannel, readCachedPeakDbfs, writeCachedPeakDbfs } from '../features/qol/mediaComfort';
 
@@ -152,20 +151,25 @@ export const useAudioWaveform = (src: string | null, videoId: string | null) => 
         // synchronous setState in the effect body causes cascading renders
         // (react-hooks/set-state-in-effect). Async paths below are unaffected.
         if (!src || !videoId) {
-            setWaveform([]);
-            setPeakDbfs(null);
-            setIsLoading(false);
-            setError(null);
-            return;
+            // reset adiado em microtask (evita cascata de renders)
+            const raf = requestAnimationFrame(() => {
+                setWaveform([]);
+                setPeakDbfs(null);
+                setIsLoading(false);
+                setError(null);
+            });
+            return () => cancelAnimationFrame(raf);
         }
 
         // Strategy 1: Local Browser Cache (Fastest)
         const localCacheKey = videoId;
-        setPeakDbfs(readCachedPeakDbfs(videoId)); // cache LRU do pico (A2 QoL)
+        // cache LRU do pico (A2 QoL) — setState adiado (sem cascata)
+        const cachedPeak = readCachedPeakDbfs(videoId);
+        const peakRaf = requestAnimationFrame(() => setPeakDbfs(cachedPeak));
         const cachedWaveform = waveformCache.get(localCacheKey);
         if (cachedWaveform) {
             queueMicrotask(() => { setWaveform(cachedWaveform); setIsLoading(false); setError(null); });
-            return;
+            return () => cancelAnimationFrame(peakRaf);
         }
 
         const generateWaveform = async () => {

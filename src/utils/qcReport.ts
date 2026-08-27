@@ -157,6 +157,7 @@ export function exportQCReportBlob(report: QCReport): Blob {
   </section>
   <h2>Headers</h2>
   <pre>${esc(JSON.stringify(report.headers, null, 2))}</pre>
+  ${acousticHtml}
   <footer class="qc-footer">
     <span>Solaris AV Analysis Engine</span>
     <span>${formattedDate}</span>

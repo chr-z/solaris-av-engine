@@ -27,13 +27,6 @@ import {
 // números resumidos animam de 0 até o total (ease-out cúbico, 900ms).
 // O util countFrame faz snap EXATO no destino no último frame, então o texto
 // final renderizado é idêntico ao estático de antes — só a chegada muda.
-const AnimatedStat: React.FC<{ value: number; format: (n: number) => string }> = ({
-  value,
-  format,
-}) => {
-  const animated = useCountUp(value);
-  return <span className="tnum">{format(animated)}</span>;
-};
 
 export const QCExportButton: React.FC<{ className?: string }> = ({ className = '' }) => {
   const [summary, setSummary] = useState<ReturnType<typeof getQCSummary> | null>(null);

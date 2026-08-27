@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, cloneElement, useLayoutEffect } from 'react';
+import React, { useState, useRef, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 interface TooltipProps {
@@ -117,16 +117,16 @@ const Tooltip: React.FC<TooltipProps> = ({ content, children, className }) => {
     startCloseTimer();
   }, [startCloseTimer]);
 
-  const triggerWithHandlers = cloneElement(children as React.ReactElement<any>, {
-    onMouseEnter: handleMouseEnterTrigger,
-    onMouseLeave: handleMouseLeaveTrigger,
-    onFocus: handleMouseEnterTrigger,
-    onBlur: handleMouseLeaveTrigger,
-  });
-
   return (
-    <div ref={triggerRef} className="inline-flex items-center">
-      {triggerWithHandlers}
+    <div
+      ref={triggerRef}
+      className="inline-flex items-center"
+      onMouseEnter={handleMouseEnterTrigger}
+      onMouseLeave={handleMouseLeaveTrigger}
+      onFocus={handleMouseEnterTrigger}
+      onBlur={handleMouseLeaveTrigger}
+    >
+      {children}
       {isVisible && createPortal(
         <div
           ref={tooltipRef}

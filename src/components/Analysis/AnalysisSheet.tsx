@@ -8,7 +8,7 @@ type DbSnapshot = SnapshotLike;
 import { UserProfile } from '../../types';
 import UserAvatar from '../Auth/UserAvatar';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
-import { getVideoIdFromUrl } from '../../utils/videoUtils';
+
 // Tick 12: badge de score com tier semântico (pill tabular verde/amarelo/vermelho)
 import { formatScore, scoreBandClass } from '../../utils/scoreFormat';
 import { findCachedWaveformForRow, getHeaderIndexMap, ListHeaderKey } from '../../utils/waveformRowStatus';

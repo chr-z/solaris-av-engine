@@ -19,7 +19,7 @@ type WritableGoalStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> |
 
 /** Lê a meta persistida; storage ausente, chave fora ou valor inválido = null (desligado). */
 export function loadTeamGoal(storage: GoalStorage): TeamGoalConfig | null {
-  let raw: string | null = null;
+  let raw: string | null;
   try {
     raw = storage?.getItem(TEAM_GOAL_KEY) ?? null;
   } catch {

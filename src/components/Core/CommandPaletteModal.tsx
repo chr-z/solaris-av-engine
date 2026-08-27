@@ -41,10 +41,14 @@ export default function CommandPaletteModal({
   // Reset a cada abertura + foco no campo.
   useEffect(() => {
     if (isOpen) {
-      setQuery('');
-      setActiveIdx(0);
-      // foco após a montagem do portal
-      requestAnimationFrame(() => inputRef.current?.focus());
+      // reset adiado em microtask (evita cascata de renders no effect)
+      const raf = requestAnimationFrame(() => {
+        setQuery('');
+        setActiveIdx(0);
+        // foco após a montagem do portal
+        inputRef.current?.focus();
+      });
+      return () => cancelAnimationFrame(raf);
     }
   }, [isOpen]);
 

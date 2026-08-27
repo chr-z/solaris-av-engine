@@ -82,7 +82,7 @@ export function readStoredMediaComfort(
 /** Escrita best-effort; quota/incógnito falham em silêncio. */
 export function writeStoredMediaComfort(
   prefs: MediaComfortPrefs,
-  write: (payload: string) => void = (payload) => {
+  write: (payload: string) => void = () => {
     localStorage.setItem(MEDIA_COMFORT_KEY, JSON.stringify(prefs));
   },
 ): void {

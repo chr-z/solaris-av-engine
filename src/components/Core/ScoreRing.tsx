@@ -47,8 +47,10 @@ const ScoreRing: React.FC<ScoreRingProps> = ({ score, size = 88, label }) => {
             window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
         if (reduceMotion || numeric === displayValue) {
-            setDisplayValue(numeric);
-            return;
+            // sincronização sem setState síncrono no effect (evita cascata):
+            // agenda microtask — o valor final é idêntico, só a chegada difere.
+            const raf = requestAnimationFrame(() => setDisplayValue(numeric));
+            return () => cancelAnimationFrame(raf);
         }
 
         const from = 0;

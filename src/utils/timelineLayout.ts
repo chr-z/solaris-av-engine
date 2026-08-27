@@ -18,12 +18,12 @@ export interface TimelinePinInput {
     time: number;
 }
 
-export interface LaidOutPin<T extends TimelinePinInput> extends TimelinePinInput {
+export type LaidOutPin<T extends TimelinePinInput> = T & {
     /** índice da pilha vertical (0 = linha base da timeline) */
     lane: number;
     /** posição horizontal normalizada 0..1 (clampada) */
     position: number;
-}
+};
 
 /** Número máximo de lanes de empilhamento desenhadas na timeline. */
 export const TIMELINE_PIN_LANES = 3;
@@ -59,11 +59,9 @@ export function layoutTimelinePins<T extends TimelinePinInput>(
         // Escolhe a lane com o "último uso" mais antigo que respeite o gap;
         // se nenhuma respeita, usa a mais antiga de todas (round-robin justo).
         let bestLane = 0;
-        let oldestLane = 0;
         for (let lane = 1; lane < TIMELINE_PIN_LANES; lane++) {
-            if (laneLastPx[lane] < laneLastPx[oldestLane]) oldestLane = lane;
+            if (laneLastPx[lane] < laneLastPx[bestLane]) bestLane = lane;
         }
-        bestLane = oldestLane;
         for (let lane = 0; lane < TIMELINE_PIN_LANES; lane++) {
             if (px - laneLastPx[lane] >= minGapPx && laneLastPx[lane] > laneLastPx[bestLane]) {
                 bestLane = lane;

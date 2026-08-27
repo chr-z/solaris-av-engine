@@ -67,6 +67,9 @@ function HookHarness(props: {
     props.audio,
   );
 
+  // Harness de teste: chama onReady sincronamente no render de propósito
+  // (padrão de teste; ref é só leitura do estado interno).
+  // eslint-disable-next-line react-hooks/refs
   props.onReady({
     api,
     seeks: () => seeksRef.current.slice(),

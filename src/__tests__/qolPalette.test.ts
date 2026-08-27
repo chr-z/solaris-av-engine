@@ -121,7 +121,7 @@ describe('F2 undo — log global 24h', () => {
 
   it('record persiste imediatamente e peek devolve o mais recente', () => {
     const store = { v: null as string | null };
-    let t = 1_000_000;
+    const t = 1_000_000;
     const log = new UndoLog(deps(store, t));
     log.record('assign-os', 'atribuiu OS-1', { osId: 'OS-1' });
     log.record('edit-cell', 'editou linha 3', { rowIndex: 3 });
@@ -143,7 +143,7 @@ describe('F2 undo — log global 24h', () => {
 
   it('consume remove o evento revertido e o próximo vira o topo', () => {
     const store = { v: null as string | null };
-    let t = 5_000;
+    const t = 5_000;
     const log = new UndoLog(deps(store, t));
     const e1 = log.record('prioritize-os', 'priorizou OS-2');
     const e2 = log.record('prioritize-os', 'priorizou OS-3');
@@ -155,7 +155,7 @@ describe('F2 undo — log global 24h', () => {
 
   it('appliedIds evita desfazer duas vezes o mesmo evento', () => {
     const store = { v: null as string | null };
-    let t = 5_000;
+    const t = 5_000;
     const log = new UndoLog(deps(store, t));
     const e1 = log.record('assign-os', 'x');
     log.record('assign-os', 'y');
@@ -186,7 +186,7 @@ describe('F2 undo — log global 24h', () => {
 
   it('clear esvazia memória e storage', () => {
     const store = { v: null as string | null };
-    let t = 5_000;
+    const t = 5_000;
     const log = new UndoLog(deps(store, t));
     log.record('edit-cell', 'a');
     log.clear();
@@ -196,7 +196,7 @@ describe('F2 undo — log global 24h', () => {
 
   it('capacidade máxima mantém só os eventos mais recentes', () => {
     const store = { v: null as string | null };
-    let t = 5_000;
+    const t = 5_000;
     const log = new UndoLog({ ...deps(store, t), maxEvents: 3 });
     for (let i = 0; i < 6; i++) log.record('edit-cell', `e${i}`);
     expect(log.undoable.map((e) => e.label)).toEqual(['e3', 'e4', 'e5']);
