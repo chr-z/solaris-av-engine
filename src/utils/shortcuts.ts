@@ -109,10 +109,11 @@ export function getShortcutById(id: string): ShortcutDef | undefined {
 }
 
 /**
- * Resolves an event to a ShortcutDef, ignoring combos with modifiers
- * (browser/OS reserved), events from form fields, and native/player-owned
- * entries. `scopeEnabled` lets callers gate whole scopes (e.g. workspace
- * closed). All inputs are injected for testability.
+ * Resolves an event to a shortcut definition, ignoring combos with modifiers,
+ * form-field targets and native/player-owned entries. `scopeEnabled` gates
+ * whole scopes (e.g. workspace closed). `defs` injects an EFFECTIVE catalog —
+ * the user's remapped keyboard (QoL A1) — falling back to ANALYST_SHORTCUTS.
+ * All inputs are injectable for testability.
  */
 export function matchShortcut(
   event: Pick<KeyboardEvent, 'key'>,
@@ -120,11 +121,12 @@ export function matchShortcut(
     hasModifier?: boolean;
     isEditableTarget?: boolean;
     scopeEnabled?: Partial<Record<ShortcutContext, boolean>>;
+    defs?: readonly ShortcutDef[];
   } = {},
 ): ShortcutDef | null {
-  const { hasModifier = false, isEditableTarget = false, scopeEnabled } = deps;
+  const { hasModifier = false, isEditableTarget = false, scopeEnabled, defs = ANALYST_SHORTCUTS } = deps;
   if (hasModifier || isEditableTarget) return null;
-  const def = ANALYST_SHORTCUTS.find(s => !s.native && s.keys === event.key.toLowerCase());
+  const def = defs.find(s => !s.native && s.keys === event.key.toLowerCase());
   if (!def) return null;
   if (scopeEnabled && scopeEnabled[def.scope] === false) return null;
   return def;
@@ -138,9 +140,20 @@ export function isSaveCombo(event: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'meta
   return (event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 's';
 }
 
-/** Groups shortcuts by scope for the help modal columns. Order-stable. */
-export function groupShortcutsByScope(): Record<ShortcutContext, ShortcutDef[]> {
+/** Ctrl/Cmd+K — universal search (QoL F2). */
+export function isCommandPaletteCombo(event: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'>): boolean {
+  return (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'k';
+}
+
+/** Ctrl/Cmd+Shift+Z — global undo window (QoL F2). Plain ctrl+z stays native. */
+export function isUndoCombo(event: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'>): boolean {
+  return (event.ctrlKey || event.metaKey) && !event.altKey && event.shiftKey && event.key.toLowerCase() === 'z';
+}
+
+/** Groups shortcuts by scope for the help modal columns. Order-stable.
+ *  Accepts an EFFECTIVE catalog (user's remapped keys) — defaults to the stock one. */
+export function groupShortcutsByScope(defs: readonly ShortcutDef[] = ANALYST_SHORTCUTS): Record<ShortcutContext, ShortcutDef[]> {
   const groups: Record<ShortcutContext, ShortcutDef[]> = { global: [], workspace: [], player: [], dashboard: [] };
-  for (const def of ANALYST_SHORTCUTS) groups[def.scope].push(def);
+  for (const def of defs) groups[def.scope].push(def);
   return groups;
 }

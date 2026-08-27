@@ -5,6 +5,10 @@ import { UserProfile } from '../../types';
 import { getDb, isFirebaseConfigured, type SnapshotLike } from '../../config/firebase';
 import { LogEntry } from '../../utils/logCapture';
 import UserAvatar from '../Auth/UserAvatar';
+// Troca D #3: formatação i18n em fuso FIXO (nunca o do host — jsdom,
+// desktop e nuvem concordam).
+import { formatTimestampInTz } from '../../features/i18n/format';
+import { SAO_PAULO_CLOCK } from '../../features/gamification/periods';
 
 interface Report {
     id: string;
@@ -22,7 +26,7 @@ interface BugReportViewerProps {
 }
 
 const LogLine: React.FC<{ log: LogEntry }> = ({ log }) => {
-    const time = new Date(log.timestamp).toLocaleTimeString('en-GB', { hour12: false });
+    const time = formatTimestampInTz(log.timestamp, 'pt', SAO_PAULO_CLOCK);
     let color = 'text-gray-400';
     let levelBadge: string;
     let badgeColor: string;
@@ -144,7 +148,7 @@ const BugReportViewer: React.FC<BugReportViewerProps> = ({ isOpen, onClose }) =>
                                             <UserAvatar user={report.user} className="w-5 h-5"/>
                                             <span>{report.user.name}</span>
                                             <span>•</span>
-                                            <span>{new Date(report.timestamp).toLocaleString()}</span>
+                                            <span>{formatTimestampInTz(report.timestamp, 'pt', SAO_PAULO_CLOCK)}</span>
                                         </div>
                                     </div>
                                     <span className="text-gray-500 ml-4">{report.logs?.length || 0} logs</span>

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { getDb } from '../config/firebase';
+import { database } from '../config/firebase';
+// A2 QoL: cache do pico absoluto (normalize) + medição dBFS de canal.
+import { dbfsFromChannel, readCachedPeakDbfs, writeCachedPeakDbfs } from '../features/qol/mediaComfort';
 
 // Persistent, size-limited cache for waveform data.
 export const CACHE_KEY_PREFIX = 'solaris_waveform_cache_';
@@ -93,7 +95,7 @@ const processAudioBufferProgressively = async (
     audioBuffer: AudioBuffer,
     onProgress: (peaks: number[]) => void,
     bucketCount: number = 150,
-): Promise<number[]> => {
+): Promise<{ peaks: number[]; peakDbfs: number | null }> => {
     const rawData = audioBuffer.getChannelData(0);
     const samplesPerBucket = Math.floor(rawData.length / bucketCount);
     const peaks = new Array(bucketCount).fill(0);
@@ -129,11 +131,14 @@ const processAudioBufferProgressively = async (
     }
 
     onProgress([...peaks]);
-    return peaks;
+    // Pico absoluto REAL (pré-normalização) — alimenta o normalize (A2 QoL).
+    return { peaks, peakDbfs: dbfsFromChannel(rawData) };
 };
 
 export const useAudioWaveform = (src: string | null, videoId: string | null) => {
     const [waveform, setWaveform] = useState<number[]>([]);
+    // A2 QoL: pico absoluto da mídia corrente (dBFS) p/ volume normalize.
+    const [peakDbfs, setPeakDbfs] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -147,12 +152,16 @@ export const useAudioWaveform = (src: string | null, videoId: string | null) => 
         // synchronous setState in the effect body causes cascading renders
         // (react-hooks/set-state-in-effect). Async paths below are unaffected.
         if (!src || !videoId) {
-            queueMicrotask(() => { setWaveform([]); setIsLoading(false); setError(null); });
+            setWaveform([]);
+            setPeakDbfs(null);
+            setIsLoading(false);
+            setError(null);
             return;
         }
 
         // Strategy 1: Local Browser Cache (Fastest)
         const localCacheKey = videoId;
+        setPeakDbfs(readCachedPeakDbfs(videoId)); // cache LRU do pico (A2 QoL)
         const cachedWaveform = waveformCache.get(localCacheKey);
         if (cachedWaveform) {
             queueMicrotask(() => { setWaveform(cachedWaveform); setIsLoading(false); setError(null); });
@@ -213,12 +222,14 @@ export const useAudioWaveform = (src: string | null, videoId: string | null) => 
 
                 setIsLoading(false);
 
-                const finalPeaks = await processAudioBufferProgressively(audioBuffer, (progressPeaks) => {
+                const { peaks: finalPeaks, peakDbfs } = await processAudioBufferProgressively(audioBuffer, (progressPeaks) => {
                     if (!signal.aborted) setWaveform(progressPeaks);
                 });
                 
                 if (!signal.aborted) {
                     waveformCache.set(localCacheKey, finalPeaks);
+                    if (peakDbfs !== null) writeCachedPeakDbfs(videoId, peakDbfs); // A2 QoL
+                    setPeakDbfs(peakDbfs);
                     // Async cache write to DB
                     void getDb().then((db) => db.ref(`waveforms/${videoId}`).set(finalPeaks))
                         .catch(err => console.error("Firebase cache write failed:", err));
@@ -242,5 +253,5 @@ export const useAudioWaveform = (src: string | null, videoId: string | null) => 
 
     }, [src, videoId]);
 
-    return { waveform, isLoading, error };
+    return { waveform, peakDbfs, isLoading, error };
 };

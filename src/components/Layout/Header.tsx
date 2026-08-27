@@ -11,6 +11,10 @@ import OfflineIndicator from '../Core/OfflineIndicator';
 import { QCExportButton } from '../Analysis/QCExportButton';
 import ProUpgradeModal from '../Admin/ProUpgradeModal';
 import { useLicense } from '../../licensing/LicenseContext';
+// F2 QoL A2: tema claro/escuro/sistema, densidade e timer de pausa (Pomodoro).
+import ThemeMenu from './ThemeMenu';
+import DensityMenu from './DensityMenu';
+import PomodoroBadge from './PomodoroBadge';
 import { describeFeature } from '../../licensing/core';
 import { useAdminRole } from '../../hooks/useAdminRole';
 
@@ -91,6 +95,11 @@ const Header: React.FC<HeaderProps> = ({
           
           <OfflineIndicator />
 
+          {/* F2 QoL A2: tema + densidade + timer de pausa. */}
+          <ThemeMenu />
+          <DensityMenu />
+          <PomodoroBadge />
+
           {/* S6.1: edition badge + upgrade entry point (free tier only). */}
           {isPro ? (
             <span
@@ -151,6 +160,14 @@ const Header: React.FC<HeaderProps> = ({
                         >
                           {t('header.reportIssue')}
                         </button>
+                        {/* F4: Liga dos Analistas (#/liga) — todos os autenticados. */}
+                        <a
+                          href="#/liga"
+                          data-testid="header-league-link"
+                          className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
+                        >
+                          {t('header.league')}
+                        </a>
                         {/* v3: Scoring Rules console (#/admin) — same RBAC decision as the gate. */}
                         {isAdminUser && (
                           <a

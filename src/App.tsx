@@ -19,7 +19,29 @@ import { useI18n } from './i18n/I18nContext';
 import { computeFilteredRows } from './utils/rowFiltering';
 import { useDebounce } from './hooks/useDebounce';
 import { isAdminHash, isDashboardsHash } from './utils/adminRoute';
+import { isLeagueHash } from './utils/leagueRoute';
 import { persistGuestEmail, clearGuestEmail } from './hooks/useAdminRole';
+// F2 QoL Core: busca universal, modo foco e undo global 24h.
+import { isCommandPaletteCombo, isUndoCombo } from './utils/shortcuts';
+import type { IndexedDoc, ScoredResult } from './features/qol/commandPalette';
+import {
+  FOCUS_PREF_KEY,
+  FOCUS_MONITORS_KEY,
+  readFocusFlag,
+  writeFocusFlag,
+} from './features/qol/focusMode';
+import { applyUndo, registerUndoApplier, clearUndoAppliers } from './features/qol/undoApply';
+import { getUndoLog } from './features/qol/undoStore';
+// F2 QoL A2: pintura inicial do tema (claro/escuro/sistema) antes do 1º paint.
+import { applyInitialTheme } from './features/qol/theme';
+import { applyInitialDensity } from './features/qol/density';
+// F4 Gamificação: premiação de conclusões e celebrações.
+import { classifyRow } from './utils/rowFiltering';
+import { useGamification } from './hooks/useGamification';
+import { achievementDef } from './features/gamification/achievements';
+import { DEFAULT_MARKABLE_RULES } from './utils/ruleMarks';
+import { LEVELS, type LevelId } from './features/gamification/levels';
+import type { Celebration } from './components/Gamification/AchievementToast';
 
 // Code splitting (S3.1): the heavy analysis workspace (player + monitors + form)
 // is only fetched when an OS row is opened for the first time.
@@ -29,6 +51,15 @@ const AnalysisWorkspace = React.lazy(
 
 // v3 admin console (#/admin) ships as its own chunk; fetched on first visit only.
 const AdminGate = React.lazy(() => import('./components/Admin/AdminGate'));
+
+// F2: Ctrl+K command palette — own lazy chunk (only downloaded on first use).
+const CommandPaletteModal = React.lazy(
+  () => import(/* webpackChunkName: "command-palette" */ './components/Core/CommandPaletteModal'),
+);
+
+// F4: Liga dos Analistas + toasts — chunks separados (initial bundle intacto).
+const LeaguePanel = React.lazy(() => import('./components/Gamification/LeaguePanel'));
+const AchievementToast = React.lazy(() => import('./components/Gamification/AchievementToast'));
 
 // Initialize log capture service
 logCaptureService.init();
@@ -59,6 +90,17 @@ const COLS = {
 type AuthStatus = 'initializing' | 'signedOut' | 'signedIn' | 'error';
 type MediaSource = { source: File | string; info?: { name?: string; isDriveLink?: boolean; isYoutube?: boolean } };
 
+/** True quando o foco está em campo de texto — undo global não deve roubar o atalho nativo de edição. */
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    target.isContentEditable
+  );
+}
+
 const getInitialDateRange = (): { startDate: string; endDate: string } => {
     const today = new Date();
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -69,8 +111,23 @@ const getInitialDateRange = (): { startDate: string; endDate: string } => {
     };
 };
 
+/** F4: marcações da linha (regras ativas com célula 'TRUE') -> XP complexidade. */
+function countMarkedRules(headers: string[], row: RowData): number {
+  const indexByHeader = new Map<string, number>();
+  headers.forEach((h, idx) => {
+    const key = typeof h === 'string' ? h.trim() : '';
+    if (key && !indexByHeader.has(key)) indexByHeader.set(key, idx);
+  });
+  let count = 0;
+  for (const rule of DEFAULT_MARKABLE_RULES) {
+    const idx = indexByHeader.get(rule.header);
+    if (idx !== undefined && row[idx]?.value === 'TRUE') count += 1;
+  }
+  return count;
+}
+
 const App: React.FC = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // Media State
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState<string | null>(null);
@@ -104,10 +161,50 @@ const App: React.FC = () => {
   const [isAdminRoute, setIsAdminRoute] = useState(() => isAdminHash(window.location.hash));
   // P5 dashboards sub-route (#/admin/dashboards) — same RBAC gate, own panel.
   const [isDashboardsRoute, setIsDashboardsRoute] = useState(() => isDashboardsHash(window.location.hash));
+  // F4 rota da Liga (#/liga): acessível a qualquer usuário autenticado.
+  const [isLeagueRoute, setIsLeagueRoute] = useState(() => isLeagueHash(window.location.hash));
+
+  // ── F2 QoL Core ──────────────────────────────────────────────────────
+  // Ctrl+K busca universal (modal lazy).
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  // Modo foco: esconde header+lista (workspace esconde monitores/form).
+  const [isFocusMode, setIsFocusMode] = useState(() => readFocusFlag(window.localStorage, FOCUS_PREF_KEY));
+  const [focusKeepMonitors, setFocusKeepMonitors] = useState(() => readFocusFlag(window.localStorage, FOCUS_MONITORS_KEY));
+  const toggleFocusMode = useCallback(() => {
+    setIsFocusMode((prev) => {
+      writeFocusFlag(window.localStorage, FOCUS_PREF_KEY, !prev);
+      return !prev;
+    });
+  }, []);
+  const toggleKeepMonitors = useCallback(() => {
+    setFocusKeepMonitors((prev) => {
+      writeFocusFlag(window.localStorage, FOCUS_MONITORS_KEY, !prev);
+      return !prev;
+    });
+  }, []);
+  // Ctrl+Shift+Z undo global — appliers são registrados pelos donos da ação.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isCommandPaletteCombo(event)) {
+        event.preventDefault();
+        setIsPaletteOpen((open) => !open);
+        return;
+      }
+      if (isUndoCombo(event) && !isEditableTarget(event.target)) {
+        event.preventDefault();
+        applyUndo(getUndoLog());
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+
   useEffect(() => {
     const onHashChange = () => {
       setIsAdminRoute(isAdminHash(window.location.hash));
       setIsDashboardsRoute(isDashboardsHash(window.location.hash));
+      setIsLeagueRoute(isLeagueHash(window.location.hash));
     };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
@@ -118,6 +215,44 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  // ── F4 Gamificação ──────────────────────────────────────────────
+  const gamificationStorage = useMemo(() => ({
+    getItem: (k: string) => window.localStorage.getItem(k),
+    setItem: (k: string, v: string) => window.localStorage.setItem(k, v),
+    removeItem: (k: string) => window.localStorage.removeItem(k),
+  }), []);
+  const gam = useGamification(gamificationStorage, userProfile?.id ?? null);
+  // Fila de celebração: um toast por vez (conquista OU level-up).
+  const [celebration, setCelebration] = useState<Celebration | null>(null);
+  useEffect(() => {
+    if (celebration || gam.freshAchievements.length === 0) return;
+    const key = gam.freshAchievements[0];
+    const def = achievementDef(key as Parameters<typeof achievementDef>[0]);
+    if (!def) { gam.consumeFresh(); return; }
+    setCelebration({
+      kind: 'achievement',
+      id: 'ach:' + key,
+      icon: def.iconPt,
+      title: locale === 'pt' ? def.namePt : def.nameEn,
+      subtitle: t('league.toastUnlocked'),
+    });
+    gam.consumeFresh();
+  }, [gam, celebration, locale, t]);
+  const clearCelebration = useCallback(() => setCelebration(null), []);
+
+  /** Level-up -> celebração dedicada (confete discreto, reduced-motion safe). */
+  const announceLevelUp = useCallback((levelId: LevelId) => {
+    const lvl = LEVELS.find((l) => l.id === levelId);
+    if (!lvl) return;
+    setCelebration({
+      kind: 'levelup',
+      id: 'lvl:' + levelId + ':' + Date.now(),
+      icon: '🏆',
+      title: t('league.levelUp', { level: locale === 'pt' ? lvl.namePt : lvl.nameEn }),
+    });
+  }, [locale, t]);
+
   const [initialLoadingMessage, setInitialLoadingMessage] = useState(t('loading.initializing'));
 
   // Filters
@@ -452,10 +587,27 @@ const App: React.FC = () => {
     if (lastMediaSource) handleSourceSelected(lastMediaSource.source, lastMediaSource.info);
   }, [lastMediaSource, handleSourceSelected]);
 
-  // Stable identity: the workspace subtree is heavily memoized, so an inline
-  // function here would defeat React.memo on every App render (e.g. each
-  // debounced search update). Reads the already-synced ref for the selected OS.
-  const handleSaveSuccess = useCallback((savedRow: RowData) => {
+    // QoL A1 (copiar marcações): espelha a linha gêmea aplicada no pool vivo —
+    // o mesmo caminho do handleSaveSuccess, só que ANTES do save oficial.
+    const handleCommitCopiedRow = useCallback((nextRow: RowData) => {
+      setAllRows(prevRows => {
+        if (selectedOsIndex === null) return prevRows;
+        const arrayIndexToUpdate = prevRows.findIndex(item => item.rowIndex === selectedOsIndex);
+        if (arrayIndexToUpdate === -1) return prevRows;
+        const newRows = [...prevRows];
+        const originalItem = newRows[arrayIndexToUpdate];
+        const updatedPartialRow = [...originalItem.row];
+        nextRow.forEach((cell, index) => {
+          if (cell !== undefined && index < updatedPartialRow.length) {
+            updatedPartialRow[index] = cell;
+          }
+        });
+        newRows[arrayIndexToUpdate] = { ...originalItem, row: updatedPartialRow };
+        return newRows;
+      });
+    }, [selectedOsIndex]);
+
+  const handleSaveSuccess = (savedRow: RowData) => {
     setAllRows(prevRows => {
         const newRows = [...prevRows];
         const currentSelectedOsIndex = selectedOsIndexRef.current;
@@ -477,7 +629,27 @@ const App: React.FC = () => {
         }
         return newRows;
     });
-  }, []);
+
+    // F4: análise concluída (EVENT+UNIFORM+ANALYST) -> XP idempotente.
+    if (!userProfile || userProfile.id === 'guest-reviewer-id') return;
+    const woIdx = headers.indexOf(COLS.WO);
+    const osId = savedRow[woIdx]?.value?.trim() || String(selectedOsIndex ?? '');
+    if (!osId) return;
+    const colIndex = {
+      WO: woIdx,
+      EVENT: headers.indexOf(COLS.EVENT),
+      UNIFORM: headers.indexOf(COLS.UNIFORM),
+      ANALYST: headers.indexOf(COLS.ANALYST),
+      OPERATOR: headers.indexOf(COLS.OPERATOR),
+      ANALYSIS_TIME: headers.indexOf(COLS.ANALYSIS_TIME),
+      INSTRUCTOR: -1,
+      STUDIO: -1,
+    } as Record<keyof typeof COLS, number>;
+    if (classifyRow({ rowIndex: selectedOsIndex ?? -1, row: savedRow }, colIndex) !== 'completed') return;
+    const markedCount = countMarkedRules(headers, savedRow);
+    const decision = gam.completeOs({ osId, validInconformities: markedCount });
+    if (decision?.leveledUpTo) announceLevelUp(decision.leveledUpTo);
+  };
 
   const handleCloseWorkspace = useCallback(() => {
     if (selectedOsIndex !== null && userProfile?.id !== 'guest-reviewer-id') {
@@ -764,9 +936,70 @@ const App: React.FC = () => {
     } catch (error) { console.error("Sign out error", error); }
   }, []);
 
-  useEffect(() => {
-    document.documentElement.classList.add('dark');
-  }, []);
+  // F2 QoL A2: tema persistente — o hook do Header aplica a classe por
+  // efeito (pref + sistema); aqui só garantimos a pintura inicial coerente.
+  applyInitialTheme();
+  // F2 QoL A2: densidade (confortável/compacta) — mesmo contrato da pintura.
+  applyInitialDensity();
+
+  // ── F2: busca universal (Ctrl+K) ─────────────────────────────────────
+  // Docs derivados das linhas carregadas + settings conhecidos. Memoizado:
+  // reconstruir é barato e só ocorre quando os dados mudam.
+  const paletteDocs = useMemo<IndexedDoc[]>(() => {
+    const osDocs: IndexedDoc[] = allRows.map((r) => ({
+      id: `os:${r.rowIndex}`,
+      kind: 'os',
+      title: `W.O. ${r.row[headers.indexOf(COLS.WO)]?.value ?? r.rowIndex}`,
+      subtitle: headers.indexOf(COLS.STUDIO) > -1 ? r.row[headers.indexOf(COLS.STUDIO)]?.value ?? undefined : undefined,
+      keywords: [String(r.rowIndex)],
+    }));
+    const settingDocs: IndexedDoc[] = [
+      { id: 'set:focus', kind: 'setting', title: t('qol.focus.toggle'), keywords: ['focus', 'foco'] },
+      { id: 'set:focusMonitors', kind: 'setting', title: t('qol.focus.monitors'), keywords: ['monitor', 'waveform'] },
+      { id: 'set:shortcuts', kind: 'setting', title: t('header.shortcutHelp'), keywords: ['keyboard', 'atalhos', '?'] },
+    ];
+    return [...osDocs, ...settingDocs];
+  }, [allRows, headers, t]);
+
+  const handlePalettePick = useCallback((result: ScoredResult) => {
+    if (result.entry.kind === 'os') {
+      const rowIndex = Number(result.entry.id.slice(3));
+      const target = allRows.find((r) => r.rowIndex === rowIndex);
+      if (target && userProfile) handleOsSelect(rowIndex, target.row);
+    } else if (result.entry.id === 'set:focus') {
+      toggleFocusMode();
+    } else if (result.entry.id === 'set:focusMonitors') {
+      toggleKeepMonitors();
+    }
+  }, [allRows, userProfile, toggleFocusMode, toggleKeepMonitors]);
+
+  // Overlays globais do F2: palette lazy sobre qualquer rota autenticada.
+  const f2Overlays = (
+    <React.Suspense fallback={null}>
+      {isPaletteOpen && (
+        <CommandPaletteModal
+          isOpen
+          onClose={() => setIsPaletteOpen(false)}
+          docs={paletteDocs}
+          onPick={handlePalettePick}
+          kindLabels={{
+            palette: t('qol.palette.title'),
+            placeholder: t('qol.palette.placeholder'),
+            empty: t('qol.palette.empty'),
+            os: t('qol.kind.os'),
+            analyst: t('qol.kind.analyst'),
+            studio: t('qol.kind.studio'),
+            setting: t('qol.kind.setting'),
+          }}
+        />
+      )}
+    </React.Suspense>
+  );
+  const f4Overlays = (
+    <React.Suspense fallback={null}>
+      <AchievementToast celebration={celebration} onDone={clearCelebration} />
+    </React.Suspense>
+  );
 
   const renderContent = () => {
     switch(authStatus) {
@@ -787,27 +1020,56 @@ const App: React.FC = () => {
           />
         );
       case 'signedIn':
+        // F4 Liga dos Analistas (#/liga): rota própria, qualquer autenticado.
+        if (isLeagueRoute && userProfile) {
+          return (
+            <WaveformCacheProvider>
+              <div className="flex flex-col h-screen font-sans text-sm bg-solar-light-bg dark:bg-solar-dark-bg text-gray-800 dark:text-gray-200 overflow-hidden">
+                <a href="#main-workspace" className="skip-link">{t('a11y.skipToContent')}</a>
+                <React.Suspense fallback={
+                  <div className="flex items-center justify-center h-screen bg-solar-dark-bg">
+                    <LoadingIndicator statusText={t('loading.generic')} />
+                  </div>
+                }>
+                  <LeaguePanel userProfile={{ id: userProfile.id, name: userProfile.name }} />
+                </React.Suspense>
+              </div>
+            </WaveformCacheProvider>
+          );
+        }
         // v3 admin console: replaces <main> while the app shell (Header) stays mounted.
         if (isAdminRoute) {
           return (
             <WaveformCacheProvider>
               <div className="flex flex-col h-screen font-sans text-sm bg-solar-light-bg dark:bg-solar-dark-bg text-gray-800 dark:text-gray-200 overflow-hidden">
                 <a href="#main-workspace" className="skip-link">{t('a11y.skipToContent')}</a>
-                <Header
-                  onSourceSelected={handleSourceSelected}
-                  isWorkspaceOpen={false}
-                  onCloseWorkspace={() => { /* no workspace behind the admin route */ }}
-                  title="Solaris"
-                  userProfile={userProfile}
-                  onLogout={handleLogout}
-                />
+                {/* F2 modo foco também vale no console admin (esconde o shell). */}
+                <div className={`flex-shrink-0 ${isFocusMode ? 'hidden' : ''}`}>
+                  <Header
+                    onSourceSelected={handleSourceSelected}
+                    isWorkspaceOpen={false}
+                    onCloseWorkspace={() => { /* no workspace behind the admin route */ }}
+                    title="Solaris"
+                    userProfile={userProfile}
+                    onLogout={handleLogout}
+                  />
+                </div>
                 <React.Suspense fallback={
                   <div className="flex items-center justify-center h-screen bg-solar-dark-bg">
                     <LoadingIndicator statusText={t('loading.generic')} />
                   </div>
                 }>
-                  <AdminGate dashboards={isDashboardsRoute} />
+                  <AdminGate
+                    dashboards={isDashboardsRoute}
+                    viewer={
+                      userProfile
+                        ? { id: userProfile.id, name: userProfile.name }
+                        : null
+                    }
+                  />
                 </React.Suspense>
+                {f2Overlays}
+                {f4Overlays}
               </div>
             </WaveformCacheProvider>
           );
@@ -821,17 +1083,19 @@ const App: React.FC = () => {
               >
                 {t('a11y.skipToContent')}
               </a>
-              <Header
-                onSourceSelected={handleSourceSelected}
-                isWorkspaceOpen={isWorkspaceOpen}
-                onCloseWorkspace={handleCloseWorkspace}
-                title={isWorkspaceOpen && selectedRowPartialData ? `W.O: ${selectedRowPartialData[headers.indexOf(COLS.WO)]?.value}` : 'Solaris'}
-                userProfile={userProfile}
-                onLogout={handleLogout}
-              />
+              <div className={`flex-shrink-0 ${isFocusMode ? 'hidden' : ''}`}>
+                <Header
+                  onSourceSelected={handleSourceSelected}
+                  isWorkspaceOpen={isWorkspaceOpen}
+                  onCloseWorkspace={handleCloseWorkspace}
+                  title={isWorkspaceOpen && selectedRowPartialData ? `W.O: ${selectedRowPartialData[headers.indexOf(COLS.WO)]?.value}` : 'Solaris'}
+                  userProfile={userProfile}
+                  onLogout={handleLogout}
+                />
+              </div>
               <main id="main-workspace" className="flex-1 relative overflow-hidden bg-solar-light-bg dark:bg-solar-dark-bg">
-                <div className={`absolute inset-0 h-full transition-all duration-500 ease-in-out ${isWorkspaceOpen ? 'w-[320px]' : 'w-full'}`}>
-                  <AnalysisSheetList 
+                <div className={`absolute inset-0 h-full transition-all duration-500 ease-in-out ${isWorkspaceOpen && !isFocusMode ? 'w-[320px]' : 'w-full'} ${isFocusMode ? 'hidden' : ''}`}>
+                  <AnalysisSheetList
                     onDataLoaded={handleDataLoaded}
                     onRowSelected={handleOsSelect}
                     selectedOsIndex={selectedOsIndex}
@@ -846,9 +1110,9 @@ const App: React.FC = () => {
                     setFilters={setFilters}
                   />
                 </div>
-                <div 
+                <div
                   className={`absolute top-0 right-0 h-full bg-solar-light-bg dark:bg-solar-dark-bg transition-transform duration-500 ease-in-out ${isWorkspaceOpen ? 'translate-x-0' : 'translate-x-full'}`}
-                  style={{ width: 'calc(100% - 320px)' }}
+                  style={{ width: isFocusMode ? '100%' : 'calc(100% - 320px)' }}
                 >
                   {isWorkspaceOpen && (
                     <React.Suspense
@@ -882,12 +1146,20 @@ const App: React.FC = () => {
                       onClosePicker={handleClosePicker}
                       onFileFromPickerSelected={handleFileSelectedFromPicker}
                       userProfile={userProfile}
+                      isFocusMode={isFocusMode}
+                      onToggleFocusMode={toggleFocusMode}
+                      onToggleKeepMonitors={toggleKeepMonitors}
+                      focusKeepMonitors={focusKeepMonitors}
+                      allRowsForTwins={allRows}
+                      onCommitCopiedRow={handleCommitCopiedRow}
                         onClose={handleUnloadMedia}
                       />
                     </React.Suspense>
                   )}
                 </div>
               </main>
+              {f2Overlays}
+              {f4Overlays}
             </div>
           </WaveformCacheProvider>
         );

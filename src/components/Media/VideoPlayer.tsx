@@ -6,6 +6,10 @@ import { useAudioWaveform } from '../../hooks/useAudioWaveform';
 import WaveformTimeline from '../Monitors/WaveformTimeline';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
 import { useI18n } from '../../i18n/I18nContext';
+import { pulseShuttle, formatRate, SHUTTLE_RATES, INITIAL_SHUTTLE_STATE } from '../../features/qol/shuttle';
+// F2 QoL A2: conforto do playback — pular silêncios + volume normalize leve.
+import { useMediaComfort } from '../../features/qol/useMediaComfort';
+import MediaComfortToggle from '../Layout/MediaComfortToggle';
 
 // Import SVGs as URLs
 import tetoPresencialUrl from '../svg/homestudio.svg';
@@ -27,6 +31,8 @@ interface VideoPlayerProps {
     togglePlay: () => void;
     seekBy: (seconds: number) => void;
     seekToStart: () => void;
+    /** F2 QoL: seek absoluto (retomada de posição do auto-save). */
+    seekTo?: (seconds: number) => void;
     changeVolume: (delta: number) => void;
   }) => () => void;
   /** S5.2: transport telemetry for the A/B compare follower pane. */
@@ -56,8 +62,10 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
     const [isMuted, setIsMuted] = useState(false);
     const [isControlsVisible, setIsControlsVisible] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    // A2 QoL: shuttle adaptativo (cada pulso mesma direção sobe/desce degrau).
+    const [shuttleState, setShuttleState] = useState(INITIAL_SHUTTLE_STATE);
 
-    const { waveform, isLoading: isWaveformLoading } = useAudioWaveform(src, videoId);
+    const { waveform, peakDbfs, isLoading: isWaveformLoading } = useAudioWaveform(src, videoId);
     // Waveform cache bookkeeping: when the waveform just finished loading
     // (loading → loaded transition), register the id in the shared cache.
     // Tracked via an effect-updated ref instead of render-time reads.
@@ -102,6 +110,19 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         video.currentTime = time;
         setCurrentTime(time);
     }, [internalVideoRef]);
+
+    // A2 QoL: conforto do playback (skip silêncio + normalize). O ganho vive
+    // no grafo WebAudio do hook — o volume/mute nativos seguem livres pro
+    // usuário; o skip é efeito sobre currentTime com seek estável.
+    const comfort = useMediaComfort(
+        waveform,
+        duration,
+        currentTime,
+        src,
+        internalVideoRef,
+        handleSeek,
+        { peakDbfs },
+    );
     
     const handleSeekOffset = useCallback((offset: number) => {
         const video = internalVideoRef.current;
@@ -157,6 +178,14 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         };
     }, [showControlsAndStartTimer]);
 
+
+    // A2 shuttle: aplica velocidade adaptativa ao vídeo real.
+    useEffect(() => {
+        const video = internalVideoRef.current;
+        if (!video) return;
+        const rate = SHUTTLE_RATES[shuttleState.index] ?? 1;
+        if (video.playbackRate !== rate) video.playbackRate = rate;
+    }, [shuttleState]);
 
     useEffect(() => {
         const video = internalVideoRef.current;
@@ -274,6 +303,14 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
                 if (!video) return;
                 video.currentTime = 0;
                 setCurrentTime(0);
+                showControlsAndStartTimer();
+            },
+            // F2 QoL: seek absoluto p/ retomada da posição salva.
+            seekTo: (seconds: number) => {
+                const video = internalVideoRef.current;
+                if (!video || !isFinite(video.duration)) return;
+                video.currentTime = Math.max(0, Math.min(video.duration, seconds));
+                setCurrentTime(video.currentTime);
                 showControlsAndStartTimer();
             },
             changeVolume: (delta: number) => {
@@ -463,7 +500,27 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
                             className="w-0 sm:w-24 h-1 accent-white cursor-pointer opacity-0 group-hover/volume:opacity-100 group-hover/volume:w-24 transition-all duration-300"
                          />
                     </div>
-                    <span className="font-mono text-sm">{formatTime(currentTime)} / {formatTime(duration)}</span>
+                    <div className="flex flex-shrink-0 flex items-center gap-1.5 text-[11px] mx-1 bg-black/40 rounded-full px-2 py-0.5 select-none ring-1 ring-white/10">
+                <span className="opacity-70">S</span>
+                <button
+                  onClick={() => setShuttleState(s => pulseShuttle(s, 'down'))}
+                  title="S < — diminui ritmo (A2 shuttle)"
+                  aria-label="A2: diminuir ritmo do shuttle"
+                  className="hover:text-amber-300 focus-visible:ring-1 focus-visible:ring-amber-300 px-0.5 transition-colors font-bold text-xs leading-none"
+                >−</button>
+                <button
+                  onClick={() => setShuttleState(s => pulseShuttle(s, 'up'))}
+                  title="S > — acelera ritmo (A2 shuttle)"
+                  aria-label="A2: aumentar ritmo do shuttle"
+                  className="hover:text-amber-300 focus-visible:ring-1 focus-visible:ring-amber-300 px-0.5 transition-colors font-bold text-xs leading-none"
+                >+</button>
+                <span className="font-mono text-xs tabular-nums min-w-[1.75rem] text-center text-white" aria-live="polite">
+                  {formatRate(SHUTTLE_RATES[shuttleState.index] || 1)}
+                </span>
+              </div>
+              {/* A2 QoL: conforto do playback (skip silêncio / normalize). */}
+              <MediaComfortToggle api={comfort} />
+              <span className="font-mono text-sm">{formatTime(currentTime)} / {formatTime(duration)}</span>
                 </div>
                 <button onClick={toggleFullscreen} title="Fullscreen (f)" className="p-1 rounded-full hover:bg-white/10 transition-colors">
                     {isFullscreen ? <ExitFullscreenIcon className="w-7 h-7" /> : <FullscreenIcon className="w-7 h-7" />}

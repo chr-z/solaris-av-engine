@@ -1,4 +1,9 @@
-import React, { useRef, useCallback, useState, useEffect } from 'react';
+import React, { useRef, useCallback, useState, useEffect, Suspense, lazy } from 'react';
+
+// F6 troca #1: renderer v7 lazy — chunk só carrega quando há peaks prontos.
+const WaveSurferCanvas = lazy(
+    () => import('../../features/wavesurfer/WaveSurferCanvas'),
+);
 
 interface WaveformTimelineProps {
     duration: number;
@@ -29,6 +34,21 @@ const WaveformTimeline: React.FC<WaveformTimelineProps> = ({ duration, currentTi
     const timelineRef = useRef<HTMLDivElement>(null);
     const [isSeeking, setIsSeeking] = useState(false);
     const [hoverPosition, setHoverPosition] = useState<number | null>(null);
+
+    // F6: estado do renderer wavesurfer. Se o chunk falhar (rede/offline
+    // extrema), caímos PERMANENTEMENTE nas barras legadas até trocar de mídia.
+    const [wsFailed, setWsFailed] = useState(false);
+    useEffect(() => {
+        const onFallback = () => setWsFailed(true);
+        window.addEventListener('solaris:waveform-fallback', onFallback);
+        return () => window.removeEventListener('solaris:waveform-fallback', onFallback);
+    }, []);
+    // Nova mídia = nova chance para o renderer v7.
+    useEffect(() => {
+        setWsFailed(false);
+    }, [waveform]);
+
+    const useWsRenderer = !wsFailed && !isLoading && waveform.length > 0 && duration > 0;
 
     const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         if (!timelineRef.current || !duration) return;
@@ -91,28 +111,43 @@ const WaveformTimeline: React.FC<WaveformTimelineProps> = ({ duration, currentTi
             className="w-full h-12 cursor-pointer flex items-center group"
         >
             <div className="w-full h-8 relative bg-black/20 rounded-md">
-                {/* Waveform Visualization */}
-                <div className="absolute inset-0 flex items-end justify-between px-0.5 overflow-hidden">
-                    {isLoading ? (
-                        <div className="w-full h-full flex items-center justify-center">
-                            <div className="w-4 h-4 border-2 border-white/50 border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                    ) : (
-                        waveform.map((peak, i) => (
-                            <div
-                                key={i}
-                                className={`w-[2px] rounded-full ${getPeakColor(peak)}`}
-                                style={{ height: `${Math.max(5, peak * 100)}%` }}
-                            />
-                        ))
-                    )}
-                </div>
+                {/* Renderer v7 (lazy): canvas wavesurfer por baixo dos overlays */}
+                {useWsRenderer && (
+                    <Suspense fallback={null}>
+                        <WaveSurferCanvas
+                            peaks={waveform}
+                            duration={duration}
+                            currentTime={currentTime}
+                        />
+                    </Suspense>
+                )}
 
-                {/* Playhead Progress */}
-                <div 
-                    className="absolute top-0 left-0 h-full bg-solar-accent/60 rounded-md"
-                    style={{ width: `${progressPercent}%` }}
-                />
+                {/* Waveform Visualization (fallback legado / enquanto carrega) */}
+                {!useWsRenderer && (
+                    <div className="absolute inset-0 flex items-end justify-between px-0.5 overflow-hidden">
+                        {isLoading ? (
+                            <div className="w-full h-full flex items-center justify-center">
+                                <div className="w-4 h-4 border-2 border-white/50 border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        ) : (
+                            waveform.map((peak, i) => (
+                                <div
+                                    key={i}
+                                    className={`w-[2px] rounded-full ${getPeakColor(peak)}`}
+                                    style={{ height: `${Math.max(5, peak * 100)}%` }}
+                                />
+                            ))
+                        )}
+                    </div>
+                )}
+
+                {/* Playhead Progress — só no modo legado; o v7 pinta o próprio */}
+                {!useWsRenderer && (
+                    <div 
+                        className="absolute top-0 left-0 h-full bg-solar-accent/60 rounded-md"
+                        style={{ width: `${progressPercent}%` }}
+                    />
+                )}
 
                 {/* Scrubber Knob */}
                 <div 
