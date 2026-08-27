@@ -18,7 +18,7 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({ statusText, error, 
                     {onRetry && (
                         <button
                             onClick={onRetry}
-                            className="px-4 py-2 bg-solar-accent text-solar-dark-bg rounded-md hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-bg focus:ring-solar-accent"
+                            className="px-4 py-2 bg-solar-accent text-bg rounded-md hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg focus:ring-solar-accent"
                         >
                             {t('loading.retry')}
                         </button>
@@ -27,7 +27,7 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({ statusText, error, 
             ) : (
                 <>
                     <div className="relative w-16 h-16 mx-auto mb-4" aria-hidden="true">
-                        <div className="w-full h-full border-4 border-solar-dark-border rounded-full"></div>
+                        <div className="w-full h-full border-4 border-hairline rounded-full"></div>
                         <div className="absolute inset-0 w-full h-full border-4 border-solar-accent border-t-transparent rounded-full animate-spin"></div>
                     </div>
                     <p

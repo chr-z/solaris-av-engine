@@ -79,8 +79,8 @@ const ComparePane: React.FC<ComparePaneProps> = ({
   const resolvedSrc = source ? resolveCompareSrc(source) : null;
 
   return (
-    <div className="w-full h-full flex flex-col bg-solar-dark-content/80 backdrop-blur-md rounded-lg border border-solar-dark-border overflow-hidden">
-      <header className="flex-shrink-0 flex items-center justify-between gap-2 px-3 py-2 border-b border-solar-dark-border">
+    <div className="w-full h-full flex flex-col bg-surface/80 backdrop-blur-md rounded-lg border border-hairline overflow-hidden">
+      <header className="flex-shrink-0 flex items-center justify-between gap-2 px-3 py-2 border-b border-hairline">
         <div className="flex items-center gap-2 min-w-0">
           <span
             className="flex-shrink-0 font-mono text-xs font-bold bg-solar-accent/20 text-solar-accent rounded px-1.5 py-0.5"
@@ -118,12 +118,12 @@ const ComparePane: React.FC<ComparePaneProps> = ({
                 onKeyDown={e => { if (e.key === 'Enter') handleSubmitDraft(); }}
                 placeholder={t('compare.sourcePlaceholder')}
                 aria-label={t('compare.sourcePlaceholder')}
-                className="flex-1 min-w-0 bg-solar-dark-bg border border-solar-dark-border rounded-md px-3 py-1.5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-solar-accent"
+                className="flex-1 min-w-0 bg-surface-raised border border-hairline rounded-md px-3 py-1.5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-solar-accent"
               />
               <button
                 onClick={handleSubmitDraft}
                 disabled={!urlDraft.trim()}
-                className="flex-shrink-0 p-2 rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover disabled:opacity-50 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
+                className="flex-shrink-0 p-2 rounded-md bg-solar-accent text-bg hover:bg-solar-accent-hover disabled:opacity-50 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
                 aria-label={t('compare.load')}
                 title={t('compare.load')}
               >
@@ -152,7 +152,7 @@ const ComparePane: React.FC<ComparePaneProps> = ({
             <p className="text-sm text-red-400">{t('compare.loadFailed')}</p>
             <button
               onClick={() => { onChangeSource(null); setUrlDraft(source ?? ''); }}
-              className="px-3 py-1.5 text-sm rounded-md bg-solar-dark-bg border border-solar-dark-border text-gray-300 hover:bg-gray-500/20 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
+              className="px-3 py-1.5 text-sm rounded-md bg-surface-raised border border-hairline text-gray-300 hover:bg-gray-500/20 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
             >
               {t('compare.changeSource')}
             </button>

@@ -30,7 +30,7 @@ const AdminGate: React.FC<{
 
   if (loading) {
     return (
-      <main className="flex items-center justify-center h-screen bg-solar-dark-bg">
+      <main className="flex items-center justify-center h-screen bg-bg">
         <LoadingIndicator statusText={t('admin.checkingRole')} />
       </main>
     );
@@ -40,7 +40,7 @@ const AdminGate: React.FC<{
     <a
       href="#/"
       data-testid="admin-back"
-      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-gray-500 text-gray-300 hover:bg-gray-500/10 text-sm transition-colors"
+      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-hairline text-gray-300 wash-hover text-sm transition-colors"
     >
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M19 12H5" />
@@ -55,7 +55,7 @@ const AdminGate: React.FC<{
       <main
         role="alert"
         data-testid="admin-denied"
-        className="flex flex-col items-center justify-center h-screen gap-4 bg-solar-dark-bg text-gray-300 p-8 text-center"
+        className="flex flex-col items-center justify-center h-screen gap-4 bg-bg text-gray-300 p-8 text-center"
       >
         <h1 className="text-xl font-bold text-red-400">{t('admin.deniedTitle')}</h1>
         <p className="max-w-md text-sm">
@@ -67,10 +67,10 @@ const AdminGate: React.FC<{
   }
 
   return (
-    <main className="min-h-screen bg-solar-dark-bg">
+    <main className="min-h-screen bg-bg">
       <div className="max-w-5xl mx-auto pt-4 flex items-center justify-between gap-2">
         {backLink}
-        <span className="text-xs text-gray-500" title={t('admin.roleSourceTitle')}>
+        <span className="text-xs text-ink-secondary" title={t('admin.roleSourceTitle')}>
           {source === 'firebase-claim' ? t('admin.roleViaClaim') : t('admin.roleViaLocal')}
         </span>
       </div>

@@ -96,7 +96,7 @@ const Popover: React.FC<PopoverProps> = ({ trigger, children, contentClassName }
         <div
           ref={contentRef}
           style={style}
-          className={`bg-solar-light-content/80 dark:bg-solar-dark-content/80 backdrop-blur-md rounded-lg shadow-lg border border-solar-light-border dark:border-solar-dark-border p-1 ${contentClassName || ''}`}
+          className={`bg-surface/95 backdrop-blur-md rounded-lg shadow-pop border border-hairline p-1 ${contentClassName || ''}`}
           role="dialog"
           aria-modal="false"
           onKeyDown={handleKeyDown}

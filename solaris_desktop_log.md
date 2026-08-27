@@ -484,6 +484,7 @@
 
 ## histórico (merge lane audio/acoustics)
 
+
 # SOLARIS — log de trabalho
 
 ## Tick 26/08 ~09h45 - audio-dsp (Yui / cron solaris-audio)
@@ -1358,6 +1359,7 @@ Guardrail barato SEM código novo: fila P1-P4 segue DONE e pushed.
   matam o próprio chrome no exit.
 - src-tauri/pitch intocados (do outro worker); suite commitada segue valendo
   (nenhum código mudou desde 6933b0b - commits da lane são docs-only). Sem Telegram.
+
 ## Tick #26 26/08 ~05h05 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
 
 - Estado: HEAD 81daa81 == origin/main provado por rev-parse pos-fetch; turbo/web-opt
@@ -1382,6 +1384,7 @@ Guardrail barato SEM código novo: fila P1-P4 segue DONE e pushed.
 - src-tauri/pitch intocados (do outro worker); suite commitada segue valendo
   (nenhum codigo mudou desde 6933b0b - commits da lane sao docs-only). Sem Telegram.
 
+=======
 ## Tick #27 26/08 ~06h20 - turbo-web worker (cron MODO TURBO SOLARIS): guardrail noturno
 
 - Estado: HEAD 7667657 == origin/main provado por rev-parse pos-fetch --prune;

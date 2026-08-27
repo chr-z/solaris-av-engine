@@ -29,7 +29,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
 
     if (!selectedRow) {
         return (
-            <div className="flex items-center justify-center h-full text-gray-500 p-4 text-center">
+            <div className="flex items-center justify-center h-full text-ink-secondary p-4 text-center">
                 <p>Select a Work Order from the list to view details and start grading.</p>
             </div>
         );
@@ -40,7 +40,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
     const calculatedFields = new Set([...resultFields, 'FINAL SCORE']);
 
     const localVideoPathComponent = (
-        <div className="p-6 pt-4 border-b border-solar-dark-border bg-solar-dark-bg/30">
+        <div className="p-6 pt-4 border-b border-hairline bg-bg/30">
             <label htmlFor="local-video-path" className="flex items-center gap-2 text-xs font-medium text-gray-300 mb-1">
                 <VideoIcon className="w-4 h-4 text-solar-accent"/>
                 Network Video Path (Optional)
@@ -51,16 +51,16 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                 value={localFilePath}
                 onChange={(e) => onLocalFilePathChange(e.target.value)}
                 placeholder="\\server\share\video.mp4"
-                className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200"
+                className="w-full bg-surface border border-hairline rounded-md px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent dark:text-ink"
             />
-             <p className="text-xs text-gray-500 mt-1">Paste the network path to help other analysts locate the raw file.</p>
+             <p className="text-xs text-ink-secondary mt-1">Paste the network path to help other analysts locate the raw file.</p>
         </div>
     );
 
     return (
         <div className="flex flex-col h-full">
             {/* Tab Navigation Bar */}
-            <div className="flex-shrink-0 border-b border-solar-light-border dark:border-solar-dark-border sticky top-0 bg-solar-light-content dark:bg-solar-dark-content z-10">
+            <div className="flex-shrink-0 border-b border-hairline sticky top-0 bg-surface z-10">
                 <nav className="-mb-px flex space-x-2 overflow-x-auto px-4" aria-label="Tabs">
                     {Object.keys(formSections).map(sectionTitle => (
                         <button
@@ -119,7 +119,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                         type="text"
                                         value={value?.toString() ?? '0.00'}
                                         readOnly
-                                        className="w-full bg-solar-light-bg dark:bg-solar-dark-bg border border-solar-light-border dark:border-solar-dark-border rounded-md px-3 py-1.5 text-sm font-bold text-gray-300 focus:outline-none cursor-default"
+                                        className="w-full bg-surface dark:bg-surface border border-hairline dark:border-surface-raised rounded-md px-3 py-1.5 text-sm text-ink font-bold focus:outline-none focus:ring-2 focus:ring-accent cursor-default dark:text-ink"
                                     />
                                 </div>
                             );
@@ -148,7 +148,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                         id={fieldName}
                                         checked={isChecked}
                                         onChange={onChange}
-                                        className="h-4 w-4 rounded border-gray-500 text-solar-accent focus:ring-solar-accent bg-transparent"
+                                        className="checkbox-custom"
                                     />
                                     <span className="text-sm select-none flex items-center gap-1.5">
                                         {cellData?.link ? (
@@ -176,7 +176,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                                     </div>
                                                 }
                                             >
-                                                <InfoIcon className="w-4 h-4 text-gray-500 cursor-help" />
+                                                <InfoIcon className="w-4 h-4 text-ink-secondary cursor-help" />
                                             </Tooltip>
                                         )}
                                     </span>
@@ -200,12 +200,12 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                             id={fieldName}
                                             value={value?.toString() ?? ''}
                                             readOnly
-                                            className="w-full bg-solar-light-bg dark:bg-solar-dark-bg border border-solar-light-border dark:border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent pr-10 cursor-default dark:text-gray-200"
+                                            className="w-full bg-surface dark:bg-surface border border-hairline dark:border-surface-raised rounded-md px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent dark:text-ink cursor-default"
                                         />
                                         <button
                                             onClick={() => folderId && onOpenPicker(folderId)}
                                             disabled={!folderId}
-                                            className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-solar-accent disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                                            className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-solar-accent disabled:text-gray-500 disabled:cursor-not-allowed transition-colors"
                                             title="Open Drive Folder"
                                             aria-label="Open Google Drive Picker"
                                         >
@@ -226,7 +226,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                         id={fieldName}
                                         value={value?.toString() ?? ''}
                                         onChange={(e) => onDataChange(colIndex, e.target.value)}
-                                        className="w-full bg-solar-light-bg dark:bg-solar-dark-bg border border-solar-light-border dark:border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200"
+                                        className="w-full bg-surface-raised border border-hairline rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent text-ink"
                                     >
                                         <option value="" disabled={!!value}>Select...</option>
                                         {dropdownOptions.map(option => (
@@ -250,7 +250,7 @@ const AnalysisForm: React.FC<AnalysisFormProps> = ({
                                     value={value?.toString() ?? ''}
                                     onChange={(e) => onDataChange(colIndex, e.target.value)}
                                     rows={isTextarea ? 3 : undefined}
-                                    className="w-full bg-solar-light-bg dark:bg-solar-dark-bg border border-solar-light-border dark:border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200"
+                                    className="w-full bg-surface-raised border border-hairline rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent text-ink"
                                 />
                             </div>
                         );

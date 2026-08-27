@@ -19,7 +19,7 @@ const ProLockOverlay: React.FC<ProLockOverlayProps> = ({ titleKey }) => {
   };
 
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center p-4 bg-solar-dark-bg/60">
+    <div className="absolute inset-0 z-10 flex items-center justify-center p-4 bg-bg/60">
       <div
         role="button"
         tabIndex={0}
@@ -31,7 +31,7 @@ const ProLockOverlay: React.FC<ProLockOverlayProps> = ({ titleKey }) => {
           }
         }}
         aria-label={t('pro.lock.openUpgrade', { feature: t(titleKey as never) })}
-        className="group w-full max-w-xs rounded-lg border border-solar-dark-border bg-solar-dark-content/90 backdrop-blur-sm p-4 text-center cursor-pointer hover:border-solar-accent/60 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent focus:outline-none"
+        className="group w-full max-w-xs rounded-lg border border-hairline bg-surface/90 backdrop-blur-sm p-4 text-center cursor-pointer hover:border-solar-accent/60 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent focus:outline-none"
       >
         <svg
           className="w-8 h-8 mx-auto mb-2 text-solar-accent"
@@ -50,8 +50,7 @@ const ProLockOverlay: React.FC<ProLockOverlayProps> = ({ titleKey }) => {
         <p className="text-xs text-gray-400 leading-snug">
           {t('pro.lock.description', { feature: t(titleKey as never) })}
         </p>
-        <span className="inline-block mt-3 px-3 py-1.5 rounded-md bg-solar-accent text-solar-dark-bg text-xs font-medium group-hover:bg-solar-accent-hover transition-colors">
-          {t('pro.lock.cta')}
+        <span className="inline-block mt-3 px-3 py-1.5 rounded-md bg-gradient-to-br from-accent-from to-accent-to text-bg text-xs font-bold">          {t('pro.lock.cta')}
         </span>
       </div>
     </div>

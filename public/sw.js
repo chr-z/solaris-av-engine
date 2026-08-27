@@ -11,11 +11,13 @@
  *
  * Version bump `CACHE_VERSION` on deploy-shape changes to invalidate old caches.
  */
-const CACHE_VERSION = 'solaris-v2';
+const CACHE_VERSION = 'solaris-v3-r4';
 const OFFLINE_URLS = [
   './',
   'index.html',
   'manifest.webmanifest',
+  'icons/icon-16.png',
+  'icons/icon-32.png',
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/icon-maskable-512.png',

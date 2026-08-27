@@ -1,7 +1,127 @@
+/* Fontes locais v3 (Inter + JetBrains Mono) — font-display:optional, ver
+   fonts.css. Precisam vir antes de tudo. */
+@import './fonts.css';
+
+/* Design tokens v3 — fonte canônica de toda cor/espaço/raio/sombra.
+   TEM que vir antes das diretivas @tailwind: @import só é válido
+   no topo do arquivo (antes de qualquer regra). Depois do @tailwind,
+   o postcss-import descarta o bloco inteiro e as vars somem do build. */
+@import './tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   Componentes base (R1) — consomem exclusivamente os tokens
+   ============================================================ */
+@layer components {
+  /* Card hairline: borda sutil + sombra interna suave (fim das bordas cinza duras) */
+  .card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+  }
+  .card-raised {
+    background-color: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-pop);
+  }
+
+  /* Botões — tamanhos 32/40px (touch-friendly), 120-180ms só transform/opacity */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 32px;
+    padding: 0 var(--space-4);
+    border-radius: var(--radius-md);
+    font-family: var(--font-ui);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform 140ms ease-out, box-shadow 140ms ease-out,
+      background-color 140ms ease-out, opacity 140ms ease-out;
+  }
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  /* Primário: gradiente roxo→laranja refinado + glow leve no hover */
+  .btn-primary {
+    background-image: var(--gradient-accent);
+    color: #0b0e14;
+    font-weight: 700;
+  }
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: var(--shadow-glow-hover);
+  }
+  /* Secundário ghost: hover de superfície */
+  .btn-ghost {
+    background-color: transparent;
+    color: var(--color-text);
+    border-color: var(--color-border-strong);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background-color: var(--color-surface-raised);
+  }
+
+  /* Inputs: fundo elevado, borda acende no foco (accent) */
+  .input {
+    background-color: var(--color-surface-raised);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
+  }
+  .input::placeholder {
+    color: var(--color-text-secondary);
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-glow);
+  }
+
+  /* Timecodes/métricas: mono + números tabulares */
+  .tnum {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  /* Skeleton loader (desenhado — nada de spinner genérico) */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--color-surface) 25%,
+      var(--color-surface-raised) 50%,
+      var(--color-surface) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+    border-radius: var(--radius-md);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* ============================================================
+   Animações utilitárias existentes (usadas por modais/loading).
+   Restauradas intactas — comportamento não muda.
+   ============================================================ */
 @layer utilities {
   .transition-height {
     transition-property: height;
@@ -17,53 +137,8 @@
       transform: translateY(0);
     }
   }
-
   .animate-text-fade-in {
     animation: text-fade-in 0.5s ease-out forwards;
-  }
-  
-  /* Custom Scrollbar Styles for Webkit browsers */
-  ::-webkit-scrollbar {
-    width: 12px;
-    height: 12px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: #f0f0f0; /* solar-light-bg */
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background-color: #d1d1d1; /* solar-light-border */
-    border-radius: 10px;
-    border: 3px solid #f0f0f0; /* solar-light-bg */
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: #b0b0b0; 
-  }
-
-  .dark ::-webkit-scrollbar-track {
-    background: #2a2a2e; /* solar-dark-content */
-  }
-
-  .dark ::-webkit-scrollbar-thumb {
-    background-color: #404040; /* solar-dark-border */
-    border-radius: 10px;
-    border: 3px solid #2a2a2e; /* solar-dark-content */
-  }
-  
-  .dark ::-webkit-scrollbar-thumb:hover {
-    background-color: #555555;
-  }
-  
-  /* Custom Scrollbar Styles for Firefox */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: #d1d1d1 #f0f0f0; /* thumb track */
-  }
-
-  .dark * {
-    scrollbar-color: #404040 #2a2a2e; /* thumb track */
   }
 
   @keyframes fade-in-fast {
@@ -71,32 +146,46 @@
     to { opacity: 1; transform: scale(1); }
   }
   .animate-fade-in-fast {
-      animation: fade-in-fast 0.2s ease-out forwards;
+    animation: fade-in-fast 0.15s ease-out forwards;
   }
 }
 
-/* ---------------------------------------------------------------------------
-   Accessibility (S1.2)
-   ------------------------------------------------------------------------- */
-
-/* Visible focus ring for keyboard users only (mouse clicks stay clean). */
-:focus-visible {
-  outline: 2px solid #0a84ff; /* solar-accent */
-  outline-offset: 2px;
-  border-radius: 4px;
+/* ============================================================
+   Scrollbar discreta (tokens)
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(139, 147, 167, 0.35);
+  border-radius: var(--radius-full);
+  border: 3px solid var(--color-bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(139, 147, 167, 0.6);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 147, 167, 0.35) var(--color-bg);
 }
 
-/* Skip link: hidden until focused via keyboard. */
+/* ============================================================
+   Skip link (a11y, S1.2) — agora com accent da marca
+   ============================================================ */
 .skip-link {
   position: absolute;
   top: -48px;
   left: 8px;
   z-index: 100;
-  padding: 8px 16px;
-  background-color: #0a84ff;
-  color: #ffffff;
-  border-radius: 0 0 6px 6px;
-  font-size: 0.875rem;
+  padding: var(--space-2) var(--space-4);
+  background-image: var(--gradient-accent);
+  color: #0b0e14;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  font-size: var(--text-sm);
   font-weight: 600;
   transition: top 0.15s ease-out;
 }
@@ -104,16 +193,25 @@
   top: 0;
 }
 
-/* Respect users who prefer reduced motion: disable decorative animation
-   and transitions globally (WCAG 2.3.3 / 2.2.2). */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+/* Movimento reduzido é tratado globalmente em tokens.css (WCAG 2.3.3). */
+/* ============================================================
+   R2 — Componentes premium (badges, checkboxes, tooltips,
+   skeletons). Consomem exclusivamente tokens v3.
+   ============================================================ */
+@layer components {
+  /* ---------- Badges pill (números tabulares) ---------- */
+  .badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 1px var(--space-2);
+    border-radius: var(--radius-full);
+    background-color: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    font-size: var(--text-2xs);
+    font-weight: 600;
+    line-height: 1.4;
   }
 }
 /* ── F4 Gamificação: confete discreto do level-up (spec C1) ────────────── */
@@ -151,4 +249,224 @@ html.solaris-density-compact [role='option'] {
 html.solaris-density-compact button,
 html.solaris-density-compact input[type='range'] {
   line-height: 1.15;
+
+  /* Números/métricas dentro do badge: tabulares */
+  .badge-pill .tnum,
+  .badge-pill.tnum {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums lining-nums;
+    font-size: var(--text-xs);
+  }
+  /* Variantes semânticas — verde=ok, amarelo=atenção, vermelho=inconformidade */
+  .badge-pill.badge-ok   { color: var(--color-ok);   border-color: rgba(52, 211, 153, 0.25); background-color: rgba(52, 211, 153, 0.08); }
+  .badge-pill.badge-warn { color: var(--color-warn); border-color: rgba(251, 191, 36, 0.25); background-color: rgba(251, 191, 36, 0.08); }
+  .badge-pill.badge-fail { color: var(--color-fail); border-color: rgba(248, 113, 113, 0.25); background-color: rgba(248, 113, 113, 0.08); }
+  .badge-pill.badge-info { color: var(--color-info); border-color: rgba(96, 165, 250, 0.25); background-color: rgba(96, 165, 250, 0.08); }
+
+  /* Sparkline inline de tendência (SVG 40x12) */
+  .badge-sparkline {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .badge-sparkline svg {
+    display: block;
+    overflow: visible;
+  }
+
+  /* Badge de score na lista de análise (tick 12): pill um pouco maior que o
+     padrão pra carregar o número com presença, mantendo o mesmo vocabulário
+     semântico (ok/warn/fail). Número já é tabular via .tnum interno. */
+  .badge-score {
+    padding: 2px var(--space-2);
+    font-size: var(--text-xs);
+  }
+  .badge-score .tnum {
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  /* ---------- Checkbox customizado animado ---------- */
+  .checkbox-custom {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex-shrink: 0;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-bg);
+    cursor: pointer;
+    position: relative;
+    transition: background-color 140ms ease-out, border-color 140ms ease-out,
+      box-shadow 140ms ease-out;
+  }
+  .checkbox-custom:hover:not(:disabled) {
+    border-color: var(--color-text-secondary);
+  }
+  .checkbox-custom:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  .checkbox-custom:checked {
+    background-image: var(--gradient-accent);
+    border-color: transparent;
+  }
+  .checkbox-custom:checked::after {
+    content: "";
+    position: absolute;
+    left: 4.5px;
+    top: 1.5px;
+    width: 5px;
+    height: 9px;
+    border: solid #0b0e14;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) scale(1);
+    animation: checkbox-check 140ms ease-out;
+  }
+  .checkbox-custom:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  @keyframes checkbox-check {
+    from { transform: rotate(45deg) scale(0); opacity: 0; }
+    to   { transform: rotate(45deg) scale(1); opacity: 1; }
+  }
+
+  /* ---------- Tooltip rico ---------- */
+  .tooltip-rich {
+    font-size: var(--text-xs);
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+    background-color: var(--color-surface-raised);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-pop);
+    padding: var(--space-2) var(--space-3);
+    max-width: 288px; /* w-72 do Tooltip core */
+  }
+  .tooltip-rich .tooltip-title {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 2px;
+  }
+  .tooltip-rich kbd {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    color: var(--color-text);
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border-strong);
+    border-bottom-width: 2px;
+    border-radius: var(--radius-sm);
+    padding: 0 4px;
+  }
+
+  /* ---------- Skeletons desenhados ---------- */
+  .skeleton-line   { height: 0.8125rem; border-radius: var(--radius-sm); }
+  .skeleton-title  { height: 1.5rem;    border-radius: var(--radius-md); }
+  .skeleton-block  { height: 80px;      border-radius: var(--radius-lg); }
+
+  /* ---------- Logo Solaris (disco accent + halo) ----------
+     Momento wow nº 1: animação de entrada UMA vez por sessão
+     (classe .solaris-logo-intro é adicionada condicionalmente). */
+  .solaris-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+    border-radius: var(--radius-full);
+  }
+  .solaris-logo-disc {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-full);
+    background-image: var(--gradient-accent);
+    box-shadow:
+      inset -1px -2px 3px rgba(11, 14, 20, 0.35), /* sombra interna de volume */
+      0 0 calc(var(--space-2) / 2) var(--color-accent-glow); /* halo leve */
+  }
+  @keyframes logo-intro {
+    from {
+      opacity: 0;
+      transform: scale(0.6) rotate(-90deg);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+  }
+  .solaris-logo-intro {
+    animation: logo-intro 600ms ease-out both;
+  }
+
+  /* ---------- Estados de interação v3 (t16) ----------
+     Substituem os hovers crus gray-500/20 + text-white do MVP nos
+     botões-ícone, itens de menu e chips. Mesma anatomia de classe no
+     DOM (mesmos elementos, mesmos aria-labels), acabamento dos tokens. */
+  /* Botão-ícone: o gesto mais comum do app (fechar, editar, controles). */
+  .icon-btn {
+    color: var(--color-text-secondary);
+    transition: background-color 140ms ease-out, color 140ms ease-out;
+  }
+  .icon-btn:hover:not(:disabled) {
+    background-color: var(--color-hover-wash);
+    color: var(--color-text);
+  }
+  /* Variante destrutiva (remover marcador etc.) — semântica fail mantida. */
+  .icon-btn-danger {
+    color: var(--color-fail);
+  }
+  .icon-btn-danger:hover:not(:disabled) {
+    background-color: rgb(var(--color-fail-rgb) / 0.12);
+    color: var(--color-fail);
+  }
+  /* Item de menu/dropdown (popover do usuário, listas de opções). */
+  .menu-item {
+    width: 100%;
+    text-align: left;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    transition: background-color 140ms ease-out;
+  }
+  .menu-item:hover:not(:disabled) {
+    background-color: var(--color-hover-wash);
+  }
+  /* Item de ação destrutiva (Sign out). */
+  .menu-item-danger {
+    color: var(--color-fail);
+  }
+  .menu-item-danger:hover:not(:disabled) {
+    background-color: rgb(var(--color-fail-rgb) / 0.12);
+  }
+  /* Chip de alternância (Sort by: Time|Comment) — hover só quando inativo;
+     ativo recebe o wash accent (equivalente ao bg-solar-accent/20 legado). */
+  .chip-sort {
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-md);
+    color: inherit;
+    transition: background-color 140ms ease-out, color 140ms ease-out;
+  }
+  .chip-sort:hover:not(.is-active):not(:disabled) {
+    background-color: var(--color-hover-wash);
+  }
+  .chip-sort.is-active {
+    background-color: rgb(var(--color-accent-rgb) / 0.2);
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+  /* Hover neutro avulso p/ chips com borda (toolbar A/B) que mantêm suas
+     utilidades próprias — só troca o fundo no hover pelo token. */
+  .wash-hover {
+    transition: background-color 140ms ease-out;
+  }
+  .wash-hover:hover:not(:disabled) {
+    background-color: var(--color-hover-wash);
+  }
+
 }

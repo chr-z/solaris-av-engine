@@ -156,13 +156,12 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
           </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={startCreate} className="px-3 py-1.5 rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover text-sm">
-            Nova regra
+          <button onClick={startCreate} className="btn btn-primary px-3 py-1.5 text-sm">            Nova regra
           </button>
           <button onClick={exportJson} className="px-3 py-1.5 rounded-md border border-solar-accent/60 text-solar-accent hover:bg-solar-accent/10 text-sm">
             Exportar JSON
           </button>
-          <button onClick={resetSeed} className="px-3 py-1.5 rounded-md border border-gray-500 text-gray-300 hover:bg-gray-500/10 text-sm">
+          <button onClick={resetSeed} className="px-3 py-1.5 rounded-md border border-hairline text-gray-300 wash-hover text-sm">
             Restaurar seed
           </button>
         </div>
@@ -181,14 +180,14 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
 
       {/* Draft editor */}
       {editingId !== null && (
-        <section aria-label="Editor de regra" className="mb-6 p-4 rounded-lg bg-solar-dark-content/70 border border-solar-dark-border space-y-3">
+        <section aria-label="Editor de regra" className="mb-6 p-4 rounded-lg bg-surface/70 border border-hairline space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm">
               Nome (coluna na planilha)
               <input
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                className="mt-1 w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1"
+                className="mt-1 w-full bg-surface border border-hairline rounded-md px-2 py-1"
               />
             </label>
             <label className="text-sm">
@@ -196,7 +195,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
               <select
                 value={draft.categoryId}
                 onChange={(e) => setDraft({ ...draft, categoryId: e.target.value })}
-                className="mt-1 w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1"
+                className="mt-1 w-full bg-surface border border-hairline rounded-md px-2 py-1"
               >
                 {config.categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.id}</option>
@@ -208,7 +207,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
               <select
                 value={draft.grade}
                 onChange={(e) => setDraft({ ...draft, grade: Number(e.target.value) })}
-                className="mt-1 w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1"
+                className="mt-1 w-full bg-surface border border-hairline rounded-md px-2 py-1"
               >
                 {[1, 2, 3].map((g) => <option key={g} value={g}>{g}</option>)}
               </select>
@@ -218,7 +217,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
               <select
                 value={String(draft.active)}
                 onChange={(e) => setDraft({ ...draft, active: e.target.value === 'true' })}
-                className="mt-1 w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1"
+                className="mt-1 w-full bg-surface border border-hairline rounded-md px-2 py-1"
               >
                 <option value="true">Sim</option>
                 <option value="false">Não</option>
@@ -234,7 +233,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
                   <input
                     value={year}
                     readOnly
-                    className="w-16 bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1"
+                    className="w-16 bg-surface border border-hairline rounded-md px-2 py-1"
                     title="Ano da vigência"
                   />
                   <input
@@ -248,7 +247,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
                         scoresByYear: { ...draft.scoresByYear, [year]: Number(e.target.value) },
                       })
                     }
-                    className="w-24 bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1"
+                    className="w-24 bg-surface border border-hairline rounded-md px-2 py-1"
                   />
                 </label>
               ))}
@@ -259,10 +258,9 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
           </fieldset>
 
           <div className="flex gap-2 pt-2">
-            <button onClick={saveDraft} className="px-4 py-1.5 rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover text-sm">
-              Salvar
+            <button onClick={saveDraft} className="px-4 py-1.5 rounded-md bg-solar-accent text-bg hover:bg-solar-accent-hover text-sm">              Salvar
             </button>
-            <button onClick={() => setEditingId(null)} className="px-4 py-1.5 rounded-md border border-gray-500 text-gray-300 text-sm">
+            <button onClick={() => setEditingId(null)} className="px-4 py-1.5 rounded-md border border-hairline text-gray-300 text-sm wash-hover">
               Cancelar
             </button>
             {editingId !== '__new__' && (
@@ -278,7 +276,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
       <section aria-label="Lista de regras">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-gray-400 border-b border-solar-dark-border">
+            <tr className="text-left text-gray-400 border-b border-hairline">
               <th className="py-2 pr-2">Inconformidade</th>
               <th className="py-2 pr-2">Categoria</th>
               <th className="py-2 pr-2">Grau</th>
@@ -290,7 +288,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
           </thead>
           <tbody>
             {config.rules.map((rule) => (
-              <tr key={rule.id} className={`border-b border-solar-dark-border/50 ${rule.active ? '' : 'opacity-50'}`}>
+              <tr key={rule.id} className={`border-b border-hairline ${rule.active ? '' : 'opacity-50'}`}>
                 <td className="py-2 pr-2">{rule.name}</td>
                 <td className="py-2 pr-2">{rule.categoryId}</td>
                 <td className="py-2 pr-2">{rule.grade}</td>
@@ -301,7 +299,7 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
                   <button onClick={() => startEdit(rule)} className="px-2 py-1 rounded border border-solar-accent/60 text-solar-accent hover:bg-solar-accent/10 text-xs">
                     Editar
                   </button>
-                  <button onClick={() => toggleActive(rule.id)} className="px-2 py-1 rounded border border-gray-500 text-gray-300 hover:bg-gray-500/10 text-xs">
+                  <button onClick={() => toggleActive(rule.id)} className="px-2 py-1 rounded border border-hairline text-gray-300 wash-hover text-xs">
                     {rule.active ? 'Desativar' : 'Reativar'}
                   </button>
                 </td>
@@ -312,17 +310,16 @@ const AdminRulesPanel: React.FC<AdminRulesPanelProps> = ({ storage = localRulesS
       </section>
 
       {/* Import */}
-      <section aria-label="Importar JSON" className="mt-8 p-4 rounded-lg bg-solar-dark-content/70 border border-solar-dark-border">
+      <section aria-label="Importar JSON" className="mt-8 p-4 rounded-lg bg-surface/70 border border-hairline">
         <h2 className="font-semibold mb-2">Importar JSON de regras</h2>
         <textarea
           value={importText}
           onChange={(e) => setImportText(e.target.value)}
           placeholder='{ "version": 2, "effectiveFrom": "...", "categories": [...], "rules": [...] }'
           rows={5}
-          className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1 font-mono text-xs"
+          className="w-full bg-surface border border-hairline rounded-md px-2 py-1 font-mono text-xs"
         />
-        <button onClick={importJson} disabled={!importText.trim()} className="mt-2 px-4 py-1.5 rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover text-sm disabled:opacity-50">
-          Validar e importar
+        <button onClick={importJson} disabled={!importText.trim()} className="mt-2 btn btn-primary px-4 py-1.5 text-sm disabled:opacity-50">          Validar e importar
         </button>
       </section>
     </div>
@@ -337,7 +334,7 @@ const AddYearButton: React.FC<{ onAdd: (year: string) => void }> = ({ onAdd }) =
         value={year}
         onChange={(e) => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
         placeholder="ano"
-        className="w-20 bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-1"
+        className="w-20 bg-surface border border-hairline rounded-md px-2 py-1"
       />
       <button
         type="button"

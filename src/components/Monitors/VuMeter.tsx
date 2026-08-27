@@ -93,13 +93,13 @@ const VuMeter: React.FC<VuMeterProps> = ({ volume, isReady, onZoom }) => {
   const displayDb = isFinite(peakDb) ? peakDb.toFixed(1) : '-∞';
 
   return (
-    <div className="h-full w-12 bg-solar-light-content/80 dark:bg-solar-dark-content/80 backdrop-blur-md rounded-lg shadow-sm flex flex-col border border-solar-light-border dark:border-solar-dark-border">
-      <header className="flex-shrink-0 flex justify-between items-center p-2 border-b border-solar-dark-border/50 h-9">
-        <h3 className="font-bold text-xs uppercase text-gray-400">VU</h3>
+    <div className="h-full w-12 bg-surface/90 backdrop-blur-md rounded-lg shadow-sm flex flex-col border border-hairline">
+      <header className="flex-shrink-0 flex justify-between items-center p-2 border-b border-hairline h-9">
+        <h3 className="font-bold text-xs uppercase text-ink-secondary">VU</h3>
         {onZoom && (
           <button
             onClick={onZoom}
-            className="p-1 -mr-1 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors"
+            className="icon-btn p-1 -mr-1 rounded-md"
             title="Expand"
             aria-label="Expand VU Meter"
           >
@@ -108,7 +108,7 @@ const VuMeter: React.FC<VuMeterProps> = ({ volume, isReady, onZoom }) => {
         )}
       </header>
       <div className="flex-1 min-h-0 flex flex-col items-center px-2 pt-1 pb-2">
-        <div className="w-full flex-1 relative border-2 border-solar-light-border dark:border-solar-dark-border rounded bg-gray-200 dark:bg-gray-800 overflow-hidden">
+        <div className="w-full flex-1 relative border-2 border-hairline rounded bg-gray-800 overflow-hidden">
           {/* Main Bar */}
           <div 
             className="absolute bottom-0 left-0 right-0 transition-height duration-75 ease-out"

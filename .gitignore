@@ -60,3 +60,7 @@ lerna-debug.log*
 
 # Lane audio/acoustics: features extraidas sao intermediario de treino regeneravel
 tools/reverb-ml/out/features.jsonl
+
+# Tauri build artifacts (branch desktop)
+src-tauri/target/
+src-tauri/gen/

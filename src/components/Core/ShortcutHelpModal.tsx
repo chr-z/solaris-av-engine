@@ -150,7 +150,15 @@ const ShortcutHelpModal: React.FC<ShortcutHelpModalProps> = ({ isOpen, onClose }
       <section aria-label={t(titleKey)}>
         <h3 className="text-xs font-bold uppercase text-solar-accent mb-2">{t(titleKey)}</h3>
         <ul className="space-y-1 mb-4">
-          {defs.map(renderRow)}
+          {defs.map(def => (
+            <li key={def.id} className="flex items-center justify-between gap-4 text-sm">
+              <span className="text-gray-300">{t(def.descriptionKey as never)}</span>
+              <kbd className="flex-shrink-0 font-mono text-xs bg-bg border border-hairline rounded px-1.5 py-0.5 text-gray-200">
+                {def.display ?? def.keys}
+              </kbd>
+            </li>
+          ))}
+
         </ul>
       </section>
     );
@@ -164,10 +172,10 @@ const ShortcutHelpModal: React.FC<ShortcutHelpModalProps> = ({ isOpen, onClose }
       aria-label={t('shortcuts.modalTitle')}
     >
       <div
-        className="bg-solar-dark-content text-white w-full max-w-md rounded-lg shadow-xl flex flex-col max-h-[80vh]"
+        className="bg-surface text-ink w-full max-w-md rounded-lg shadow-pop flex flex-col max-h-[80vh]"
         onClick={event => event.stopPropagation()}
       >
-        <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-solar-dark-border">
+        <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-hairline">
           <h2 className="font-bold">{t(SHORTCUT_HELP_KEY as never)}</h2>
           <button
             ref={closeRef}

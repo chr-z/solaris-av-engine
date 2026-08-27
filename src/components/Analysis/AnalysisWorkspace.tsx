@@ -19,6 +19,10 @@ import UserAvatar from '../Auth/UserAvatar';
 import Popover from '../Core/Popover';
 import CopyMarkingsPopover from './CopyMarkingsPopover';
 import type { MarkingsCopyPlan } from '../../features/qol/markingsCopy';
+import Tooltip from '../Core/Tooltip';
+import ScoreRing from '../Core/ScoreRing';
+import ScoreSpark from '../Core/ScoreSpark';
+
 import ShortcutHelpModal from '../Core/ShortcutHelpModal';
 import { useShortcutPrefs } from '../../hooks/useShortcutPrefs';
 import { SaveIcon, ClipboardCheckIcon, YouTubeIcon, GoogleDriveIcon, XIcon, GridIcon, ClockIcon, PencilIcon, InfoIcon, ColumnsIcon, RowsIcon, RefreshIcon, FocusIcon } from '../Core/icons';
@@ -48,6 +52,11 @@ import { getUndoLog, resetUndoLog } from '../../features/qol/undoStore';
 // Troca D #3: horário do auto-save em fuso FIXO (não o do host).
 import { formatTimestampInTz } from '../../features/i18n/format';
 import { SAO_PAULO_CLOCK } from '../../features/gamification/periods';
+import { humanizeSaveError, humanizeMarkerSaveError } from '../../utils/humanErrors';
+import { useEscapeToClose } from '../../hooks/useEscapeToClose';
+import { parseScore } from '../../utils/scoreFormat';
+import { formatScorePtBr } from '../../engine/scoring';
+
 import { getCompareGridClass } from '../../utils/compareMode';
 import { getDb, getFirebaseCompat, isFirebaseConfigured, type UnsubscribeFn } from '../../config/firebase';
 
@@ -80,7 +89,7 @@ const VideoSourceChooser: React.FC<VideoSourceChooserProps> = ({ choices, onSele
                             isYoutube: choice.type === 'youtube',
                             isDriveLink: choice.type === 'driveFile'
                         })}
-                        className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-solar-dark-content border border-solar-dark-border hover:bg-solar-accent/20 hover:border-solar-accent transition-colors focus:outline-none focus:ring-2 focus:ring-solar-accent"
+                        className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-surface border border-hairline hover:bg-solar-accent/20 hover:border-solar-accent transition-colors focus:outline-none focus:ring-2 focus:ring-solar-accent"
                     >
                         {choice.type === 'youtube' && <YouTubeIcon className="w-6 h-6 text-red-500" />}
                         {choice.type === 'driveFile' && <GoogleDriveIcon className="w-6 h-6 text-blue-400" />}
@@ -109,14 +118,22 @@ interface TimestampModalProps {
     currentVideoName: string;
 }
 
-const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoRef, selectedOsIndex, userProfile, currentVideoId, currentVideoName }) => {
+// v3 (t15): exportado pra teste de componente — erro humano no save de
+// marcadores é contrato da spec e precisa ser travado por teste.
+export const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoRef, selectedOsIndex, userProfile, currentVideoId, currentVideoName }) => {
     const [timestamps, setTimestamps] = useState<Timestamp[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [comment, setComment] = useState('');
     const [sortOrder, setSortOrder] = useState<'time' | 'comment'>('time');
     const [editingTimestampId, setEditingTimestampId] = useState<string | null>(null);
     const [editingComment, setEditingComment] = useState('');
+    // v3: falha de save vira mensagem humana (nunca alert cru); o comentário
+    // digitado permanece no campo pra re-tentativa (promessa do hint).
+    const [markerSaveError, setMarkerSaveError] = useState<string | null>(null);
     const listRef = useRef<HTMLUListElement>(null);
+
+    // v3: mesmo gesto de fechar dos modais irmãos (ESC).
+    useEscapeToClose(isOpen, onClose);
 
     useEffect(() => {
         if (!isOpen || !selectedOsIndex || !currentVideoId) return;
@@ -166,28 +183,34 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
             setComment('');
             setEditingTimestampId(null);
         }
+        setMarkerSaveError(null);
     };
     
     const handleSaveNew = async () => {
         if (!comment.trim() || !userProfile || !videoRef.current) return;
+        setMarkerSaveError(null);
 
-        const newTimestamp = {
-            time: videoRef.current.currentTime,
-            comment: comment.trim(),
-            analyst: {
-                id: userProfile.id, name: userProfile.name, givenName: userProfile.givenName, picture: userProfile.picture,
-            },
-            createdAt: (await getFirebaseCompat()).app.database.ServerValue.TIMESTAMP,
-            fileId: currentVideoId,
-            fileName: currentVideoName,
-        };
-        
         try {
+            // Dentro do try: em demo/offline o próprio loadFirebase rejeita —
+            // a falha precisa cair na mensagem humana, não num rejection cru.
+            const newTimestamp = {
+                time: videoRef.current.currentTime,
+                comment: comment.trim(),
+                analyst: {
+                    id: userProfile.id, name: userProfile.name, givenName: userProfile.givenName, picture: userProfile.picture,
+                },
+                createdAt: (await getFirebaseCompat()).app.database.ServerValue.TIMESTAMP,
+                fileId: currentVideoId,
+                fileName: currentVideoName,
+            };
             await (await getDb()).ref(`timestamps/${selectedOsIndex}/${currentVideoId}`).push(newTimestamp);
             setComment('');
         } catch (error) {
             console.error("Failed to save timestamp:", error);
-            alert("Error saving timestamp. Check connection.");
+            // v3: mensagem humana inline (spec v3 — nunca raw error/alert);
+            // o comentário permanece no campo conforme prometido no hint.
+            const raw = error instanceof Error ? error.message : String(error);
+            setMarkerSaveError(humanizeMarkerSaveError(raw).title);
         }
     };
     
@@ -224,49 +247,58 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
     if (!isOpen) return null;
 
     return createPortal(
-        <div 
-            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in-fast" 
+        <div
+            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in-fast"
             onClick={onClose}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Time Markers"
         >
             <div 
-                className="bg-solar-dark-content text-white w-full max-w-2xl h-[70vh] rounded-lg shadow-xl flex flex-col"
+                className="bg-surface text-white w-full max-w-2xl h-[70vh] rounded-lg shadow-xl flex flex-col"
                 onClick={e => e.stopPropagation()}
             >
-                <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-solar-dark-border">
+                <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-hairline">
                     <div className="min-w-0">
                         <h2 className="font-bold text-lg leading-tight">Time Markers</h2>
                         <p className="text-xs text-gray-400 truncate" title={currentVideoName}>{currentVideoName}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <div className="flex items-center gap-1 text-xs bg-solar-dark-bg px-2 py-1 rounded-md">
+                        <div className="flex items-center gap-1 text-xs bg-bg px-2 py-1 rounded-md">
                             <span className="text-gray-400">Sort by:</span>
-                            <button onClick={() => setSortOrder('time')} className={`px-2 py-0.5 rounded ${sortOrder === 'time' ? 'bg-solar-accent text-solar-dark-bg' : 'hover:bg-gray-500/20'}`}>Time</button>
-                            <button onClick={() => setSortOrder('comment')} className={`px-2 py-0.5 rounded ${sortOrder === 'comment' ? 'bg-solar-accent text-solar-dark-bg' : 'hover:bg-gray-500/20'}`}>Comment</button>
-                        </div>
-                        <button onClick={onClose} className="p-2 rounded-full text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors" aria-label="Close">
+                            <button onClick={() => setSortOrder('time')} className={`chip-sort ${sortOrder === 'time' ? 'is-active' : ''}`}>Time</button>
+                            <button onClick={() => setSortOrder('comment')} className={`chip-sort ${sortOrder === 'comment' ? 'is-active' : ''}`}>Comment</button>                        </div>
+                        <button onClick={onClose} className="icon-btn p-2 rounded-full" aria-label="Close">
                             <XIcon className="w-5 h-5" />
                         </button>
                     </div>
                 </header>
                 <div className="flex-1 min-h-0 overflow-y-auto p-2">
-                     {isLoading && <p className="text-gray-400 text-center p-4">Loading markers...</p>}
+                     {isLoading && (
+                        <div className="p-4 space-y-3" aria-hidden="true">
+                            <div className="skeleton skeleton-line w-2/5 mx-auto" />
+                            <div className="skeleton skeleton-line" />
+                            <div className="skeleton skeleton-line w-4/5" />
+                            <div className="skeleton skeleton-line w-3/5" />
+                            <span className="sr-only">Loading markers…</span>
+                        </div>
+                     )}
                      {!isLoading && sortedTimestamps.length === 0 && (
                         <div className="text-center p-6 text-gray-400">
-                           <ClockIcon className="w-12 h-12 mx-auto mb-2 text-gray-500"/>
+                           <ClockIcon className="w-12 h-12 mx-auto mb-2 text-ink-secondary"/>
                            <h3 className="font-bold">No Markers</h3>
                            <p className="text-sm">Use the field below to add the first marker to this video.</p>
                         </div>
                      )}
                      <ul ref={listRef} className="space-y-1 p-2">
                         {sortedTimestamps.map(ts => (
-                            <li key={ts.id} className="group bg-solar-dark-bg/50 rounded-lg">
+                            <li key={ts.id} className="group bg-bg/50 rounded-lg">
                                 {editingTimestampId === ts.id ? (
                                     <div className="p-3 space-y-2">
-                                        <textarea value={editingComment} onChange={e => setEditingComment(e.target.value)} rows={2} className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200" autoFocus/>
+                                        <textarea value={editingComment} onChange={e => setEditingComment(e.target.value)} rows={2} className="w-full bg-bg border border-hairline rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200" autoFocus/>
                                         <div className="flex justify-end gap-2">
-                                            <button onClick={handleCancelEdit} className="px-3 py-1 text-sm rounded-md hover:bg-gray-500/20">Cancel</button>
-                                            <button onClick={handleSaveEdit} disabled={!editingComment.trim()} className="px-3 py-1 text-sm rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover disabled:opacity-50">Save</button>
-                                        </div>
+                                            <button onClick={handleCancelEdit} className="menu-item !w-auto">Cancel</button>
+                                            <button onClick={handleSaveEdit} disabled={!editingComment.trim()} className="btn btn-primary px-3 py-1 text-sm disabled:opacity-50">Save</button>                                        </div>
                                     </div>
                                 ) : (
                                     <div className="flex items-start gap-3 p-3">
@@ -281,8 +313,8 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
                                                 </div>
                                                 {userProfile?.id === ts.analyst.id && (
                                                     <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button onClick={() => handleStartEdit(ts)} className="p-1 rounded-full text-gray-400 hover:bg-gray-500/20 hover:text-white" aria-label="Edit"><PencilIcon className="w-3 h-3" /></button>
-                                                        <button onClick={() => handleDelete(ts.id)} className="p-1 rounded-full text-gray-400 hover:bg-red-500/20 hover:text-red-400" aria-label="Remove"><XIcon className="w-3 h-3" /></button>
+                                                        <button onClick={() => handleStartEdit(ts)} className="icon-btn p-1 rounded-full" aria-label="Edit"><PencilIcon className="w-3 h-3" /></button>
+                                                        <button onClick={() => handleDelete(ts.id)} className="icon-btn icon-btn-danger p-1 rounded-full" aria-label="Remove"><XIcon className="w-3 h-3" /></button>
                                                     </div>
                                                 )}
                                             </div>
@@ -294,12 +326,17 @@ const TimestampModal: React.FC<TimestampModalProps> = ({ isOpen, onClose, videoR
                         ))}
                      </ul>
                 </div>
-                <div className="flex-shrink-0 p-3 border-t border-solar-dark-border bg-solar-dark-bg/50">
+                <div className="flex-shrink-0 p-3 border-t border-hairline bg-bg/50">
                     <div className="space-y-2">
-                        <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Add a time marker comment..." rows={2} className="w-full bg-solar-dark-bg border border-solar-dark-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-solar-accent dark:text-gray-200 dark:placeholder-gray-500" onFocus={handleAddClick}/>
+                        {markerSaveError && (
+                            <p role="alert" className="text-sm text-fail flex items-start gap-1.5">
+                                <span aria-hidden="true">⚠</span>
+                                <span>{markerSaveError} Your comment is still here — check the connection and try again.</span>
+                            </p>
+                        )}
+                        <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Add a time marker comment..." rows={2} className="input w-full resize-none" onFocus={handleAddClick}/>
                         <div className="flex justify-end">
-                            <button onClick={handleSaveNew} disabled={!comment.trim()} className="px-4 py-2 text-sm font-semibold rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover disabled:opacity-50">Add Marker</button>
-                        </div>
+                            <button onClick={handleSaveNew} disabled={!comment.trim()} className="btn btn-primary px-4 py-2 text-sm disabled:opacity-50">Add Marker</button>                        </div>
                     </div>
                 </div>
             </div>
@@ -587,6 +624,72 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
   // State for local video path sharing
   const [localFilePath, setLocalFilePath] = useState('');
   const [retrievedFilePath, setRetrievedFilePath] = useState<string | null>(null);
+
+  // R3 v3: time markers for the redesigned timeline pins. Same Firebase path
+  // the TimestampModal reads (`timestamps/<os>/<videoId>`) — a light 'value'
+  // listener only for rendering; adding/removing still goes through the modal.
+  const [timelineMarkers, setTimelineMarkers] = useState<Timestamp[]>([]);
+  useEffect(() => {
+    if (!selectedOsIndex || !currentVideoId) {
+      queueMicrotask(() => setTimelineMarkers([]));
+      return;
+    }
+    // turbo-web: acesso lazy ao DB — builds offline/demo nao tocam o SDK e
+    // ficam sem pins, silenciosamente (mesmo contrato do modal de markers).
+    if (!isFirebaseConfigured()) { return; }
+    let active = true;
+    let ref: ReturnType<Awaited<ReturnType<typeof getDb>>['ref']> | null = null;
+    let unsub: UnsubscribeFn | null = null;
+    const applySnapshot = (snapshot: any) => {
+      const data = snapshot.val();
+      if (data) {
+        const list: Timestamp[] = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+        list.sort((a: Timestamp, b: Timestamp) => a.time - b.time);
+        setTimelineMarkers(list);
+      } else {
+        setTimelineMarkers([]);
+      }
+    };
+    getDb().then((db) => {
+      if (!active) return;
+      ref = db.ref(`timestamps/${selectedOsIndex}/${currentVideoId}`);
+      unsub = ref.on('value', applySnapshot, () => { /* permission/offline: sem pins */ });
+    }).catch(() => { /* offline/demo: sem pins */ });
+    return () => {
+      active = false;
+      if (ref && unsub) ref.off('value', unsub);
+    };
+  }, [selectedOsIndex, currentVideoId]);
+
+  // R3 v3: clicking a pin seeks the leader video to the marker time.
+  const handleMarkerSelect = useCallback((time: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    try {
+      video.currentTime = time;
+    } catch { /* vídeo ainda não pronto */ }
+  }, []);
+
+  // R3 v3: nota final atual (memo) pro ScoreRing do cabeçalho.
+  const finalScoreForRing = useMemo(() => {
+    if (!localRowData || headers.length === 0) return null;
+    const idx = headers.indexOf('FINAL SCORE');
+    if (idx < 0) return null;
+    return parseScore(localRowData[idx]?.value);
+  }, [localRowData, headers]);
+
+  // Tick 9: breakdown por categoria pro ScoreSpark (mesma matemática do
+  // ScoringEngine usada nas colunas; memo — roda a cada marcação, não por render).
+  const categoryBreakdownForSpark = useMemo(() => {
+    if (!localRowData || headers.length === 0) return null;
+    try {
+      const { result } = recalculateScoresWithEngine(localRowData, headers);
+      return result.categories;
+    } catch {
+      return null;
+    }
+  }, [localRowData, headers]);
+
 
 
   // Fetch stored local file path when OS is selected
@@ -882,8 +985,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
       <button
         onClick={handleSave}
         disabled={isSaving}
-        className="flex items-center gap-2 px-4 py-2 rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50"
-      >
+        className="flex items-center gap-2 px-4 py-2 rounded-md bg-solar-accent text-bg hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent disabled:opacity-50"      >
         {isSaving ? (
            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
         ) : (
@@ -910,7 +1012,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
         onClick={() => { void handleSyncToSheet(); }}
         disabled={isSyncing || isSaving}
         title="Grava a linha da O.S. na planilha (escrita idempotente com auditoria)"
-        className="flex items-center gap-2 px-4 py-2 rounded-md border border-solar-accent/60 text-solar-accent hover:bg-solar-accent/10 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50"
+        className="flex items-center gap-2 px-4 py-2 rounded-md border border-solar-accent/60 text-solar-accent hover:bg-solar-accent/10 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent disabled:opacity-50"
       >
         {isSyncing ? (
           <div className="w-5 h-5 border-2 border-solar-accent border-t-transparent rounded-full animate-spin"></div>
@@ -922,8 +1024,11 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
     </div>
   );
 
-return (
-    <div className="w-full h-full flex p-4 gap-4 overflow-hidden bg-solar-dark-bg">
+  const osIdentifier = localRowData ? (localRowData[headers.indexOf('W.O.')]?.value || '') : '';
+
+  return (
+    <div className="w-full h-full flex p-4 gap-4 overflow-hidden bg-bg">
+
         {isPickerOpen && pickerFolderId && (
             <DriveFilePicker
                 folderId={pickerFolderId}
@@ -965,6 +1070,9 @@ return (
                     onClose={onClose}
                     registerPlayerControls={registerPlayerControls}
                     onTransport={publishTransportCombined}
+                    onMarkerSelect={handleMarkerSelect}
+                    markers={timelineMarkers}
+
                 >
                     {videoChoices.length > 1 && (
                         <VideoSourceChooser
@@ -980,10 +1088,24 @@ return (
                          />
                     )}
                     {!videoSrc && !retrievedFilePath && videoChoices.length <= 1 && !isPickerOpen && (
-                        <div className="flex flex-col items-center justify-center text-center text-gray-400 p-4">
-                            <p className="font-bold text-lg mb-2">{videoTitle}</p>
-                            <p className="mb-4">Select an option below to start analysis.</p>
-                            <div className="w-96">
+                        <div className="flex flex-col items-center justify-center text-center text-ink-secondary p-4">
+                            {/* Empty state ilustrado (momento wow #4) */}
+                            <svg width="72" height="72" viewBox="0 0 72 72" fill="none" aria-hidden="true" className="mb-3 opacity-90">
+                                <rect x="10" y="14" width="52" height="36" rx="6" stroke="var(--color-border-strong)" strokeWidth="1.5" />
+                                <path d="M30 26l12 7-12 7v-14z" fill="url(#solaris-empty-play)" />
+                                <path d="M22 58h28M28 63h16" stroke="var(--color-border-strong)" strokeWidth="1.5" strokeLinecap="round" />
+                                <circle cx="57" cy="20" r="8" fill="var(--color-bg)" stroke="var(--color-border-strong)" strokeWidth="1.5" />
+                                <path d="M53.5 20l2.4 2.4L60.5 17" stroke="var(--color-ok)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                <defs>
+                                    <linearGradient id="solaris-empty-play" x1="30" y1="26" x2="42" y2="40">
+                                        <stop stopColor="var(--color-accent-from)" />
+                                        <stop offset="1" stopColor="var(--color-accent-to)" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <p className="font-bold text-lg mb-2 text-ink">{videoTitle}</p>
+                            <p className="mb-4">Paste a YouTube link or pick a source below to start.</p>
+                            <div className="w-96 max-w-full">
                                 <SourceSelector onSourceSelected={onLoadMedia} />
                             </div>
                             <p className="text-sm mt-4">Or click the <GoogleDriveIcon className="inline-block w-4 h-4 align-text-bottom" /> button next to the "FOLDER" field.</p>
@@ -1016,6 +1138,9 @@ return (
                 onClose={onClose}
                 registerPlayerControls={registerPlayerControls}
                 onTransport={publishTransportCombined}
+                    onMarkerSelect={handleMarkerSelect}
+                    markers={timelineMarkers}
+
             >
                 {videoChoices.length > 1 && (
                     <VideoSourceChooser
@@ -1031,10 +1156,24 @@ return (
                      />
                 )}
                 {!videoSrc && !retrievedFilePath && videoChoices.length <= 1 && !isPickerOpen && (
-                    <div className="flex flex-col items-center justify-center text-center text-gray-400 p-4">
-                        <p className="font-bold text-lg mb-2">{videoTitle}</p>
-                        <p className="mb-4">Select an option below to start analysis.</p>
-                        <div className="w-96">
+                    <div className="flex flex-col items-center justify-center text-center text-ink-secondary p-4">
+                        {/* Empty state ilustrado (momento wow #4) */}
+                        <svg width="72" height="72" viewBox="0 0 72 72" fill="none" aria-hidden="true" className="mb-3 opacity-90">
+                            <rect x="10" y="14" width="52" height="36" rx="6" stroke="var(--color-border-strong)" strokeWidth="1.5" />
+                            <path d="M30 26l12 7-12 7v-14z" fill="url(#solaris-empty-play2)" />
+                            <path d="M22 58h28M28 63h16" stroke="var(--color-border-strong)" strokeWidth="1.5" strokeLinecap="round" />
+                            <circle cx="57" cy="20" r="8" fill="var(--color-bg)" stroke="var(--color-border-strong)" strokeWidth="1.5" />
+                            <path d="M53.5 20l2.4 2.4L60.5 17" stroke="var(--color-ok)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            <defs>
+                                <linearGradient id="solaris-empty-play2" x1="30" y1="26" x2="42" y2="40">
+                                    <stop stopColor="var(--color-accent-from)" />
+                                    <stop offset="1" stopColor="var(--color-accent-to)" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <p className="font-bold text-lg mb-2 text-ink">{videoTitle}</p>
+                        <p className="mb-4">Paste a YouTube link or pick a source below to start.</p>
+                        <div className="w-96 max-w-full">
                             <SourceSelector onSourceSelected={onLoadMedia} />
                         </div>
                         <p className="text-sm mt-4">Or click the <GoogleDriveIcon className="inline-block w-4 h-4 align-text-bottom" /> button next to the "FOLDER" field.</p>
@@ -1045,15 +1184,14 @@ return (
         </div>
         {compare.isActive && (
           <div
-            className="flex-shrink-0 flex items-center justify-center gap-3 py-1.5 px-4 rounded-lg bg-solar-light-content/80 dark:bg-solar-dark-content/80 backdrop-blur-md border border-solar-light-border dark:border-solar-dark-border text-sm"
+            className="flex-shrink-0 flex items-center justify-center gap-3 py-1.5 px-4 rounded-lg bg-surface/80 dark:bg-surface/80 backdrop-blur-md border border-hairline text-sm"
             role="toolbar"
             aria-label={t('compare.title')}
           >
             <span className="font-bold text-xs uppercase tracking-wide text-solar-accent">{t('compare.title')}</span>
             <button
               onClick={compare.toggleSyncMode}
-              className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent ${compare.syncMode === 'locked' ? 'bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover' : 'bg-solar-dark-bg border border-solar-dark-border text-gray-300 hover:bg-gray-500/20'}`}
-              title={compare.syncMode === 'locked' ? t('compare.syncLocked') : t('compare.syncFree')}
+              className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent ${compare.syncMode === 'locked' ? 'bg-solar-accent text-bg hover:bg-solar-accent-hover' : 'bg-bg border border-hairline wash-hover'}`}              title={compare.syncMode === 'locked' ? t('compare.syncLocked') : t('compare.syncFree')}
               aria-label={t('compare.syncMode')}
             >
               {compare.syncMode === 'locked' ? '⇄ ' + t('compare.syncLocked') : '✕ ' + t('compare.syncFree')}
@@ -1066,19 +1204,19 @@ return (
                 value={compare.offsetSeconds}
                 onChange={e => compare.setOffset(parseFloat(e.target.value))}
                 aria-describedby="compare-offset-hint"
-                className="w-20 bg-solar-dark-bg border border-solar-dark-border rounded-md px-2 py-0.5 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-solar-accent"
+                className="w-20 bg-bg border border-hairline rounded-md px-2 py-0.5 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-solar-accent"
               />
             </label>
-            <span id="compare-offset-hint" className="text-[11px] text-gray-500 hidden lg:inline">{t('compare.offsetHint')}</span>
+            <span id="compare-offset-hint" className="text-[11px] text-ink-secondary hidden lg:inline">{t('compare.offsetHint')}</span>
             <button
               onClick={compare.resetOffset}
-              className="px-2 py-0.5 rounded-md text-xs bg-solar-dark-bg border border-solar-dark-border text-gray-300 hover:bg-gray-500/20 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
+              className="px-2 py-0.5 rounded-md text-xs bg-bg border border-hairline wash-hover focus-visible:ring-2 focus-visible:ring-solar-accent"
             >
               0
             </button>
             <button
               onClick={compare.toggleLayout}
-              className="p-1.5 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
+              className="icon-btn p-1.5 rounded-md focus-visible:ring-2 focus-visible:ring-solar-accent"
               title={t('compare.layout')}
               aria-label={t('compare.layout')}
             >
@@ -1103,9 +1241,46 @@ return (
         )}
 
       </div>
-      <div className="w-1/3 h-full flex flex-col bg-solar-light-content/80 dark:bg-solar-dark-content/80 backdrop-blur-md rounded-lg shadow-sm border border-solar-light-border dark:border-solar-dark-border overflow-hidden">
-          <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-solar-light-border dark:border-solar-dark-border">
-              <h2 className="font-bold">Analysis Sheet</h2>
+      <div className="w-1/3 h-full flex flex-col bg-surface/80 dark:bg-surface/80 backdrop-blur-md rounded-lg shadow-sm border border-hairline overflow-hidden">
+          <header className="flex-shrink-0 flex justify-between items-center p-3 border-b border-hairline">
+              <div className="flex items-center gap-3 min-w-0">
+                  {/* Momento wow #3: anel do score final (0–5), cor semântica */}
+                  {localRowData && headers.includes('FINAL SCORE') && (
+                      <ScoreRing
+                          score={finalScoreForRing}
+                          size={44}
+                          label={t('workspace.finalScore') || 'FINAL'}
+                      />
+                  )}
+                  {/* Tick 9: micro-sparkline do perfil por categoria (spec v3:
+                      "pill com número tabular + micro-sparkline da tendência").
+                      Tooltip rico segue o padrão da casa; some junto com o anel. */}
+                  {localRowData && headers.includes('FINAL SCORE') && categoryBreakdownForSpark && (
+                      <Tooltip
+                          content={
+                              <div className="space-y-1 text-left">
+                                  <p className="font-bold text-white">{t('workspace.scoreSparkTitle')}</p>
+                                  {categoryBreakdownForSpark.map((c) => {
+                                      const label = c.categoryId; // IDs do seed JÁ são o vocabulário do MVP
+                                      return (
+                                          <p key={c.categoryId} className="flex justify-between gap-6 text-xs">
+                                              <span className="text-gray-400">{label}</span>
+                                              <span className="font-mono tnum text-gray-300">
+                                                  {formatScorePtBr(c.finalScore)}/{formatScorePtBr(c.maxScore)}
+                                              </span>
+                                          </p>
+                                      );
+                                  })}
+                              </div>
+                          }
+                      >
+                          <span tabIndex={0} role="img" aria-label={String(t('workspace.scoreSparkTitle'))} className="cursor-help inline-flex">
+                              <ScoreSpark categories={categoryBreakdownForSpark} />
+                          </span>
+                      </Tooltip>
+                  )}
+                  <h2 className="font-bold">Analysis Sheet</h2>
+              </div>
               <div className="flex items-center gap-2">
                   {/* F2 QoL: badge discreto do auto-save (spec A1 "salvo ✓"). */}
                   {lastSavedAt && (
@@ -1128,13 +1303,23 @@ return (
                       <FocusIcon className="w-5 h-5" />
                   </button>
                   {saveStatus === 'error' && <p className="text-sm text-red-400 mr-2">{saveError}</p>}
+                  {saveStatus === 'error' && saveError && (() => {
+                      const he = humanizeSaveError(saveError);
+                      return (
+                          <div className="text-right mr-2 max-w-56" role="alert">
+                              <p className="text-sm text-fail leading-tight">{he.title}</p>
+                              <p className="text-2xs text-ink-secondary leading-tight">{he.hint}</p>
+                          </div>
+                      );
+                  })()}
+
                   {/* S5.2: enter/exit A/B compare split (also via V). S6.1: Pro-gated — free tier gets the upsell lock. */}
                   {isCompareAllowed ? (
                     <button
                       onClick={handleToggleCompare}
                       disabled={!videoSrc}
                       aria-pressed={compare.isActive}
-                      className={`p-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed ${compare.isActive ? 'bg-solar-accent/30 text-solar-accent hover:bg-solar-accent/40' : 'text-gray-400 hover:bg-gray-500/20 hover:text-white'}`}
+                      className={`p-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed ${compare.isActive ? 'bg-solar-accent/30 text-solar-accent hover:bg-solar-accent/40' : 'icon-btn'}`}
                       title={t('compare.open')}
                       aria-label={t('compare.open')}
                     >
@@ -1145,7 +1330,7 @@ return (
                       onClick={() => window.dispatchEvent(new CustomEvent('solaris:open-pro-upgrade'))}
                       aria-label={t('pro.lock.openUpgrade', { feature: t('compare.title') })}
                       title={t('pro.lock.description', { feature: t('compare.title') })}
-                      className="relative p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent"
+                      className="relative icon-btn p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
                     >
                       <ColumnsIcon className="w-5 h-5" />
                       <svg
@@ -1161,7 +1346,7 @@ return (
                   <button
                     onClick={() => setIsTimestampModalOpen(true)}
                     disabled={!currentVideoId}
-                    className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="icon-btn p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Time Markers"
                     aria-label="Open time markers"
                   >
@@ -1170,7 +1355,7 @@ return (
                   {/* S5.1: keyboard shortcut reference (also via "?"). */}
                   <button
                     onClick={() => setIsShortcutHelpOpen(true)}
-                    className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent"
+                    className="icon-btn p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
                     title={t('header.shortcutHelp')}
                     aria-label={t('header.shortcutHelp')}
                   >
@@ -1180,7 +1365,7 @@ return (
                     contentClassName="w-72"
                     trigger={
                       <button
-                        className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent"
+                        className="icon-btn p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
                         title="Overlay Settings"
                         aria-label="Open overlay settings"
                       >
@@ -1193,7 +1378,7 @@ return (
                   {pickerFolderId && (
                     <button
                         onClick={() => onOpenPicker(pickerFolderId)}
-                        className="p-2 rounded-md text-gray-400 hover:bg-gray-500/20 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent"
+                        className="icon-btn p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-solar-accent"
                         title="Open Drive Picker"
                         aria-label="Open Drive Picker"
                     >

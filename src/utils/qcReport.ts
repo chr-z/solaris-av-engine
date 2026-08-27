@@ -80,7 +80,7 @@ export function generateQCReport(
   };
 }
 
-/** Exporta o relatório como blob downloadável (client-side) */
+/** Exporta o relatório como documento HTML completo, pronto pra abrir/imprimir/PDF */
 export function exportQCReportBlob(report: QCReport): Blob {
   // Spec SOLARIS_AUDIO_ACOUSTICS §Saída: o relatório QC inclui os scores
   // acústicos. A seção vem do registro da última análise acústica publicada;
@@ -88,23 +88,84 @@ export function exportQCReportBlob(report: QCReport): Blob {
   const acousticSection = getLatestAcousticQCSection();
   const acousticHtml = acousticSection ? renderAcousticQCSectionHtml(acousticSection) : '';
   const formattedDate = new Date(report.generatedAt).toISOString().split('T')[0];
-  const template = `
-    <h1>${report.title}</h1>
-    <p><strong>Generated:</strong> ${formattedDate}</p>
-    <p><strong>Locale:</strong> ${report.locale.toUpperCase()}</p>
-    <hr />
-    <h2>Metrics</h2>
-    <ul>
-      <li>Total Rows: ${report.totalRows}</li>
-      <li>Filtered Rows: ${report.filteredRows}</li>
-      <li>Avg Analysis Time: ${report.metrics.avgAnalysisTime}s</li>
-      <li>Total Errors: ${report.metrics.totalErrors}</li>
-      <li>Warnings: ${report.metrics.warningCount}</li>
-    </ul>
-    <h2>Headers</h2>
-    <pre>${JSON.stringify(report.headers, null, 2)}</pre>
-    ${acousticHtml}
-  `;
+  const generatedAt = new Date(report.generatedAt).toLocaleString(
+    report.locale === 'pt' ? 'pt-BR' : 'en-US',
+    { dateStyle: 'medium', timeStyle: 'short' }
+  );
+  const esc = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const template = `<!doctype html>
+<html lang="${report.locale}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(report.title)} · ${formattedDate}</title>
+<style>
+  :root { --ink:#161a23; --muted:#5b6474; --line:rgba(16,20,30,.12);
+          --accent:#8f6ff7; --accent2:#f09a52; --warn:#b45309; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#f6f7fb; color:var(--ink);
+         font:15px/1.55 Inter,system-ui,-apple-system,'Segoe UI',sans-serif;
+         -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .qc-doc { max-width:800px; margin:32px auto; padding:0 24px; }
+  .qc-header h1 { font-size:24px; letter-spacing:-.01em; margin:0; }
+  .qc-rule { height:3px; border-radius:999px;
+             background:linear-gradient(90deg,var(--accent),var(--accent2));
+             margin:14px 0 10px; }
+  .qc-meta { color:var(--muted); font-size:13px; margin:0; }
+  .qc-meta strong { color:var(--ink); }
+  .qc-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(128px,1fr));
+             gap:10px; margin:20px 0 6px; }
+  .qc-stat { background:#fff; border:1px solid var(--line);
+             border-radius:10px; padding:12px 14px; }
+  .qc-stat b { display:block; font-size:24px; line-height:1.2;
+               font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+  .qc-stat span { font-size:11px; text-transform:uppercase;
+                  letter-spacing:.06em; color:var(--muted); }
+  .qc-stat.is-warn b { color:var(--warn); }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.08em;
+       color:var(--muted); border-top:1px solid var(--line);
+       padding-top:14px; margin:22px 0 10px; }
+  pre { background:#fff; border:1px solid var(--line); border-radius:10px;
+        padding:12px 14px; margin:0;
+        font:12.5px/1.5 'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+        overflow-x:auto; }
+  .qc-footer { margin-top:26px; padding-top:12px;
+               border-top:1px solid var(--line); color:var(--muted);
+               font-size:12px; display:flex; justify-content:space-between; gap:12px; }
+  @page { size:A4; margin:14mm; }
+  @media print {
+    body { background:#fff; }
+    .qc-doc { margin:0; max-width:none; padding:0; }
+  }
+</style>
+</head>
+<body>
+<main class="qc-doc">
+  <header class="qc-header">
+    <h1>${esc(report.title)}</h1>
+    <div class="qc-rule" aria-hidden="true"></div>
+    <p class="qc-meta"><strong>Generated:</strong> ${generatedAt} &middot;
+       <strong>Locale:</strong> ${esc(report.locale.toUpperCase())}</p>
+  </header>
+  <section class="qc-grid" aria-label="Metrics">
+    <div class="qc-stat"><b>${report.totalRows}</b><span>Total rows</span></div>
+    <div class="qc-stat"><b>${report.filteredRows}</b><span>Filtered rows</span></div>
+    <div class="qc-stat"><b>${report.metrics.avgAnalysisTime}s</b><span>Avg analysis time</span></div>
+    <div class="qc-stat${report.metrics.totalErrors > 0 ? ' is-warn' : ''}"><b>${report.metrics.totalErrors}</b><span>Total errors</span></div>
+    <div class="qc-stat"><b>${report.metrics.warningCount}</b><span>Warnings</span></div>
+  </section>
+  <h2>Headers</h2>
+  <pre>${esc(JSON.stringify(report.headers, null, 2))}</pre>
+  <footer class="qc-footer">
+    <span>Solaris AV Analysis Engine</span>
+    <span>${formattedDate}</span>
+  </footer>
+</main>
+</body>
+</html>
+`;
+
 
   const blob = new Blob([template], { type: 'text/html' });
   return blob;

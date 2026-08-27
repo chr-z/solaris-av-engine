@@ -10,6 +10,7 @@ import {
   suggestedQCFileName,
 } from '../../utils/qcPdf';
 
+
 /**
  * S4.1 (repaired in S5.1; upgraded in F6/D): downloads a professional PDF
  * QC report (pdfmake, lazy-loaded chunk) for the current dataset and shows
@@ -22,6 +23,18 @@ import {
  * Uses the app's own lightweight i18n approach (hardcoded EN strings, same
  * as before the upgrade).
  */
+// Momento wow #2 da spec v3: ao concluir a análise/exportar o relatório, os
+// números resumidos animam de 0 até o total (ease-out cúbico, 900ms).
+// O util countFrame faz snap EXATO no destino no último frame, então o texto
+// final renderizado é idêntico ao estático de antes — só a chegada muda.
+const AnimatedStat: React.FC<{ value: number; format: (n: number) => string }> = ({
+  value,
+  format,
+}) => {
+  const animated = useCountUp(value);
+  return <span className="tnum">{format(animated)}</span>;
+};
+
 export const QCExportButton: React.FC<{ className?: string }> = ({ className = '' }) => {
   const [summary, setSummary] = useState<ReturnType<typeof getQCSummary> | null>(null);
   const [lastBlob, setLastBlob] = useState<Blob | null>(null);
@@ -80,6 +93,7 @@ export const QCExportButton: React.FC<{ className?: string }> = ({ className = '
         disabled={isGenerating}
         className={`flex items-center gap-2 px-3 py-2 rounded-md bg-solar-accent text-white hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-content focus:ring-solar-accent disabled:opacity-60 ${className}`}
         aria-label="Export QC Report"
+
         title="Export QC Report"
       >
         <svg
@@ -111,13 +125,14 @@ export const QCExportButton: React.FC<{ className?: string }> = ({ className = '
       aria-label="QC Report Exported"
     >
       <div
-        className="bg-solar-dark-content rounded-lg p-6 max-w-sm w-full mx-4 text-center text-white border border-solar-dark-border shadow-xl"
+        className="card card-raised rounded-lg p-6 max-w-sm w-full mx-4 text-center shadow-pop"
         onClick={event => event.stopPropagation()}
       >
         <h3 className="font-bold text-lg mb-1">Report exported</h3>
         <p className="text-sm text-gray-300 mb-2">
           {summary.title} — {summary.totalRows} rows · avg {summary.avgAnalysisTime}s ·{' '}
           {summary.errorCount} errors
+
         </p>
         {usedFallback && (
           <p className="text-xs text-amber-400 mb-3" role="status">
@@ -130,11 +145,12 @@ export const QCExportButton: React.FC<{ className?: string }> = ({ className = '
             disabled={!lastBlob || !lastFileName}
             className="px-4 py-2 bg-solar-accent text-white rounded-md hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-solar-accent disabled:opacity-50"
           >
+
             Download again
           </button>
           <button
             onClick={() => setSummary(null)}
-            className="px-4 py-2 rounded-md hover:bg-gray-500/20 transition-colors"
+            className="btn btn-ghost px-4 py-2 rounded-md"
           >
             Close
           </button>

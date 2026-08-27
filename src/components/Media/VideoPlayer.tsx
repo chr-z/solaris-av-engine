@@ -1,5 +1,5 @@
 import React, { forwardRef, useRef, useState, useEffect, useCallback } from 'react';
-import { OverlaySettings } from '../../types';
+import { OverlaySettings, Timestamp } from '../../types';
 import Crosshair from '../Monitors/Crosshair';
 import { PlayIcon, PauseIcon, VolumeHighIcon, VolumeMediumIcon, VolumeLowIcon, VolumeMuteIcon, FullscreenIcon, ExitFullscreenIcon, XIcon, Replay5Icon, Forward5Icon } from '../Core/icons';
 import { useAudioWaveform } from '../../hooks/useAudioWaveform';
@@ -10,6 +10,7 @@ import { pulseShuttle, formatRate, SHUTTLE_RATES, INITIAL_SHUTTLE_STATE } from '
 // F2 QoL A2: conforto do playback — pular silêncios + volume normalize leve.
 import { useMediaComfort } from '../../features/qol/useMediaComfort';
 import MediaComfortToggle from '../Layout/MediaComfortToggle';
+import { humanizeError } from '../../utils/humanErrors';
 
 // Import SVGs as URLs
 import tetoPresencialUrl from '../svg/homestudio.svg';
@@ -37,6 +38,10 @@ interface VideoPlayerProps {
   }) => () => void;
   /** S5.2: transport telemetry for the A/B compare follower pane. */
   onTransport?: (state: { time: number; playing: boolean; duration: number }) => void;
+  /** R3 v3: time markers rendered as stackable pins on the waveform timeline. */
+  markers?: Timestamp[];
+  /** R3 v3: click on a marker pin (defaults to seeking to the marker time). */
+  onMarkerSelect?: (time: number) => void;
 }
 
 const formatTime = (totalSeconds: number): string => {
@@ -48,7 +53,7 @@ const formatTime = (totalSeconds: number): string => {
 
 
 const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
-  ({ src, videoId, title, overlaySettings, setOverlaySettings, isLoading: isMediaLoading, errorMessage, children, onRetry, onClose, registerPlayerControls, onTransport }, ref) => {
+  ({ src, videoId, title, overlaySettings, setOverlaySettings, isLoading: isMediaLoading, errorMessage, children, onRetry, onClose, registerPlayerControls, onTransport, markers, onMarkerSelect }, ref) => {
     const { t } = useI18n();
     const internalVideoRef = ref as React.RefObject<HTMLVideoElement>;
     const containerRef = useRef<HTMLDivElement>(null);
@@ -469,13 +474,15 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
         />
 
         {/* Custom Controls UI */}
-        <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-4 text-white transition-opacity duration-300 ${isControlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-4 text-white transition-opacity duration-150 ${isControlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             <WaveformTimeline
                 duration={duration}
                 currentTime={currentTime}
                 onSeek={handleSeek}
                 waveform={waveform}
                 isLoading={isWaveformLoading}
+                markers={markers}
+                onMarkerSelect={onMarkerSelect}
             />
             <div className="flex justify-between items-center mt-2">
                 <div className="flex items-center gap-2 sm:gap-4">
@@ -497,7 +504,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
                             step="0.05"
                             value={isMuted ? 0 : volume}
                             onChange={handleVolumeChange}
-                            className="w-0 sm:w-24 h-1 accent-white cursor-pointer opacity-0 group-hover/volume:opacity-100 group-hover/volume:w-24 transition-all duration-300"
+                            aria-label={t('workspace.volume')} className="w-0 sm:w-24 h-1 accent-white cursor-pointer opacity-0 group-hover/volume:opacity-100 group-hover/volume:w-24 transition-all duration-150"
                          />
                     </div>
                     <div className="flex flex-shrink-0 flex items-center gap-1.5 text-[11px] mx-1 bg-black/40 rounded-full px-2 py-0.5 select-none ring-1 ring-white/10">
@@ -534,21 +541,31 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(
                 <p className="mt-4 truncate max-w-full">{title}</p>
             </div>
         )}
-        {errorMessage && (
-             <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-gray-400 p-8 text-center">
-                <p className="font-semibold text-lg text-red-400 mb-2">Media Error</p>
-                <p className="mb-4 max-w-md">{errorMessage}</p>
-                {onRetry && (
-                  <button
-                    onClick={onRetry}
-                    className="px-4 py-2 bg-solar-accent text-solar-dark-bg rounded-md hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-dark-bg focus:ring-solar-accent"
-                  >
-                    Retry
-                  </button>
-                )}
-            </div>
-        )}
-        {!src && !isMediaLoading && !errorMessage && children}
+        {errorMessage && (() => {
+            const he = humanizeError(errorMessage);
+            return (
+                <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-ink-secondary p-8 text-center">
+                    <svg width="56" height="56" viewBox="0 0 56 56" fill="none" aria-hidden="true" className="mb-3">
+                        <rect x="8" y="12" width="40" height="28" rx="5" stroke="var(--color-border-strong)" strokeWidth="1.5" />
+                        <path d="M25 22l10 6-10 6v-12z" fill="var(--color-fail)" opacity="0.85" />
+                        <path d="M16 48h24" stroke="var(--color-border-strong)" strokeWidth="1.5" strokeLinecap="round" />
+                        <circle cx="44" cy="18" r="9" fill="var(--color-bg)" stroke="var(--color-fail)" strokeWidth="1.5" />
+                        <path d="M44 13.5v5.5M44 22.2v.4" stroke="var(--color-fail)" strokeWidth="1.6" strokeLinecap="round" />
+                    </svg>
+                    {/* Erro humano: nunca a mensagem crua (spec v3) */}
+                    <p className="font-semibold text-lg text-fail mb-1">{he.title}</p>
+                    <p className="mb-4 max-w-md">{he.hint}</p>
+                    {onRetry && (
+                      <button
+                        onClick={onRetry}
+                        className="btn-primary px-4 py-2 rounded-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+                      >
+                        Retry
+                      </button>
+                    )}
+                </div>
+            );
+        })()}        {!src && !isMediaLoading && !errorMessage && children}
         {renderOverlay()}
       </div>
     );

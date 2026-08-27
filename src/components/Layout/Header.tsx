@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { VideoIcon, ArrowLeftIcon } from '../Core/icons';
+import SolarisLogo from '../Core/SolarisLogo';
 import Popover from '../Core/Popover';
 import SourceSelector from '../Media/SourceSelector';
 import { UserProfile } from '../../types';
@@ -59,15 +60,15 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="flex-shrink-0 flex items-center justify-between p-3 h-16 border-b border-solar-light-border dark:border-solar-dark-border bg-solar-light-content/80 dark:bg-solar-dark-content/80 backdrop-blur-sm z-20">
+      <header className="flex-shrink-0 flex items-center justify-between p-3 h-16 border-b border-hairline bg-surface/80 dark:bg-surface/80 backdrop-blur-sm z-20">
         <div className="flex items-center gap-2">
-          <div className={`transition-all duration-300 ease-in-out ${isWorkspaceOpen ? 'w-0 opacity-0 -translate-x-2' : 'w-6 opacity-100'}`}>
-            <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full"></div>
+          <div className={`transition-all duration-150 ease-in-out ${isWorkspaceOpen ? 'w-0 opacity-0 -translate-x-2' : 'w-6 opacity-100'}`}>
+            <SolarisLogo size={24} />
           </div>
           
           <button 
             onClick={onCloseWorkspace}
-            className={`transition-all duration-300 ease-in-out flex items-center gap-2 ${isWorkspaceOpen ? 'w-auto opacity-100' : 'w-0 opacity-0 -translate-x-2'}`}
+            className={`transition-all duration-150 ease-in-out flex items-center gap-2 ${isWorkspaceOpen ? 'w-auto opacity-100' : 'w-0 opacity-0 -translate-x-2'}`}
             disabled={!isWorkspaceOpen}
             aria-label={t('header.backToList')}
           >
@@ -81,7 +82,7 @@ const Header: React.FC<HeaderProps> = ({
               <Popover 
                 contentClassName="w-96"
                 trigger={
-                  <button className="flex items-center gap-2 px-3 py-2 rounded-md bg-solar-accent text-solar-dark-bg hover:bg-solar-accent-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solar-light-content dark:focus:ring-offset-solar-dark-content focus:ring-solar-accent">
+                  <button className="flex items-center gap-2 px-3 py-2 rounded-md bg-gradient-to-br from-accent-from to-accent-to text-[#0b0e14] font-semibold hover:shadow-glow transition-shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-accent">
                     <VideoIcon className="w-5 h-5" />
                     <span>{t('header.loadMedia')}</span>
                   </button>
@@ -91,7 +92,7 @@ const Header: React.FC<HeaderProps> = ({
               </Popover>
           )}
           
-          <div className="h-6 w-px bg-solar-dark-border"></div>
+          <div className="h-6 w-px bg-hairline"></div>
           
           <OfflineIndicator />
 
@@ -142,21 +143,21 @@ const Header: React.FC<HeaderProps> = ({
               <Popover 
                 contentClassName="w-56"
                 trigger={
-                  <button className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-500/20 transition-colors">
+                  <button className="icon-btn flex items-center gap-2 p-1 rounded-full">
                       <UserAvatar user={userProfile} className="w-8 h-8"/>
                   </button>
                 }
               >
                 {(close) => (
                   <div className="p-1">
-                    <div className="px-3 py-2 border-b border-solar-dark-border">
+                    <div className="px-3 py-2 border-b border-hairline">
                         <p className="font-bold truncate" title={userProfile.name}>{userProfile.name}</p>
                         <p className="text-xs text-gray-400 truncate" title={userProfile.email}>{userProfile.email}</p>
                     </div>
                     <div className="py-1">
-                        <button 
-                          onClick={() => { setIsBugReportModalOpen(true); close(); }} 
-                          className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
+                        <button
+                          onClick={() => { setIsBugReportModalOpen(true); close(); }}
+                          className="menu-item"
                         >
                           {t('header.reportIssue')}
                         </button>
@@ -172,7 +173,7 @@ const Header: React.FC<HeaderProps> = ({
                         {isAdminUser && (
                           <a
                             href="#/admin"
-                            className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
+                            className="menu-item"
                           >
                             {t('header.adminPanel')}
                           </a>
@@ -182,24 +183,24 @@ const Header: React.FC<HeaderProps> = ({
                           <a
                             href="#/admin/dashboards"
                             data-testid="header-dashboards-link"
-                            className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
+                            className="menu-item"
                           >
                             {t('header.dashboards')}
                           </a>
                         )}
                         {/* Admin Panel Link */}
                         {userProfile.email.endsWith('.admin') && (
-                          <button 
-                            onClick={() => { setIsBugReportViewerOpen(true); close(); }} 
-                            className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
+                          <button
+                            onClick={() => { setIsBugReportViewerOpen(true); close(); }}
+                            className="menu-item"
                           >
                             {t('header.systemReports')}
                           </button>
                         )}
                     </div>
-                    <button 
-                      onClick={() => { onLogout(); close(); }} 
-                      className="w-full text-left mt-1 px-3 py-2 text-sm rounded-md text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors border-t border-solar-dark-border"
+                    <button
+                      onClick={() => { onLogout(); close(); }}
+                      className="menu-item menu-item-danger mt-1 border-t border-hairline"
                     >
                       {t('header.signOut')}
                     </button>

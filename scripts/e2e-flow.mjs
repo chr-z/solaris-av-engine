@@ -140,9 +140,11 @@ check('título localizado pt', report.title.includes('Relatório QC Solar'));
 check('métricas populadas (linhas > 0)', report.totalRows > 0 && report.headers.length === headers.length);
 const blob = app.exportQCReportBlob(report);
 const html = await blob.text();
+// redesign r4a: o documento v3 usa <section aria-label="Metrics"> (grid de stats)
+// em vez de <h2>Metrics</h2> — contrato atualizado na fusão turbo-web × v3.
 check('blob HTML não-vazio p/ download',
   blob instanceof Blob && blob.size > 0 &&
-  html.includes(report.title) && html.includes('<h2>Metrics</h2>'));
+  html.includes(report.title) && html.includes('aria-label="Metrics"') && html.includes('<h2>Headers</h2>'));
 
 console.log('\n[5/5] Fila inteligente — sugestão, ação e undo (features F2)');
 const HOUR = 3600_000;

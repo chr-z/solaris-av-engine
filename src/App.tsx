@@ -1005,7 +1005,7 @@ const App: React.FC = () => {
     switch(authStatus) {
       case 'initializing':
         return (
-          <div className="flex items-center justify-center h-screen bg-solar-dark-bg">
+          <div className="flex items-center justify-center h-screen bg-surface">
             <LoadingIndicator statusText={initialLoadingMessage} />
           </div>
         );
@@ -1041,7 +1041,7 @@ const App: React.FC = () => {
         if (isAdminRoute) {
           return (
             <WaveformCacheProvider>
-              <div className="flex flex-col h-screen font-sans text-sm bg-solar-light-bg dark:bg-solar-dark-bg text-gray-800 dark:text-gray-200 overflow-hidden">
+              <div className="flex flex-col h-screen font-sans text-sm bg-surface text-gray-800 dark:text-gray-200 overflow-hidden">
                 <a href="#main-workspace" className="skip-link">{t('a11y.skipToContent')}</a>
                 {/* F2 modo foco também vale no console admin (esconde o shell). */}
                 <div className={`flex-shrink-0 ${isFocusMode ? 'hidden' : ''}`}>
@@ -1055,7 +1055,7 @@ const App: React.FC = () => {
                   />
                 </div>
                 <React.Suspense fallback={
-                  <div className="flex items-center justify-center h-screen bg-solar-dark-bg">
+                  <div className="flex items-center justify-center h-screen bg-surface">
                     <LoadingIndicator statusText={t('loading.generic')} />
                   </div>
                 }>
@@ -1076,7 +1076,7 @@ const App: React.FC = () => {
         }
         return (
           <WaveformCacheProvider>
-            <div className="flex flex-col h-screen font-sans text-sm bg-solar-light-bg dark:bg-solar-dark-bg text-gray-800 dark:text-gray-200 overflow-hidden">
+            <div className="flex flex-col h-screen font-sans text-sm bg-surface text-gray-800 dark:text-gray-200 overflow-hidden">
               <a
                 href="#main-workspace"
                 className="skip-link"
@@ -1093,9 +1093,10 @@ const App: React.FC = () => {
                   onLogout={handleLogout}
                 />
               </div>
-              <main id="main-workspace" className="flex-1 relative overflow-hidden bg-solar-light-bg dark:bg-solar-dark-bg">
+              <main id="main-workspace" className="flex-1 relative overflow-hidden bg-surface">
                 <div className={`absolute inset-0 h-full transition-all duration-500 ease-in-out ${isWorkspaceOpen && !isFocusMode ? 'w-[320px]' : 'w-full'} ${isFocusMode ? 'hidden' : ''}`}>
                   <AnalysisSheetList
+
                     onDataLoaded={handleDataLoaded}
                     onRowSelected={handleOsSelect}
                     selectedOsIndex={selectedOsIndex}
@@ -1111,8 +1112,9 @@ const App: React.FC = () => {
                   />
                 </div>
                 <div
-                  className={`absolute top-0 right-0 h-full bg-solar-light-bg dark:bg-solar-dark-bg transition-transform duration-500 ease-in-out ${isWorkspaceOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                  className={`absolute top-0 right-0 h-full bg-surface transition-transform duration-500 ease-in-out ${isWorkspaceOpen ? 'translate-x-0' : 'translate-x-full'}`}
                   style={{ width: isFocusMode ? '100%' : 'calc(100% - 320px)' }}
+/redesign-premium
                 >
                   {isWorkspaceOpen && (
                     <React.Suspense

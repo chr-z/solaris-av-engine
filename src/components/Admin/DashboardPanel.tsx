@@ -159,7 +159,7 @@ const DIMENSIONS: GroupDimension[] = ["studio", "instructor", "analyst"];
  * tiers 1..4 deepen the solar accent. Same count → same tint, always.
  */
 const HEAT_TIER_CLASS = [
-  "bg-gray-800/40 text-gray-500 border border-gray-600/40",
+  "bg-surface-raised text-ink-secondary border border-hairline",
   "bg-solar-accent/15 text-orange-100",
   "bg-solar-accent/35 text-white",
   "bg-solar-accent/60 text-white",
@@ -222,7 +222,7 @@ const CompareSidePicker: React.FC<{
         )}`}
         value={dimension}
         onChange={(e) => onDimensionChange(e.target.value as GroupDimension)}
-        className="rounded-md border border-gray-600/60 bg-gray-900/70 px-1.5 py-1 text-xs text-gray-100 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+        className="rounded-md border border-hairline bg-surface-raised px-1.5 py-1 text-xs text-gray-100 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
       >
         {DIMENSIONS.map((d) => (
           <option key={d} value={d}>
@@ -234,7 +234,7 @@ const CompareSidePicker: React.FC<{
         aria-label={t("dash.compare.side", { side })}
         value={label}
         onChange={(e) => onLabelChange(e.target.value)}
-        className="max-w-[12rem] rounded-md border border-gray-600/60 bg-gray-900/70 px-1.5 py-1 text-xs text-gray-100 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+        className="max-w-[12rem] rounded-md border border-hairline bg-surface-raised px-1.5 py-1 text-xs text-gray-100 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
       >
         <option value="">{t("dash.compare.placeholder")}</option>
         {labels.map((l) => (
@@ -256,11 +256,11 @@ const Card: React.FC<{
 }> = ({ label, value, sub, testId }) => (
   <div
     data-testid={testId ?? "dash-card"}
-    className="rounded-lg border border-gray-600/60 bg-gray-800/50 px-4 py-3 min-w-[9rem]"
+    className="card px-4 py-3 min-w-[9rem]"
   >
     <p className="text-xs uppercase tracking-wide text-gray-400">{label}</p>
     <p className="text-2xl font-semibold text-gray-100 mt-1">{value}</p>
-    {sub !== undefined && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
+    {sub !== undefined && <p className="text-xs text-ink-secondary mt-0.5">{sub}</p>}
   </div>
 );
 
@@ -311,7 +311,7 @@ const TrendChart: React.FC<{
         {points.map((p) => (
           <span
             key={p.month}
-            className="w-8 text-center text-[10px] text-gray-500"
+            className="w-8 text-center text-[10px] text-ink-secondary"
           >
             {p.month.slice(5)}/{p.month.slice(2, 4)}
           </span>
@@ -342,7 +342,7 @@ const GroupTable: React.FC<{
       className="w-full text-sm border-collapse"
     >
       <thead>
-        <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-600/60">
+        <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-hairline">
           <th scope="col" className="py-2 pr-4">
             {t("dash.table.group")}
           </th>
@@ -364,7 +364,7 @@ const GroupTable: React.FC<{
         {stats.map((s) => (
           <tr
             key={s.label}
-            className="border-b border-gray-700/40 last:border-b-0"
+            className="border-b border-hairline last:border-b-0 transition-colors"
           >
             <td className="py-2 pr-4 font-medium text-gray-200">
               <button
@@ -383,7 +383,7 @@ const GroupTable: React.FC<{
                   onClick={() => onPinCompare(s.label)}
                   title={t("dash.compare.title")}
                   aria-label={t("dash.compare.title")}
-                  className="ml-2 px-1.5 py-0.5 rounded border border-gray-600/60 font-mono text-[10px] uppercase text-gray-400 hover:text-solar-accent hover:border-solar-accent transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+                  className="ml-2 px-1.5 py-0.5 rounded border border-hairline font-mono text-[10px] uppercase text-gray-400 wash-hover hover:text-accent hover:border-accent transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
                 >
                   A/B
                 </button>
@@ -436,7 +436,7 @@ const MonthHubView: React.FC<{
         type="button"
         data-testid="dash-month-hub-back"
         onClick={onBack}
-        className="mb-3 px-3 py-1.5 rounded-md text-sm border border-gray-600/60 text-gray-300 hover:bg-gray-500/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+        className="mb-3 px-3 py-1.5 rounded-md text-sm border border-hairline text-gray-300 wash-hover transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
       >
         ← {t("dash.drill.back")}
       </button>
@@ -453,7 +453,7 @@ const MonthHubView: React.FC<{
             {t("dash.drill.monthScope", { month })}
           </h2>
           <p
-            className="text-xs text-gray-500 mt-0.5"
+            className="text-xs text-ink-secondary mt-0.5"
             data-testid="dash-month-hub-count"
           >
             {t("dash.drill.count", {
@@ -502,7 +502,7 @@ const MonthHubView: React.FC<{
           className="w-full text-sm border-collapse"
         >
           <thead>
-            <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-600/60">
+            <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-hairline">
               <th scope="col" className="py-2 pr-4">
                 {t("dash.table.group")}
               </th>
@@ -524,7 +524,7 @@ const MonthHubView: React.FC<{
             {stats.map((s) => (
               <tr
                 key={s.label}
-                className="border-b border-gray-700/40 last:border-b-0"
+                className="border-b border-hairline last:border-b-0 transition-colors"
               >
                 <td className="py-2 pr-4 font-medium text-gray-200">
                   <button
@@ -543,7 +543,7 @@ const MonthHubView: React.FC<{
                       onClick={() => onPinCompare(s.label)}
                       title={t("dash.compare.title")}
                       aria-label={t("dash.compare.title")}
-                      className="ml-2 px-1.5 py-0.5 rounded border border-gray-600/60 font-mono text-[10px] uppercase text-gray-400 hover:text-solar-accent hover:border-solar-accent transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+                      className="ml-2 px-1.5 py-0.5 rounded border border-hairline font-mono text-[10px] uppercase text-gray-400 wash-hover hover:text-accent hover:border-accent transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
                     >
                       A/B
                     </button>
@@ -610,7 +610,7 @@ const DrillDownView: React.FC<{
         type="button"
         data-testid="dash-drill-back"
         onClick={onBack}
-        className="mb-3 px-3 py-1.5 rounded-md text-sm border border-gray-600/60 text-gray-300 hover:bg-gray-500/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+        className="mb-3 px-3 py-1.5 rounded-md text-sm border border-hairline text-gray-300 wash-hover transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
       >
         ← {backLabel ?? t("dash.drill.back")}
       </button>
@@ -635,7 +635,7 @@ const DrillDownView: React.FC<{
             {t("dash.drill.title", { group: label })}
           </h2>
           <p
-            className="text-xs text-gray-500 mt-0.5"
+            className="text-xs text-ink-secondary mt-0.5"
             data-testid="dash-drill-count"
           >
             {t("dash.drill.count", {
@@ -704,7 +704,7 @@ const DrillDownView: React.FC<{
           className="w-full text-sm border-collapse"
         >
           <thead>
-            <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-600/60">
+            <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-hairline">
               <th scope="col" className="py-2 pr-4">
                 {t("drill.table.date")}
               </th>
@@ -723,7 +723,7 @@ const DrillDownView: React.FC<{
             {records.map((rec) => (
               <tr
                 key={`${rec.rowIndex}-${rec.wo}`}
-                className="border-b border-gray-700/40 last:border-b-0"
+                className="border-b border-hairline last:border-b-0 transition-colors"
               >
                 <td className="py-2 pr-4 tabular-nums text-gray-300">
                   {rec.date ?? "—"}
@@ -1273,7 +1273,7 @@ const DashboardPanel: React.FC = () => {
           className={`${compareOpen ? "" : "ml-auto "}px-3 py-1.5 rounded-md text-sm font-medium border transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent ${
             compareOpen
               ? "bg-solar-accent/20 border-solar-accent text-solar-accent"
-              : "border-gray-600/60 text-gray-300 hover:bg-gray-500/10"
+              : "border-hairline text-gray-300 wash-hover"
           }`}
         >
           {t("dash.compare")}
@@ -1284,7 +1284,7 @@ const DashboardPanel: React.FC = () => {
           onClick={() => setIsShortcutHelpOpen(true)}
           title={t("header.shortcutHelp")}
           aria-label={t("header.shortcutHelp")}
-          className="ml-auto px-2 py-1 rounded-md text-xs font-mono border border-gray-600/60 text-gray-300 hover:bg-gray-500/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+          className="ml-auto px-2 py-1 rounded-md text-xs font-mono border border-hairline text-gray-300 wash-hover transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
         >
           ?
         </button>
@@ -1292,7 +1292,7 @@ const DashboardPanel: React.FC = () => {
 
       <div
         data-testid="dash-period-bar"
-        className="flex flex-wrap items-center gap-2 mb-5 rounded-lg border border-gray-600/60 bg-gray-800/50 px-3 py-2"
+        className="flex flex-wrap items-center gap-2 mb-5 card px-3 py-2"
       >
         <span className="text-xs uppercase tracking-wide text-gray-400">
           {t("dash.period.title")}
@@ -1306,7 +1306,7 @@ const DashboardPanel: React.FC = () => {
             placeholder={t("dash.period.placeholder")}
             aria-label={`${t("dash.period.title")}: ${t("dash.period.from")}`}
             data-testid="dash-period-from"
-            className="w-32 rounded-md border border-gray-600/60 bg-gray-900/70 px-2 py-1 text-sm text-gray-100"
+            className="w-32 rounded-md border border-hairline bg-surface-raised px-2 py-1 text-sm text-gray-100"
           />
         </label>
         <label className="flex items-center gap-1 text-xs text-gray-300">
@@ -1318,7 +1318,7 @@ const DashboardPanel: React.FC = () => {
             placeholder={t("dash.period.placeholder")}
             aria-label={`${t("dash.period.title")}: ${t("dash.period.to")}`}
             data-testid="dash-period-to"
-            className="w-32 rounded-md border border-gray-600/60 bg-gray-900/70 px-2 py-1 text-sm text-gray-100"
+            className="w-32 rounded-md border border-hairline bg-surface-raised px-2 py-1 text-sm text-gray-100"
           />
         </label>
         {periodActive && (
@@ -1329,7 +1329,7 @@ const DashboardPanel: React.FC = () => {
               setFromInput("");
               setToInput("");
             }}
-            className="px-2 py-1 rounded-md text-xs border border-gray-600/60 text-gray-300 hover:bg-gray-500/10 transition-colors"
+            className="px-2 py-1 rounded-md text-xs border border-hairline text-gray-300 wash-hover transition-colors"
           >
             {t("dash.period.clear")}
           </button>
@@ -1378,7 +1378,7 @@ const DashboardPanel: React.FC = () => {
               className={`px-3 py-1.5 rounded-md text-sm transition-colors border ${
                 selected
                   ? "bg-solar-accent/20 border-solar-accent text-solar-accent"
-                  : "border-gray-600/60 text-gray-300 hover:bg-gray-500/10"
+                  : "border-hairline text-gray-300 wash-hover"
               }`}
             >
               {t(s.labelKey)}
@@ -1390,7 +1390,7 @@ const DashboardPanel: React.FC = () => {
       {compareOpen && (
         <div
           data-testid="dash-compare-bar"
-          className="mb-5 rounded-lg border border-gray-600/60 bg-gray-800/50 px-3 py-3"
+          className="mb-5 card px-3 py-3"
         >
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <span className="text-xs uppercase tracking-wide text-gray-400">
@@ -1423,7 +1423,7 @@ const DashboardPanel: React.FC = () => {
                 setSideA({ dimension: sideA.dimension, label: "" });
                 setSideB({ dimension: sideB.dimension, label: "" });
               }}
-              className="px-2 py-1 rounded-md text-xs border border-gray-600/60 text-gray-300 hover:bg-gray-500/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+              className="px-2 py-1 rounded-md text-xs border border-hairline text-gray-300 wash-hover transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
             >
               {t("dash.compare.clear")}
             </button>
@@ -1431,7 +1431,7 @@ const DashboardPanel: React.FC = () => {
 
           {!pinned ? (
             <p
-              className="mt-2 text-xs text-gray-500"
+              className="mt-2 text-xs text-ink-secondary"
               data-testid="dash-compare-empty"
             >
               {sideA.dimension !== sideB.dimension &&
@@ -1443,7 +1443,7 @@ const DashboardPanel: React.FC = () => {
                   })}
             </p>
           ) : comparison === null ? (
-            <p className="mt-2 text-xs text-gray-500" data-testid="dash-compare-empty">
+            <p className="mt-2 text-xs text-ink-secondary" data-testid="dash-compare-empty">
               {t("dash.empty")}
             </p>
           ) : (
@@ -1643,7 +1643,7 @@ const DashboardPanel: React.FC = () => {
                   className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent ${
                     !categoryActive
                       ? "bg-solar-accent/20 border-solar-accent text-solar-accent"
-                      : "border-gray-600/60 text-gray-300 hover:bg-gray-500/10"
+                      : "border-hairline text-gray-300 wash-hover"
                   }`}
                 >
                   {t("dash.cat.all")}
@@ -1662,7 +1662,7 @@ const DashboardPanel: React.FC = () => {
                       className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent ${
                         selected
                           ? "bg-solar-accent/20 border-solar-accent text-solar-accent"
-                          : "border-gray-600/60 text-gray-300 hover:bg-gray-500/10"
+                          : "border-hairline text-gray-300 wash-hover"
                       }`}
                     >
                       {cat === "unknown" ? `(${cat})` : cat}
@@ -1725,7 +1725,7 @@ const DashboardPanel: React.FC = () => {
                     className="w-full text-sm border-collapse"
                   >
                     <thead>
-                      <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-600/60">
+                      <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-hairline">
                         <th scope="col" className="py-2 pr-4">
                           #
                         </th>
@@ -1753,9 +1753,9 @@ const DashboardPanel: React.FC = () => {
                       {ranking.map((stat, index) => (
                         <tr
                           key={stat.ruleId}
-                          className="border-b border-gray-700/40 last:border-b-0"
+                          className="border-b border-hairline last:border-b-0 transition-colors"
                         >
-                          <td className="py-2 pr-4 tabular-nums text-gray-500">
+                          <td className="py-2 pr-4 tabular-nums text-ink-secondary">
                             {index + 1}
                           </td>
                           <td className="py-2 pr-4 font-medium text-gray-200">
@@ -1781,7 +1781,7 @@ const DashboardPanel: React.FC = () => {
                     </tbody>
                   </table>
                   <p
-                    className="text-xs text-gray-500 mt-2"
+                    className="text-xs text-ink-secondary mt-2"
                     data-testid="dash-ranking-hint"
                   >
                     {t("dash.rank.hint")}
@@ -1793,7 +1793,7 @@ const DashboardPanel: React.FC = () => {
                   */}
                   {markHeatmap.months.length > 0 && (
                     <div
-                      className="mt-6 pt-4 border-t border-gray-700/40"
+                      className="mt-6 pt-4 border-t border-hairline"
                       data-testid="dash-heatmap"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -1825,7 +1825,7 @@ const DashboardPanel: React.FC = () => {
                           data-testid="dash-heatmap-table"
                         >
                           <thead>
-                            <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-600/60">
+                            <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-hairline">
                               <th scope="col" className="py-2 pr-4">
                                 {t("dash.rank.table.rule")}
                               </th>
@@ -1846,7 +1846,7 @@ const DashboardPanel: React.FC = () => {
                               return (
                                 <tr
                                   key={row.ruleId}
-                                  className="border-b border-gray-700/40 last:border-b-0"
+                                  className="border-b border-hairline last:border-b-0 transition-colors"
                                 >
                                   <td className="py-1.5 pr-4 text-gray-200">
                                     {row.name}
@@ -1894,7 +1894,7 @@ const DashboardPanel: React.FC = () => {
                         </table>
                       </div>
                       <p
-                        className="text-xs text-gray-500 mt-2"
+                        className="text-xs text-ink-secondary mt-2"
                         data-testid="dash-heatmap-hint"
                       >
                         {t("dash.heat.hint")}
@@ -1923,7 +1923,7 @@ const DashboardPanel: React.FC = () => {
                 className="mt-4 w-full text-sm border-collapse"
               >
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-600/60">
+                  <tr className="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-hairline">
                     <th scope="col" className="py-2 pr-4">
                       {t("dash.trend.month")}
                     </th>
@@ -1951,7 +1951,7 @@ const DashboardPanel: React.FC = () => {
                     return (
                       <tr
                         key={p.month}
-                        className="border-b border-gray-700/40 last:border-b-0"
+                        className="border-b border-hairline last:border-b-0 transition-colors"
                       >
                         <td className="py-2 pr-4 tabular-nums text-gray-200">
                           {p.month}
@@ -1979,7 +1979,7 @@ const DashboardPanel: React.FC = () => {
 
       {/* v3 P10: trend month buttons open the second-level hub now. */}
       {section === "trend" && !drillDown && (
-        <p className="text-xs text-gray-500 mt-2" data-testid="dash-trend-hint">
+        <p className="text-xs text-ink-secondary mt-2" data-testid="dash-trend-hint">
           {t("dash.drill.monthHint")}
         </p>
       )}
@@ -1990,14 +1990,14 @@ const DashboardPanel: React.FC = () => {
           data-testid="dash-qc-toast"
           role="status"
           aria-live="polite"
-          className="fixed bottom-4 right-4 z-50 max-w-xs rounded-lg border border-emerald-500/40 bg-gray-900/95 px-4 py-3 text-sm text-emerald-200 shadow-xl"
+          className="fixed bottom-4 right-4 z-50 max-w-xs card-raised px-4 py-3 text-sm text-emerald-200"
         >
           <p className="mb-2">{t("dash.qcReport.done")}</p>
           <button
             type="button"
             data-testid="dash-qc-toast-close"
             onClick={() => setQcToastVisible(false)}
-            className="rounded-md border border-gray-600/60 px-2 py-1 text-xs text-gray-300 hover:bg-gray-500/10 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
+            className="rounded-md border border-hairline px-2 py-1 text-xs text-gray-300 wash-hover transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-solar-accent"
           >
             OK
           </button>
