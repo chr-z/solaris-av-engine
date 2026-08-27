@@ -8,7 +8,7 @@
 
 RGB parade, waveform, vectorscope and real-time FFT spectrograms for high-volume media pipelines. No plugins, no installs: open a URL and start analyzing.
 
-[![Live Demo](https://img.shields.io/badge/demo-solaris--av--engine.vercel.app-F97316?style=for-the-badge&logo=vercel)](https://solaris-av-engine.vercel.app)
+[![Live Demo](https://img.shields.io/badge/demo-solaris.chr--z.dev-F97316?style=for-the-badge&logo=cloudflare)](https://solaris.chr-z.dev)
 [![CI](https://github.com/chr-z/solaris-av-engine/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/chr-z/solaris-av-engine/actions/workflows/ci.yml)
 [![Tests](https://custom-icon.shields.io/badge/tests-Vitest_129_passing-6DA55D?style=for-the-badge&logo=vitest&logoColor=white)](https://github.com/chr-z/solaris-av-engine/actions)
 [![License](https://img.shields.io/github/license/chr-z/solaris-av-engine?style=for-the-badge&color=F97316)](LICENSE)
