@@ -330,3 +330,91 @@ export function buildScoreCellUpdates(
   }
   return updates;
 }
+
+// ---------- Acoustic scores → sheet (P3: Reverb/Clip/Ruído/Distorção/Eco) ----------
+
+type AcousticColumnKey = 'reverb' | 'clipping' | 'noise' | 'distortion' | 'echo';
+
+/**
+ * Header aliases for the five acoustic columns. First alias mirrors the
+ * canonical labels defined in audio-acoustics/qcIntegration.ts
+ * (SHEET_COLUMNS_HEADERS); the short ones cover legacy/manual sheets.
+ * Kept local (data only) so this service stays decoupled from the engine barrel.
+ */
+const ACOUSTIC_COLUMN_ALIASES: Array<{ key: AcousticColumnKey; aliases: string[] }> = [
+  { key: 'reverb', aliases: ['Audio Reverb Score', 'Reverb'] },
+  { key: 'clipping', aliases: ['Audio Clipping Score', 'Clip'] },
+  { key: 'noise', aliases: ['Audio Ruído Score', 'Ruído'] },
+  { key: 'distortion', aliases: ['Audio Distorção Score', 'Distorção'] },
+  { key: 'echo', aliases: ['Audio Eco Score', 'Eco'] },
+];
+
+/** Either the engine's flattened columns or the full report shape ({axes}). */
+export type AcousticColumnsInput = Record<string, number> | { axes: Record<string, { score: number }> };
+
+function toNumericColumns(input: AcousticColumnsInput): Record<string, number> {
+  const maybeAxes = (input as { axes?: Record<string, { score: number }> }).axes;
+  if (maybeAxes && typeof maybeAxes === 'object') {
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(maybeAxes)) out[k] = typeof v?.score === 'number' ? v.score : 0;
+    return out;
+  }
+  return input as Record<string, number>;
+}
+
+/** Integer 0–100, round-half-up (stable across JSON roundtrips, same rule as acousticSheetColumns). */
+const formatAcousticCell = (v: number): string =>
+  String(Math.round(Math.max(0, Math.min(100, Number.isFinite(v) ? v : 0))));
+
+/**
+ * Builds cell updates for the acoustic quality columns against the CURRENT
+ * headers (dynamic mapping — same contract as buildScoreCellUpdates). Columns
+ * absent from the sheet are silently skipped; a sheet with none of them
+ * returns [] so callers can bail out without writing anything.
+ */
+export function buildAcousticCellUpdates(
+  headerMap: SheetHeaderMap,
+  input: AcousticColumnsInput,
+): Array<{ colIndex: number; value: string }> {
+  const numeric = toNumericColumns(input);
+  const updates: Array<{ colIndex: number; value: string }> = [];
+  for (const { key, aliases } of ACOUSTIC_COLUMN_ALIASES) {
+    if (!(key in numeric)) continue;
+    const idx = columnIndex(headerMap, ...aliases);
+    if (idx >= 0) updates.push({ colIndex: idx, value: formatAcousticCell(numeric[key]) });
+  }
+  return updates;
+}
+
+/**
+ * Returns a NEW row with the given updates applied (original untouched).
+ * Grows the row with empty cells when an update targets beyond current length
+ * (sparse sheets keep positional semantics intact for the API writer).
+ */
+export function applyCellUpdates(
+  rowData: RowData,
+  updates: ReadonlyArray<{ colIndex: number; value: string }>,
+): RowData {
+  const next = rowData.slice();
+  for (const u of updates) {
+    while (next.length <= u.colIndex) next.push({ value: '' });
+    next[u.colIndex] = { ...next[u.colIndex], value: u.value };
+  }
+  return next;
+}
+
+/**
+ * One-call bridge used by the workspace save/sync flows: merges the acoustic
+ * scores into the row being written, resolving columns from the sheet's
+ * current headers. No acoustic columns present ⇒ original row unchanged.
+ */
+export function mergeAcousticScoresIntoRow(
+  rowData: RowData,
+  headers: string[],
+  columns: AcousticColumnsInput,
+): RowData {
+  if (!headers.length) return rowData;
+  const updates = buildAcousticCellUpdates(buildHeaderMap(headers), columns);
+  if (!updates.length) return rowData;
+  return applyCellUpdates(rowData, updates);
+}

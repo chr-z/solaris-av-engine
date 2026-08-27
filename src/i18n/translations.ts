@@ -443,6 +443,19 @@ export const en = {
     'Brings quiet recordings closer to −16 dBFS (peak-based, capped at ×3).',
   'mediaComfort.noEnvelope':
     'Waveform not available yet — silence detection needs the audio decoded first.',
+  // (merge lane audio/acoustics)
+  // v3 P3: acoustic analysis panel
+  'acoustics.panel.label': 'Acoustic analysis',
+  'acoustics.panel.title': 'Acoustic Analysis',
+  'acoustics.panel.analyzing': 'Analyzing audio…',
+  'acoustics.panel.overall': 'overall',
+  'acoustics.panel.error': 'Acoustic analysis failed',
+  'acoustics.panel.timeline': 'Problem timeline — click to seek',
+  'acoustics.panel.seekHint': 'Marks show where clipping/hum/echo occur. Click to jump.',
+  'acoustics.panel.baselineLearned': 'Learned baseline: RT60 {rt60}s, floor {floor} dBFS',
+  'acoustics.panel.baselineDefault': 'Default targets: RT60 {rt60}s, floor {floor} dBFS',
+  'acoustics.panel.markReference': 'Mark as reference',
+  'acoustics.panel.forgetReference': 'Forget reference',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -886,6 +899,19 @@ export const pt: Record<TranslationKey, string> = {
     'Aproxima gravações baixinhas de −16 dBFS (por pico, teto de ×3).',
   'mediaComfort.noEnvelope':
     'Waveform ainda indisponível — a detecção de silêncio precisa do áudio decodificado primeiro.',
+  // (merge lane audio/acoustics)
+  // v3 P3: acoustic analysis panel
+  'acoustics.panel.label': 'Análise acústica',
+  'acoustics.panel.title': 'Análise Acústica',
+  'acoustics.panel.analyzing': 'Analisando áudio…',
+  'acoustics.panel.overall': 'geral',
+  'acoustics.panel.error': 'Falha na análise acústica',
+  'acoustics.panel.timeline': 'Timeline de problemas — clique para buscar',
+  'acoustics.panel.seekHint': 'Marcas mostram onde há clipping/hum/eco. Clique para pular.',
+  'acoustics.panel.baselineLearned': 'Baseline aprendido: RT60 {rt60}s, piso {floor} dBFS',
+  'acoustics.panel.baselineDefault': 'Alvos padrão: RT60 {rt60}s, piso {floor} dBFS',
+  'acoustics.panel.markReference': 'Marcar como referência',
+  'acoustics.panel.forgetReference': 'Esquecer referência',
 };
 
 export const dictionaries = { en, pt } as const;

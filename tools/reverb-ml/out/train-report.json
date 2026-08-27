@@ -1,0 +1,115 @@
+{
+  "sizes": [
+    8,
+    24,
+    24,
+    1
+  ],
+  "epochs": 6000,
+  "n_train": 216,
+  "n_val": 54,
+  "val_loss_mse": 0.013443,
+  "metrics_val": {
+    "mae_all": 0.0863,
+    "max_all": 0.3405,
+    "mae_dry": 0.0916,
+    "max_dry": 0.2218,
+    "mae_strong": 0.0864,
+    "max_strong": 0.3405,
+    "mae_subtle": 0.0835,
+    "max_subtle": 0.3305
+  },
+  "metrics_train": {
+    "mae_all": 0.0242,
+    "max_all": 0.1494,
+    "mae_dry": 0.0155,
+    "max_dry": 0.0662,
+    "mae_strong": 0.027,
+    "max_strong": 0.1494,
+    "mae_subtle": 0.0245,
+    "max_subtle": 0.1256
+  },
+  "fusion_policy": {
+    "weight_ml": 1.0,
+    "selected_on_train_mae": 0.0242,
+    "val_band_both_present": {
+      "mae_detector_only": 0.1365,
+      "mae_ml_only": 0.0627,
+      "mae_final_fusion": 0.0627
+    }
+  },
+  "fusion_vs_detector_on_val": {
+    "improved_rows": 37,
+    "worsened_rows": 13,
+    "mae_detector_where_present": 0.1365,
+    "mae_fused_where_absent": 0.1013
+  },
+  "big_errors_audit": [
+    {
+      "truth": 0.0,
+      "det": 0.0,
+      "ml": -0.222,
+      "fused": -0.222,
+      "fused_err": 0.222,
+      "blame": "ml"
+    },
+    {
+      "truth": 0.0,
+      "det": 0.0,
+      "ml": -0.216,
+      "fused": -0.216,
+      "fused_err": 0.216,
+      "blame": "ml"
+    },
+    {
+      "truth": 0.3,
+      "det": 0.0,
+      "ml": 0.63,
+      "fused": 0.63,
+      "fused_err": 0.33,
+      "blame": "ml"
+    },
+    {
+      "truth": 0.9,
+      "det": 1.43,
+      "ml": 0.56,
+      "fused": 0.56,
+      "fused_err": 0.34,
+      "blame": "detector"
+    },
+    {
+      "truth": 1.2,
+      "det": 0.0,
+      "ml": 0.97,
+      "fused": 0.97,
+      "fused_err": 0.23,
+      "blame": "ml"
+    },
+    {
+      "truth": 1.2,
+      "det": 0.0,
+      "ml": 1.0,
+      "fused": 1.0,
+      "fused_err": 0.2,
+      "blame": "ml"
+    }
+  ],
+  "gates": {
+    "mae_all": 0.1,
+    "mae_dry": 0.15,
+    "max_dry": 0.35,
+    "mae_strong": 0.12,
+    "mae_subtle": 0.15,
+    "quant_drift_s": 0.02
+  },
+  "quantization": {
+    "scale": 6.343812430309725e-05,
+    "params": 841,
+    "max_drift_s": 0.00019
+  },
+  "onnx_vs_numpy_max_diff": 0.0,
+  "artifacts": {
+    "model_onnx": "tools/reverb-ml/out/model.onnx",
+    "weights_ts": "src\\audio-acoustics\\ml\\reverbMlWeights.generated.ts"
+  }
+}

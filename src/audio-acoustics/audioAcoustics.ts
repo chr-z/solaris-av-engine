@@ -1,0 +1,773 @@
+/**
+ * Solaris Acoustic Analysis API (P3 surface sobre o núcleo P1).
+ *
+ * Entrada: PCM mono Float32/Float64 + sampleRate (caminho puro, testável).
+ * Saída: relatório com score de QUALIDADE 0-100 por eixo (100 = limpo),
+ * severidade, marcas de timeline, explicações geradas dos números e
+ * suporte a baseline por estúdio.
+ *
+ * Decodificação de arquivo/URL usa AudioContext quando disponível (browser);
+ * em Node/jsdom use analyzeAudioPcm diretamente após decodificar.
+ */
+
+import { FFT, hannWindow } from './fft';
+import { rmsTime } from './features';
+import { detectClip, estimateTHDFromSpectrum, crestClippingEvidence, isCrestSaturated, type ClipResult, type CrestEvidence } from './clipping';
+import {
+  detectHum, estimateNoiseFloorDb, sibilanceRatioDb, percentile,
+  HumSpectrumAccumulator, detectHumFromQuietSpectrum,
+} from './noise';
+import { detectEcho, type EchoResult } from './echo';
+import { analyzeReverb, type ReverbResult } from './reverb';
+import { analyzeReverbWithML } from './reverbMl';
+
+export interface StudioBaseline {
+  /** RT60 alvo do estúdio (s). Desvios para cima penalizam mais cedo. */
+  rt60Target?: number;
+  /** Noise floor aceitável (dBFS). */
+  noiseFloorDbMax?: number;
+  /** Nome/ID do estúdio (para explicações). */
+  name?: string;
+}
+
+export interface AcousticOptions {
+  fftSize?: number;
+  hop?: number;
+  baseline?: StudioBaseline;
+  /** Analisa eco apenas nestas janelas (padrão: até 10 janelas de 15s espalhadas). */
+  echoWindowsSec?: number;
+  /**
+   * Progresso granular (0-100). Chamado nos limites de estágio e a cada 32
+   * frames da STFT — custo desprezível, nunca altera o resultado.
+   */
+  onProgress?: (p: AcousticProgress) => void;
+  /**
+   * Token cooperativo de cancelamento: passe um objeto mutável e marque
+   * `{ aborted: true }` para abortar. Checado nos mesmos pontos do progresso;
+   * a análise interrompida lança AnalysisCancelledError.
+   */
+  signal?: { aborted: boolean };
+}
+
+/** Estágios de análise, na ordem em que ocorrem. */
+export type AcousticStage = 'frames' | 'peak' | 'reverb' | 'echo' | 'finalize';
+
+export interface AcousticProgress {
+  /** 0-100, monótono não-decrescente dentro de uma mesma análise. */
+  pct: number;
+  stage: AcousticStage;
+  /** Só no estágio 'frames': posição da varredura espectral. */
+  framesDone?: number;
+  framesTotal?: number;
+}
+
+/** Erro lançado quando opts.signal.aborted vira true durante a análise. */
+export class AnalysisCancelledError extends Error {
+  constructor() {
+    super('Análise acústica cancelada.');
+    this.name = 'AnalysisCancelledError';
+  }
+}
+
+export type Severity = 'ok' | 'warn' | 'critical';
+
+export interface AxisResult {
+  /** Qualidade 0-100 (100 = limpo). */
+  score: number;
+  severity: Severity;
+  /** Métrica principal do eixo (RT60 s, % clip, dB floor, THD razão, ms delay…). */
+  value: number;
+  /** Explicação gerada dos números. */
+  explanation: string;
+}
+
+export interface TimelineMark {
+  tSec: number;
+  axis: 'clipping' | 'reverb' | 'echo' | 'noise' | 'hum' | 'shift';
+  severity: Exclude<Severity, 'ok'>;
+  note: string;
+}
+
+export interface AcousticReport {
+  durationSec: number;
+  sampleRate: number;
+  axes: {
+    reverb: AxisResult;
+    clipping: AxisResult;
+    distortion: AxisResult;
+    noise: AxisResult;
+    echo: AxisResult;
+    sibilance: AxisResult;
+  };
+  /** Score consolidado (média ponderada; reverb pesa 2x — prioridade do produto). */
+  overallScore: number;
+  timelineMarks: TimelineMark[];
+  reverb: ReverbResult;
+  /** Refinamento ML do RT60 (P4). Presente quando o trecho é elegível. */
+  reverbMl?: {
+    rt60Final: number;
+    rt60Detector: number | null;
+    rt60Ml: number;
+    engine: 'embedded' | 'ort';
+    note: string;
+  };
+  echo: EchoResult;
+  hum: ReturnType<typeof detectHum>;
+  clip: ClipResult;
+  noiseFloorDb: number;
+  sibilanceRatioDb: number;
+  /** Mudança acústica mid-video (INFO). kind: 'level' (loudness) ou 'spectral' (timbre/sala). */
+  acousticShift: AcousticShift;
+  warnings: string[];
+}
+
+const clamp01_100 = (v: number) => Math.max(0, Math.min(100, v));
+
+/** Interpolação piecewise: pontos [x0,y0],[x1,y1]… decrescentes. */
+function piecewise(points: Array<[number, number]>, x: number): number {
+  if (x <= points[0][0]) return points[0][1];
+  for (let i = 1; i < points.length; i++) {
+    if (x <= points[i][0]) {
+      const [x0, y0] = points[i - 1];
+      const [x1, y1] = points[i];
+      const t = (x - x0) / (x1 - x0);
+      return y0 + t * (y1 - y0);
+    }
+  }
+  return points[points.length - 1][1];
+}
+
+function sevFromScore(score: number, warnBelow = 75, critBelow = 50): Severity {
+  if (score < critBelow) return 'critical';
+  if (score < warnBelow) return 'warn';
+  return 'ok';
+}
+
+/**
+ * Score do eixo ruído a partir do noise floor (dBFS) — ESTRITAMENTE
+ * decrescente: piso mais limpo SEMPRE pontua igual ou melhor que piso
+ * mais sujo (a curva antiga tinha joelho invertido em -40dB).
+ * Exportada para o benchmark e para testes de monotonicidade.
+ */
+export function noiseScoreFromFloorDb(floorDb: number): number {
+  return piecewise(
+    [[-70, 97], [-60, 88], [-50, 78], [-40, 62], [-32, 38], [-25, 15]],
+    floorDb
+  );
+}
+
+/**
+ * Análise pura sobre PCM mono. Determinística, sem acesso a DOM/AudioContext.
+ */
+export function analyzeAudioPcm(
+  samplesIn: Float32Array | Float64Array,
+  sampleRate: number,
+  opts?: AcousticOptions
+): AcousticReport {
+  const fftSize = opts?.fftSize ?? 4096;
+  const hop = Math.min(opts?.hop ?? 1024, fftSize);
+  const warnings: string[] = [];
+
+  const samples = samplesIn instanceof Float64Array ? samplesIn : new Float64Array(samplesIn);
+  const durationSec = samples.length / sampleRate;
+
+  // Progresso + cancelamento cooperativos. `pct` é mantido monótono.
+  let pctFloor = 0;
+  const report_ = (p: number, stage: AcousticStage, framesDone?: number): void => {
+    if (p < pctFloor) p = pctFloor;
+    pctFloor = p;
+    if (opts?.signal?.aborted) throwCancelled();
+    opts?.onProgress?.({ pct: Math.min(100, p), stage, ...(framesDone !== undefined ? { framesDone } : {}) });
+  };
+  function throwCancelled(): never {
+    throw new AnalysisCancelledError();
+  }
+
+  // ---------- Frames STFT ----------
+  const fft = new FFT(fftSize);
+  const win = hannWindow(fftSize);
+  const halfBins = fftSize / 2 + 1;
+
+  // Correção de ganho da janela Hann para RMS coerente.
+  let winPower = 0;
+  for (let i = 0; i < fftSize; i++) winPower += win[i] * win[i];
+  const winRmsCorrection = Math.sqrt(fftSize / winPower);
+
+  const frameRmsDb: number[] = [];
+  const meanPowSpec = new Float64Array(halfBins);
+  const humAcc = new HumSpectrumAccumulator();
+  const clipEvents: Array<{ sampleIdx: number; runLen: number }> = [];
+  let globalPeakDb = -120;
+  let tonalFrames = 0;
+  const thdSamples: number[] = [];
+  const sibSamples: number[] = [];
+  // Features por frame para o detector de mudança acústica mid-video (INFO).
+  const shiftAcc = new AcousticShiftAccumulator(sampleRate, fftSize);
+
+  const numFrames = Math.max(0, Math.floor((samples.length - fftSize) / hop) + 1);
+  for (let f = 0; f < numFrames; f++) {
+    if ((f & 0x1f) === 0) report_(Math.min(70, (f / Math.max(numFrames, 1)) * 70), 'frames', f);
+    const off = f * hop;
+    const mags = fft.magnitudeSpectrum(samples.subarray(off, off + fftSize) as Float64Array, win);
+
+    // RMS do frame no tempo (barato e exato).
+    const fr = rmsTime(samples.subarray(off, off + fftSize));
+    frameRmsDb.push(fr > 0 ? 20 * Math.log10(fr * winRmsCorrection) : -120);
+
+    // Espectro médio (potência).
+    for (let k = 0; k < halfBins; k++) meanPowSpec[k] += mags[k] * mags[k];
+
+    // Clipping absoluto neste frame (para timeline).
+    const clip = detectClip(samples.subarray(off, off + fftSize), 1.0);
+    if (clip.hasClip) {
+      clipEvents.push({ sampleIdx: off, runLen: clip.clipRunLen });
+    }
+
+    // THD apenas em frames tonais (fundamental identificável).
+    const fundBinEst = argmax(mags, 2, Math.floor(2000 / (sampleRate / fftSize)));
+    if (fundBinEst > 0 && mags[fundBinEst] > localMed(mags, fundBinEst, 24) * 8) {
+      tonalFrames++;
+      if (thdSamples.length < 400) {
+        thdSamples.push(estimateTHDFromSpectrum(mags, sampleRate, fftSize));
+      }
+    }
+    if (sibSamples.length < 800) sibSamples.push(sibilanceRatioDb(mags, sampleRate, fftSize));
+
+    // Hum: acumula espectro por frame p/ pente de banda no espectro silencioso
+    // (p25 temporal) — imune a bin fracionário e a fala. Cap de memória.
+    humAcc.add(mags);
+    shiftAcc.add(mags);
+  }
+
+  // Pico global.
+  report_(72, 'peak');
+  for (let i = 0; i < samples.length; i++) {
+    const a = Math.abs(samples[i]);
+    if (a > globalPeakDb) globalPeakDb = a; // reuse como pico linear temporariamente
+  }
+  globalPeakDb = globalPeakDb > 0 ? 20 * Math.log10(globalPeakDb) : -120;
+
+  // Espectro médio final (magnitude).
+  const avgMags = new Float64Array(halfBins);
+  const nSpec = Math.max(numFrames, 1);
+  for (let k = 0; k < halfBins; k++) avgMags[k] = Math.sqrt(meanPowSpec[k] / nSpec);
+
+  // ---------- Eixos ----------
+  // Reverb (prioridade máxima).
+  report_(76, 'reverb');
+  const reverb = analyzeReverb(samples, sampleRate);
+  // P4 — refinamento ML do RT60 (ADITIVO): quando o trecho é elegível (fala
+  // na distribuição de treino), o RT60 fundido ML+Schroeder substitui a
+  // estimativa crua do detector NA PONTUAÇÃO. O campo reverb.rt60 bruto é
+  // preservado (compatibilidade/testes); fora da elegibilidade o comportamento
+  // legado (`reverb.rt60 || 2.5`) permanece idêntico.
+  const mlRefine = analyzeReverbWithML(samples, sampleRate, {
+    rt60: reverb.rt60Method === 'schroeder' ? reverb.rt60 : null,
+    c50: reverb.c50,
+  });
+  const rt60Target = opts?.baseline?.rt60Target ?? 0.4;
+  // Calibração 25/08 ~17h (tick subtle0.45): com o estimador Schroeder maduro
+  // (mediana-âncora + escada VAD dupla), o erro relativo na banda sutil caiu
+  // para ≤1.5% em ritmo canônico/lento (truth 0.45 → est 0.442–0.456 em 4
+  // seeds). A curva antiga ([0.45→82], warn<78) só flagava acima de ~0.48 de
+  // verdade — FN sistemático no sutil0.45 (única lacuna do P/R da spec).
+  // Nova curva: 0.45 → 76 (warn), 0.55 → 66; seca continua ≥96 e crítica <20.
+  const reverbScore = clamp01_100(piecewise(
+    [[Math.min(rt60Target, 0.3), 96], [0.4, 86], [0.45, 76], [0.55, 66], [0.7, 50], [1.2, 18], [2.0, 5]],
+    // Sentinel ||2.5 SÓ para o caminho legado (detector sem RT60). No caminho
+    // ML, rt60Final=0 é resposta GENUÍNA ("seco" — o MLP prevê negativo p/
+    // salas secas e o clamp zera): 0||2.5 fabricava sala de 2.5s → FP crítico
+    // em seco+codec lossy (mp3/m4a fazem o Schroeder convergir espúrio).
+    mlRefine.mlApplied ? mlRefine.rt60Final : (reverb.rt60 || 2.5)
+  ));
+  const reverbSev = sevFromScore(reverbScore, 82, 58);
+  const reverbExplanation = explainReverb(reverb, rt60Target, opts?.baseline?.name)
+    + (mlRefine.mlApplied ? ` ${mlRefine.note}` : '');
+
+  // Clipping: evidência absoluta + flat-top em qualquer teto é checada aqui em cima
+  // do pico global (sub-ceil clipping) — passamos threshold dinâmico.
+  const absCeil = Math.pow(10, -0.01 / 20); // ~0dBFS
+  const clipAbs = detectClip(samples, absCeil);
+  // Flat-top sub-ceil: plateaus ≥4 samples dentro de 1dB abaixo do pico global.
+  const flatTop = detectPlateausNearCeil(samples, Math.pow(10, (globalPeakDb - 1.2) / 20));
+  const subCeilClip = flatTop.count >= 8 && clipAbs.flatTopRuns < flatTop.count / 4;
+  // Crest factor por janela de 50ms: assinatura de saturação que SOBREVIVE a
+  // codec lossy (plateaus idênticos morrem no mp3/aac; dinâmica esmagada não
+  // ressuscita). Calibração: limpo ≤0.31, saturado ≥0.59 pós-codec — corte 0.45.
+  const crest: CrestEvidence = crestClippingEvidence(samples, sampleRate);
+  const crestSaturated = isCrestSaturated(crest);
+  const clipRatio = Math.max(clipAbs.clipRatio, flatTop.samples / Math.max(samples.length, 1));
+  // Hard clip digital tem assinatura exata (samples bit-idênticos saturados):
+  // mesmo com poucos samples afetados, a evidência é definitiva — o score não
+  // pode ficar alto só porque a razão é pequena.
+  const definiteHardClip = clipAbs.exactSatRuns >= 2;
+  let clippingScore = !clipAbs.hasClip && !subCeilClip && !crestSaturated
+    ? 98
+    : clamp01_100(piecewise([[0, 92], [0.0005, 72], [0.003, 45], [0.02, 15], [0.08, 3]], clipRatio));
+  if (definiteHardClip) clippingScore = Math.min(clippingScore, 40);
+  // Saturação confirmada por crest (única evidência — típico pós-codec):
+  // teto de score equivalente a clipRatio ~1e-4..3e-5 (warn), nunca "ok".
+  if (crestSaturated && !definiteHardClip) clippingScore = Math.min(clippingScore, 68);
+  const clippingSev = sevFromScore(clippingScore, 80, 50);
+
+  // Distorção: THD mediana dos frames tonais; sem tonalidade → neutro-bom.
+  let distortionValue = 0;
+  let distortionScore: number;
+  if (tonalFrames >= 5 && thdSamples.length > 0) {
+    distortionValue = percentile(thdSamples, 50);
+    distortionScore = clamp01_100(piecewise(
+      [[0, 97], [0.01, 88], [0.03, 68], [0.08, 40], [0.2, 15]],
+      distortionValue
+    ));
+  } else {
+    distortionScore = clipAbs.hasClip || subCeilClip || crestSaturated ? 55 : 92;
+    // Aviso só faz sentido quando a falta de tom NÃO é explicada por clipping
+    // (com clipping confirmado, o eixo clipping já carrega a informação).
+    if (!(clipAbs.hasClip || subCeilClip || crestSaturated)) {
+      warnings.push('Sem tom sustentado identificável — THD não mensurável neste trecho.');
+    }
+  }
+  const distortionSev = sevFromScore(distortionScore, 78, 50);
+
+  // Ruído: noise floor = percentil 10 dos RMS por frame.
+  // Curva ESTRITAMENTE decrescente (tick 25/08 ~12h): a versão anterior tinha
+  // o joelho [-40, 90] DEPOIS de [-50, 75] — um piso MAIS SUJO (-42dB)
+  // pontuava ~88 enquanto um mais limpo (-48dB) pontuava ~77. Invertido = injusto.
+  // Entradas mais curtas que uma janela de FFT (ex.: <93ms @44.1k) geram ZERO
+  // frames: percentile([]) é NaN por contrato e contaminaria o relatório
+  // inteiro (noiseFloorDb → score de ruído → JSON do sheet-sync quebra).
+  // Piso -120dBFS = "silêncio digital", valor neutro-bem-formado.
+  const noiseFloorDb = frameRmsDb.length > 0 ? estimateNoiseFloorDb(frameRmsDb, 10) : -120;
+  const floorMax = opts?.baseline?.noiseFloorDbMax ?? -45;
+  const noiseScoreRaw = clamp01_100(noiseScoreFromFloorDb(noiseFloorDb));
+
+  // Hum: preferir o espectro silencioso (p25 temporal por bin) — fala é
+  // transiente e some no p25; hum constante permanece. Fallback: detector
+  // de pico original sobre a média espectral (entradas curtas/1 frame).
+  const quietSpec = humAcc.buildQuietSpectrum();
+  const hum = quietSpec !== null
+    ? detectHumFromQuietSpectrum(quietSpec, sampleRate, fftSize)
+    : detectHum(avgMags, sampleRate, fftSize);
+  let humNoisePenalty = 0;
+  if (hum.humDetected) {
+    humNoisePenalty = hum.severity === 'heavy' ? 40 : hum.severity === 'moderate' ? 22 : 10;
+    warnings.push(`Hum ${hum.fundamentalHz}Hz detectado (${hum.severity}, ${hum.harmonicCount} harmônicos, ${hum.humLevelDb}dBFS).`);
+  }
+  const noiseScoreFinal = clamp01_100(noiseScoreRaw - humNoisePenalty);
+  const noiseSev = sevFromScore(noiseScoreFinal, 75, 50);
+
+  // Eco.
+  report_(88, 'echo');
+  const echoWinSec = opts?.echoWindowsSec ?? 15;
+  const echo = detectEchoWindows(samples, sampleRate, echoWinSec);
+  const echoScore = !echo.hasEcho
+    ? 96
+    : clamp01_100(piecewise([[0.25, 65], [0.4, 45], [0.6, 28], [0.9, 10]], echo.confidence));
+  const echoSev = sevFromScore(echoScore, 75, 50);
+
+  // Sibilância: mediana das razões por frame.
+  const sibDb = sibSamples.length ? percentile(sibSamples, 50) : 0;
+  const sibilanceScore = clamp01_100(piecewise([[-10, 96], [-6, 86], [-2, 68], [2, 45], [8, 25]], sibDb));
+  const sibilanceSev = sevFromScore(sibilanceScore, 70, 45);
+
+  // Mudança acústica mid-video (INFO): loudness (legado) + timbre espectral.
+  report_(94, 'finalize');
+  const acousticShift = detectAcousticShift(frameRmsDb, hop, sampleRate, fftSize, shiftAcc);
+
+  // ---------- Timeline ----------
+  const timelineMarks: TimelineMark[] = [];
+  const seenSecs = new Set<string>();
+  for (const ev of clipEvents.slice(0, 200)) {
+    const tSec = Math.floor(ev.sampleIdx / sampleRate);
+    const key = `c${tSec}`;
+    if (!seenSecs.has(key)) {
+      seenSecs.add(key);
+      timelineMarks.push({
+        tSec,
+        axis: 'clipping',
+        severity: clippingSev === 'critical' ? 'critical' : 'warn',
+        note: `clip ${ev.runLen} samples`,
+      });
+    }
+  }
+  if (reverb.rt60Method === 'schroeder') {
+    timelineMarks.push({
+      tSec: 0,
+      axis: 'reverb',
+      severity: reverbSev === 'critical' ? 'critical' : 'warn',
+      note: `RT60≈${reverb.rt60}s (${reverb.usedWindows} janelas de decay)`,
+    });
+  }
+  if (echo.hasEcho) {
+    timelineMarks.push({
+      tSec: 0,
+      axis: 'echo',
+      severity: echoSev === 'critical' ? 'critical' : 'warn',
+      note: `eco ${echo.delayMs}ms conf=${echo.confidence}`,
+    });
+  }
+  if (hum.humDetected) {
+    timelineMarks.push({
+      tSec: 0,
+      axis: 'hum',
+      severity: hum.severity === 'heavy' ? 'critical' : 'warn',
+      note: `hum ${hum.fundamentalHz}Hz ${hum.humLevelDb}dBFS`,
+    });
+  }
+  // Mudança acústica mid-video (INFO da spec): marca clicável no segundo exato.
+  if (acousticShift.detected) {
+    timelineMarks.push({
+      tSec: acousticShift.tSec,
+      axis: 'shift',
+      severity: 'warn',
+      note: acousticShift.note,
+    });
+  }
+
+  // ---------- Scores finais + explicações ----------
+  const axes = {
+    reverb: makeAxis(reverbScore, reverbSev, reverb.rt60, reverbExplanation),
+    clipping: makeAxis(clippingScore, clippingSev, clipRatio,
+      explainClipping(clipAbs, subCeilClip, clipRatio, crest)),
+    distortion: makeAxis(distortionScore, distortionSev, distortionValue,
+      explainDistortion(distortionValue, tonalFrames, clipAbs.hasClip || subCeilClip)),
+    noise: makeAxis(noiseScoreFinal, noiseSev, noiseFloorDb,
+      explainNoise(noiseFloorDb, floorMax, opts?.baseline?.name)),
+    echo: makeAxis(echoScore, echoSev, echo.delayMs,
+      explainEcho(echo)),
+    sibilance: makeAxis(sibilanceScore, sibilanceSev, sibDb,
+      explainSibilance(sibDb)),
+  };
+
+  const overallScore = Math.round(
+    axes.reverb.score * 0.25 +
+    axes.clipping.score * 0.2 +
+    axes.distortion.score * 0.15 +
+    axes.noise.score * 0.2 +
+    axes.echo.score * 0.15 +
+    axes.sibilance.score * 0.05
+  );
+
+  return {
+    durationSec,
+    sampleRate,
+    axes,
+    overallScore,
+    timelineMarks,
+    reverb,
+    reverbMl: {
+      rt60Final: mlRefine.rt60Final,
+      rt60Detector: mlRefine.rt60Detector,
+      rt60Ml: mlRefine.rt60Ml,
+      engine: mlRefine.engine,
+      note: mlRefine.note,
+    },
+    echo,
+    hum,
+    clip: clipAbs,
+    noiseFloorDb: Math.round(noiseFloorDb * 10) / 10,
+    sibilanceRatioDb: Math.round(sibDb * 10) / 10,
+    acousticShift,
+    warnings,
+  };
+}
+
+// ---------- helpers ----------
+
+function makeAxis(score: number, severity: Severity, value: number, explanation: string): AxisResult {
+  return { score: Math.round(score), severity, value, explanation };
+}
+
+function argmax(arr: Float64Array, from: number, to: number): number {
+  let bi = -1, bv = -Infinity;
+  const hi = Math.min(to, arr.length - 1);
+  for (let i = Math.max(0, from); i <= hi; i++) {
+    if (arr[i] > bv) { bv = arr[i]; bi = i; }
+  }
+  return bi;
+}
+
+function localMed(arr: Float64Array, center: number, radius: number): number {
+  const vals: number[] = [];
+  for (let k = Math.max(0, center - radius); k <= Math.min(arr.length - 1, center + radius); k++) vals.push(arr[k]);
+  vals.sort((a, b) => a - b);
+  return vals[Math.floor(vals.length / 2)] ?? 0;
+}
+
+/**
+ * Detecta plateaus (runs de valores ~idênticos) próximos ao teto dado —
+ * assinatura de hard clip mesmo abaixo de 0dBFS.
+ */
+function detectPlateausNearCeil(samples: Float64Array | Float32Array, ceilAmp: number): { count: number; samples: number; longest: number } {
+  const EPS = 1e-4;
+  let count = 0, total = 0, longest = 0;
+  let run = 1;
+  for (let i = 1; i < samples.length; i++) {
+    const cur = Math.abs(samples[i]);
+    const prev = Math.abs(samples[i - 1]);
+    if (cur >= ceilAmp && Math.abs(cur - prev) <= EPS) {
+      run++;
+    } else {
+      if (run >= 4) { count++; total += run; longest = Math.max(longest, run); }
+      run = 1;
+    }
+  }
+  if (run >= 4) { count++; total += run; longest = Math.max(longest, run); }
+  return { count, samples: total, longest };
+}
+
+/** Eco avaliado em até 10 janelas espalhadas pelo arquivo (custo limitado). */
+function detectEchoWindows(samples: Float64Array, sampleRate: number, winSec: number): EchoResult {
+  const winLen = Math.min(Math.floor(winSec * sampleRate), samples.length);
+  if (winLen < sampleRate * 2) {
+    return detectEcho(samples, sampleRate);
+  }
+  const maxWindows = 10;
+  const stride = Math.max(winLen, Math.floor((samples.length - winLen) / (maxWindows - 1)));
+  for (let start = 0; start + winLen <= samples.length; start += stride) {
+    const r = detectEcho(samples.subarray(start, start + winLen) as Float64Array, sampleRate);
+    if (r.hasEcho) return { ...r, delayMs: r.delayMs }; // primeiro hit já qualifica
+  }
+  return { delayMs: 0, delaySamples: 0, confidence: 0, isReal: false, hasEcho: false };
+}
+
+/** Mudança acústica mid-video (INFO na spec): troca de sala/mic no meio do bloco. */
+export interface AcousticShift {
+  detected: boolean;
+  tSec: number;
+  note: string;
+  /** 'level' = queda/salto de loudness; 'spectral' = timbre muda com nível estável. */
+  kind?: 'level' | 'spectral';
+}
+
+/**
+ * Acumula features espectrais por frame durante a varredura STFT (custo
+ * O(bins), mesmo domínio dos acumuladores existentes) para viabilizar a
+ * detecção de troca de sala/mic SEM mudança de loudness — o caso que interessa
+ * ao produto (a sala reverberando diferente com o gain certinho passa batido
+ * num detector só de RMS).
+ *
+ * Memória: 3 números por frame (~172k frames/h ⇒ ~4MB) — dentro do orçamento.
+ */
+export class AcousticShiftAccumulator {
+  private readonly midLo: number;
+  private readonly midHi: number;
+  private readonly sibLo: number;
+  private readonly sibHi: number;
+  private readonly centroidDb: number[] = [];
+  private readonly flatnessDb: number[] = [];
+  private readonly sibilanceDb: number[] = [];
+
+  constructor(sampleRate: number, fftSize: number) {
+    const binHz = sampleRate / fftSize;
+    this.midLo = Math.max(1, Math.round(500 / binHz));
+    this.midHi = Math.max(this.midLo + 1, Math.round(2000 / binHz));
+    this.sibLo = Math.max(1, Math.round(5000 / binHz));
+    this.sibHi = Math.min(fftSize / 2, Math.round(10000 / binHz));
+  }
+
+  get count(): number {
+    return this.centroidDb.length;
+  }
+
+  /** Chamado uma vez por frame STFT com o espectro de magnitude. */
+  add(mags: Float64Array): void {
+    const n = mags.length - 1;
+    // Centroide espectral em bins (proxy linear de frequência; bins = Hz/BIN_HZ).
+    let num = 0;
+    let den = 0;
+    for (let k = 1; k <= n; k++) {
+      num += k * mags[k];
+      den += mags[k];
+    }
+    this.centroidDb.push(10 * Math.log10(Math.max(num, 1e-30) / Math.max(den, 1e-30)));
+    // Flatness espectral (geo/arith da potência) em dB.
+    let logSum = 0;
+    let powSum = 0;
+    for (let k = 1; k <= n; k++) {
+      const p = mags[k] * mags[k];
+      logSum += Math.log(p > 1e-30 ? p : 1e-30);
+      powSum += p;
+    }
+    const geo = Math.exp(logSum / n);
+    const arith = powSum / n;
+    this.flatnessDb.push(10 * Math.log10(Math.max(geo, 1e-30) / Math.max(arith, 1e-30)));
+    // Razão sibilância 5-10kHz vs mid 500-2kHz em dB (mesmas bandas do eixo).
+    let hi = 0;
+    let mid = 0;
+    const hiEnd = Math.min(this.sibHi, n);
+    for (let k = this.sibLo; k <= hiEnd; k++) hi += mags[k] * mags[k];
+    for (let k = this.midLo; k <= Math.min(this.midHi, n); k++) mid += mags[k] * mags[k];
+    this.sibilanceDb.push(10 * Math.log10(Math.max(hi, 1e-30) / Math.max(mid, 1e-30)));
+  }
+
+  /** Fatias [fromFrame,toFrame) das três séries (para mediana por janela). */
+  slice(fromFrame: number, toFrame: number): {
+    centroidDb: number[];
+    flatnessDb: number[];
+    sibilanceDb: number[];
+  } {
+    return {
+      centroidDb: this.centroidDb.slice(fromFrame, toFrame),
+      flatnessDb: this.flatnessDb.slice(fromFrame, toFrame),
+      sibilanceDb: this.sibilanceDb.slice(fromFrame, toFrame),
+    };
+  }
+}
+
+const SHIFT_LEVEL_JUMP_DB = 9;
+const SHIFT_SPECTRAL_JUMP_DB = 6;
+
+/**
+ * Shift acústico mid-video, duas camadas:
+ * 1) LEGADO — salto ≥9dB na mediana de RMS entre quartis (troca de ganho);
+ * 2) NOVO — salto SUSTENTADO ≥6dB em ≥2 de 3 features espectrais (centroide,
+ *    flatness, sibilância), medido por mediana em janelas móveis com 50% de
+ *    overlap. Mediana+móvel imuniza contra palavras isoladas e transientes:
+ *    só uma mudança persistente de timbre (sala/mic diferentes) empurra todas
+ *    as janelas de um lado da fronteira.
+ */
+function detectAcousticShift(
+  frameRmsDb: number[],
+  hop: number,
+  sampleRate: number,
+  fftSize: number,
+  feats?: AcousticShiftAccumulator
+): AcousticShift {
+  const q = 4;
+  const nf = frameRmsDb.length;
+  if (nf < q * 8) return { detected: false, tSec: 0, note: '' }; // curto demais p/ concluir
+
+  const per = Math.max(1, Math.floor(nf / q));
+
+  // 1) Loudness (comportamento legado preservado).
+  const medians: number[] = [];
+  for (let i = 0; i < q; i++) {
+    const slice = frameRmsDb.slice(i * per, Math.min(nf, (i + 1) * per));
+    medians.push(slice.length ? percentile(slice, 50) : -120);
+  }
+  for (let i = 1; i < q; i++) {
+    const jump = Math.abs(medians[i] - medians[i - 1]);
+    if (jump >= SHIFT_LEVEL_JUMP_DB) {
+      const tSec = Math.round(((i * per * hop + fftSize / 2) / sampleRate) * 10) / 10;
+      return {
+        detected: true,
+        tSec,
+        kind: 'level',
+        note: `Nível médio mudou ${jump.toFixed(1)}dB entre blocos ${i - 1}→${i} (possível troca de sala/mic)`,
+      };
+    }
+  }
+
+  // 2) Timbre: janelas móveis de mediana sobre as séries espectrais.
+  if (!feats || feats.count < nf) return { detected: false, tSec: 0, note: '' };
+  const win = Math.max(8, Math.floor(nf / 16));
+  const step = Math.max(1, Math.floor(win / 2));
+  const movC = movingMedian(feats.slice(0, nf).centroidDb, win, step);
+  const movF = movingMedian(feats.slice(0, nf).flatnessDb, win, step);
+  const movS = movingMedian(feats.slice(0, nf).sibilanceDb, win, step);
+
+  const fmt = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}`;
+  for (let j = 1; j < movC.length; j++) {
+    const dC = movC[j] - movC[j - 1];
+    const dF = movF[j] - movF[j - 1];
+    const dS = movS[j] - movS[j - 1];
+    const votes =
+      (Math.abs(dC) >= SHIFT_SPECTRAL_JUMP_DB ? 1 : 0) +
+      (Math.abs(dF) >= SHIFT_SPECTRAL_JUMP_DB ? 1 : 0) +
+      (Math.abs(dS) >= SHIFT_SPECTRAL_JUMP_DB ? 1 : 0);
+    if (votes >= 2) {
+      const frameIdx = j * step + Math.floor(win / 2);
+      const tSec = Math.round(((frameIdx * hop + fftSize / 2) / sampleRate) * 10) / 10;
+      return {
+        detected: true,
+        tSec,
+        kind: 'spectral',
+        note: `Perfil espectral mudou (centroid ${fmt(dC)}dB, flatness ${fmt(dF)}dB, sibilância ${fmt(dS)}dB; corte ≥${SHIFT_SPECTRAL_JUMP_DB}dB em ≥2 métricas) — possível troca de sala/mic com nível parecido`,
+      };
+    }
+  }
+  return { detected: false, tSec: 0, note: '' };
+}
+
+/** Mediana em janelas deslizantes (passo `step`). Janelas sempre completas. */
+function movingMedian(x: number[], win: number, step: number): number[] {
+  const out: number[] = [];
+  for (let s = 0; s + win <= x.length; s += step) {
+    out.push(percentile(x.slice(s, s + win), 50));
+  }
+  return out;
+}
+
+// ---------- explicações ----------
+
+function explainReverb(r: ReverbResult, target: number, studio?: string): string {
+  const alvo = studio ? `alvo ${target}s do estúdio ${studio}` : `referência ${target}s`;
+  if (r.rt60Method === 'schroeder') {
+    const extra = r.rt60 > target ? `acima do ${alvo}` : `dentro do ${alvo}`;
+    return `RT60≈${r.rt60}s (${extra}); método Schroeder em ${r.usedWindows} pausa(s) de fala; C50=${r.c50}dB.`;
+  }
+  if (r.rt60Method === 'c50-fallback') {
+    const extra = r.rt60 > target ? `acima do ${alvo}` : `dentro do ${alvo}`;
+    return `Sem pausas claras p/ Schroeder; C50=${r.c50}dB/C80=${r.c80}dB sugere sala "${r.classification}" (estimativa ${r.rt60}s; ${extra}).`;
+  }
+  return 'Trecho curto demais para estimar reverb.';
+}
+function explainClipping(c: ClipResult, subCeil: boolean, ratio: number, crest?: CrestEvidence): string {
+  if (crest && isCrestSaturated(crest)) {
+    const codecNote = !c.hasClip && !subCeil
+      ? ' (plateaus apagados por codec — assinatura de dinâmica esmagada)'
+      : '';
+    return `Saturação por crest factor: ${(crest.lowCrestFrac * 100).toFixed(0)}% das janelas com dinâmica comprimida (<9dB pico/RMS)${codecNote}.`;
+  }
+  if (!c.hasClip && !subCeil) return `Sem clipping (pico ${Math.round(c.peakDb * 10) / 10}dBFS).`;
+  const modo = subCeil && !c.hasClip ? 'plateaus de hard clip abaixo de 0dBFS' : 'samples em 0dBFS';
+  return `Clipping por ${modo}: ${(ratio * 100).toFixed(3)}% dos samples, run máx ${c.clipRunLen}.`;
+}
+function explainDistortion(thd: number, tonalFrames: number, clipped: boolean): string {
+  if (tonalFrames < 5) return clipped ? 'THD não mensurável; há clipping que sugere distorção.' : 'Conteúdo não tonal — THD n/a.';
+  return `THD≈${(thd * 100).toFixed(1)}% (mediana de ${tonalFrames} frames tonais).`;
+}
+function explainNoise(floorDb: number, floorMax: number, studio?: string): string {
+  const ref = studio ? `máximo ${floorMax}dBFS de ${studio}` : `referência ${floorMax}dBFS`;
+  return `Noise floor ${Math.round(floorDb)}dBFS (percentil 10; ${ref}).`;
+}
+function explainEcho(e: EchoResult): string {
+  if (!e.hasEcho) return 'Sem eco perceptível (autocorrelação do envelope sem pico proeminente ≥80ms).';
+  return `Eco real: delay ${e.delayMs}ms, confiança ${(e.confidence * 100).toFixed(0)}%.`;
+}
+function explainSibilance(db: number): string {
+  return db > 0
+    ? `Energia 5-10kHz excede 500-2kHz em ${db.toFixed(1)}dB — sibilância forte.`
+    : `Balanço de sibilância ok (5-10kHz está ${Math.abs(db).toFixed(1)}dB abaixo do mid).`;
+}
+
+// ---------- entrada de alto nível ----------
+
+/**
+ * Decodifica arquivo/ArrayBuffer via AudioContext (browser) e analisa.
+ * Em ambiente sem WebAudio lança erro orientado — use analyzeAudioPcm.
+ */
+export async function analyzeAudio(
+  input: ArrayBuffer | Float32Array | Float64Array,
+  sampleRateIfRaw = 48000,
+  opts?: AcousticOptions
+): Promise<AcousticReport> {
+  let samples: Float32Array | Float64Array;
+  let sr = sampleRateIfRaw;
+  if (input instanceof ArrayBuffer) {
+    const AC = (globalThis as { AudioContext?: new () => { decodeAudioData(b: ArrayBuffer): Promise<{ sampleRate: number; getChannelData(ch: number): Float32Array }>; close?(): void } }).AudioContext;
+    if (!AC) throw new Error('AudioContext indisponível neste runtime; decodifique externamente e use analyzeAudioPcm().');
+    const ctx = new AC();
+    try {
+      const buf = await ctx.decodeAudioData(input);
+      samples = buf.getChannelData(0);
+      sr = buf.sampleRate;
+    } finally {
+      ctx.close?.();
+    }
+  } else {
+    samples = input;
+  }
+  return analyzeAudioPcm(samples, sr, opts);
+}

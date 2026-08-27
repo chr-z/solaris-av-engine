@@ -5,6 +5,10 @@
  */
 
 import { DEMO_HEADERS, DEMO_ROWS } from './demoData';
+import {
+  getLatestAcousticQCSection,
+  renderAcousticQCSectionHtml,
+} from '../audio-acoustics/qcIntegration';
 
 /** Estrutura do relatório QC exportado */
 export interface QCReport {
@@ -78,6 +82,11 @@ export function generateQCReport(
 
 /** Exporta o relatório como blob downloadável (client-side) */
 export function exportQCReportBlob(report: QCReport): Blob {
+  // Spec SOLARIS_AUDIO_ACOUSTICS §Saída: o relatório QC inclui os scores
+  // acústicos. A seção vem do registro da última análise acústica publicada;
+  // sem análise prévia, o relatório sai sem a seção (comportamento anterior).
+  const acousticSection = getLatestAcousticQCSection();
+  const acousticHtml = acousticSection ? renderAcousticQCSectionHtml(acousticSection) : '';
   const formattedDate = new Date(report.generatedAt).toISOString().split('T')[0];
   const template = `
     <h1>${report.title}</h1>
@@ -94,6 +103,7 @@ export function exportQCReportBlob(report: QCReport): Blob {
     </ul>
     <h2>Headers</h2>
     <pre>${JSON.stringify(report.headers, null, 2)}</pre>
+    ${acousticHtml}
   `;
 
   const blob = new Blob([template], { type: 'text/html' });
