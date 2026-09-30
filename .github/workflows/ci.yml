@@ -60,6 +60,9 @@ jobs:
             echo "No changed TS files to lint."
           fi
 
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Tests
         run: npm test
 

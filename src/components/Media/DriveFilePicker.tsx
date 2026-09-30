@@ -4,7 +4,9 @@ import { useWaveformCache } from '../../contexts/WaveformCacheContext';
 import { WaveformIcon } from '../Core/icons';
 
 // GAPI injetado via <script> externo (apis.google.com) — sem tipos próprios.
-declare const gapi: { client: { getToken: () => unknown } | undefined };
+declare const gapi: {
+    client: { getToken: () => { access_token?: string } | null } | undefined;
+};
 
 interface DriveFilePickerProps {
     folderId: string;
@@ -24,7 +26,7 @@ const DriveFilePicker: React.FC<DriveFilePickerProps> = ({ folderId, onFileSelec
             setError(null);
             try {
                 // Get token from GAPI client
-                const token = gapi.client.getToken()?.access_token;
+                const token = gapi.client?.getToken()?.access_token;
                 if (!token) {
                     throw new Error("User not authenticated. Please sign in again.");
                 }

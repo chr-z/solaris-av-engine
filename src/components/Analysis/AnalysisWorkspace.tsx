@@ -642,7 +642,7 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
     const applySnapshot = (snapshot: { val: () => Record<string, unknown> | null }) => {
       const data = snapshot.val();
       if (data) {
-        const list: Timestamp[] = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+        const list: Timestamp[] = Object.keys(data).map(key => ({ id: key, ...(data[key] as Omit<Timestamp, 'id'>) }));
         list.sort((a: Timestamp, b: Timestamp) => a.time - b.time);
         setTimelineMarkers(list);
       } else {
@@ -917,6 +917,10 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
         });
       });
   }, [videoSrc]);
+  // NOTE: declared here (not below with the rest of the render helpers) because
+  // it is consumed by the acoustic hook right below; a later `const` would be a
+  // temporal-dead-zone ReferenceError on every workspace render.
+  const osIdentifier = localRowData ? (localRowData[headers.indexOf('W.O.')]?.value || '') : '';
   const studioNameForAcoustics = osIdentifier || undefined;
   const acoustics = useAcousticAnalysis({
     getPcm: videoSrc ? acousticPcmGetter : null,
@@ -1019,8 +1023,6 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
       </button>
     </div>
   );
-
-  const osIdentifier = localRowData ? (localRowData[headers.indexOf('W.O.')]?.value || '') : '';
 
   return (
     <div className="w-full h-full flex p-4 gap-4 overflow-hidden bg-bg">
