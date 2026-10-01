@@ -65,11 +65,21 @@ jobs:
           echo "$headers" | grep -qi "frame-ancestors 'none'" || { echo "FAIL: CSP lacks frame-ancestors"; exit 1; }
           echo "$headers" | grep -qi "unsafe-eval" && { echo "FAIL: CSP grants unsafe-eval"; exit 1; } || true
 
-          # /api/* must never answer with the SPA shell + 200.
-          api_headers=$(curl -sS -D - -o /tmp/api_body "$base/api/get-sheets-data")
-          echo "$api_headers" | grep -qi "content-type: application/json" || { echo "FAIL: /api/get-sheets-data is not JSON"; exit 1; }
+          # /api/* must never answer with the SPA shell + 200. The probe path is
+          # unauthenticated so this stays a pure routing assertion: unlike
+          # /api/get-sheets-data (which correctly authenticates first and returns
+          # a JSON 401 — the SOLA-34 run failed the deploy on that by mistake),
+          # an unknown /api/* path must return JSON 404, never index.html.
+          # `-w '%{content_type}'` reports the type with no per-header dependency,
+          # so this does not hinge on a proxy forwarding a header prefix.
+          api_probe=$(curl -sS -o /tmp/api_body -w '%{http_code} %{content_type}' \
+            "$base/api/__deploy_guard_probe__")
+          echo "/api/__deploy_guard_probe__ -> $api_probe"
+          case "$api_probe" in
+            *application/json*) : ;;
+            *) echo "FAIL: an unknown /api/* path did not return JSON (Pages Functions not deployed?)"; exit 1 ;;
+          esac
           if grep -qi "<!DOCTYPE html>" /tmp/api_body; then echo "FAIL: /api returned the SPA shell"; exit 1; fi
-          echo "/api/get-sheets-data -> $(echo "$api_headers" | head -1)"
 
           # SOLA-34: the licensing backend must be reachable and durable-ready.
           # A missing endpoint used to answer 405 (identical to a bogus path).
