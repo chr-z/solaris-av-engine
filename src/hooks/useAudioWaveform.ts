@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 // A2 QoL: cache do pico absoluto (normalize) + medição dBFS de canal.
 import { dbfsFromChannel, readCachedPeakDbfs, writeCachedPeakDbfs } from '../features/qol/mediaComfort';
+import { getDb } from '../config/firebase';
 
 // Persistent, size-limited cache for waveform data.
 export const CACHE_KEY_PREFIX = 'solaris_waveform_cache_';

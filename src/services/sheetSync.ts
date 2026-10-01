@@ -32,6 +32,8 @@ export interface SheetFetchOptions {
 export interface SheetUpdateOptions extends SheetFetchOptions {
   /** Google OAuth access token with spreadsheets scope (user-authorized write). */
   accessToken?: string;
+  /** Firebase ID token identifying the caller (SOLA-35: required for auth). */
+  idToken?: string;
   /** Max attempts for transient failures (default 3). */
   maxAttempts?: number;
   /** Base delay in ms for the retry backoff (default 300). */
@@ -228,7 +230,7 @@ export async function updateSheetRow(
   if (!Number.isInteger(rowIndex) || rowIndex < 2) {
     throw new Error(`rowIndex inválido: ${String(rowIndex)} (dados começam na linha 2)`);
   }
-  if (!options.accessToken) {
+  if (!options.idToken || !options.accessToken) {
     throw new SheetAuthError('Usuário não autenticado ou sessão expirada. Por favor, conecte-se novamente.');
   }
 
@@ -247,7 +249,10 @@ export async function updateSheetRow(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${options.accessToken}`,
+          // SOLA-35: Firebase ID token authenticates; the Google OAuth token
+          // is carried separately for the delegated Sheets write.
+          Authorization: `Bearer ${options.idToken}`,
+          'X-Google-Access-Token': options.accessToken,
           'X-Idempotency-Key': idempotencyKey,
         },
         body: JSON.stringify({ rowIndex, rowData }),

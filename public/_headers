@@ -1,0 +1,39 @@
+# Cloudflare Pages security headers (SOLA-35, P1-3).
+#
+# Source of truth: this file is copied verbatim into dist/ by Vite, so the
+# deployed artifact carries it as dist/_headers. Cloudflare Pages reads
+# _headers; it never read the old vercel.json. Do not reintroduce a vercel.json.
+#
+# CSP notes / why each exception exists:
+#   script-src      : 'self' + apis.google.com (gapi) + accounts.google.com (GSI).
+#                     No 'unsafe-inline' and no 'unsafe-eval': the production
+#                     build emits no inline scripts and no eval (verified in
+#                     dist/index.html).
+#   style-src       : 'unsafe-inline' is REQUIRED and therefore kept. React
+#                     sets inline style attributes across the UI and the Google
+#                     libs inject <style>; a static SPA cannot nonce those.
+#                     It is deliberately NOT granted to script-src.
+#   connect-src     : scoped to the Firebase/Google origins the app actually
+#                     calls, plus 'self' for its own /api and blob: for media.
+#                     No wildcard https:.
+#   frame-ancestors : 'none' anti-clickjacking (X-Frame-Options kept for
+#                     legacy browsers).
+#   media-src       : blob: for local files, https: for direct media URLs.
+#   img-src         : https: for Drive/YouTube thumbnails and avatars.
+#
+# HSTS is max-age=1y + includeSubDomains. 'preload' is intentionally omitted:
+# submission to the preload list is an out-of-band, hard-to-reverse commitment.
+
+/*
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' https://apis.google.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.google.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com blob:; frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://content.googleapis.com; media-src 'self' blob: https:; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Cross-Origin-Opener-Policy: unsafe-none
+  Cross-Origin-Resource-Policy: cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# API responses must never be cached as HTML/JSON snapshots.
+/api/*
+  Cache-Control: no-store

@@ -60,8 +60,17 @@ jobs:
             echo "No changed TS files to lint."
           fi
 
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Tests
         run: npm test
 
       - name: Build
         run: npm run build
+
+      - name: Bundle signing-material guard (SOLA-34)
+        run: node scripts/check_bundle_secrets.mjs dist
+
+      - name: Bundle guard self-test (SOLA-34 R-01)
+        run: node scripts/check_bundle_secrets.mjs --self-test

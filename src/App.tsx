@@ -334,11 +334,18 @@ const App: React.FC = () => {
                 const tokenResponse = gapi.client.getToken();
                 const accessToken = tokenResponse?.access_token;
                 if (!accessToken) throw new Error('User not authenticated. Please sign in.');
+
+                // SOLA-35: /api/set-auth-cookie now requires a Firebase ID token
+                // as the credential before it will mint the HttpOnly session
+                // cookies used by the media proxies.
+                const { fbAuth } = await getFirebaseCompat();
+                const idToken = await fbAuth.currentUser?.getIdToken();
+                if (!idToken) throw new Error('User not authenticated. Please sign in.');
                 
                 const cookieResponse = await fetch('/api/set-auth-cookie', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: accessToken }),
+                    body: JSON.stringify({ token: accessToken, idToken }),
                 });
 
                 if (!cookieResponse.ok) throw new Error('Failed to initialize secure video session.');

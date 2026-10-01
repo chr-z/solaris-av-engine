@@ -20,6 +20,15 @@ build
 *.env
 *.env.*
 
+# Signing / private key material (SOLA-34). NEVER commit these.
+solaris-license-signing-key.json
+*license-signing-key*.json
+*license-keypair*.json
+*.pem
+*.key
+.dev.vars
+.secrets/
+
 # Vercel
 .vercel
 

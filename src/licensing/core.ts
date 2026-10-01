@@ -1,15 +1,25 @@
 /**
- * SOLARIS Pro licensing (S6.1) — pure, framework-free core.
+ * SOLARIS Pro licensing (SOLA-34) — pure, framework-free client core.
  *
- * Local-first feature flags: entitlements are derived from a signed license
- * key (HMAC-SHA256 via WebCrypto) plus a local edition override. No network,
- * no account, no secrets in the repo — the signing secret lives only in the
- * owner's environment (see `scripts/gen_license_key.mjs`).
+ * Entitlements are Ed25519 tokens (see `./token`). This module holds NO secret
+ * and cannot sign: the old HMAC-SHA256 design put a symmetric key in the client,
+ * where anyone who reads the bundle could mint eternal Pro keys. That is gone.
+ *
+ * Trust model:
+ *  - The signed token is the only source of truth. `edition`, `exp` and
+ *    `grace_exp` are read from the signed claims, never from the storage record.
+ *  - Local storage is a cache; tampering with it cannot create entitlement
+ *    without a token that verifies against the embedded public key.
+ *  - The server (`src/licensing/server/`) is authoritative for activation
+ *    counting and revocation; the client revalidates when reachable and keeps
+ *    the signed, time-bounded entitlement while the backend is down.
  */
 
-// --- Editions ---------------------------------------------------------------
+import { verifyLicenseToken } from './token';
+import type { LicenseClaims, PublicKeyRing, SolarisEdition } from './token';
+import { LICENSE_PUBLIC_KEYS } from './keys';
 
-export type SolarisEdition = 'free' | 'pro';
+export type { SolarisEdition, LicenseClaims, PublicKeyRing } from './token';
 
 export interface FeatureFlags {
   /** Export the printable QC report (HTML download + print). */
@@ -34,144 +44,33 @@ export function flagsForEdition(edition: SolarisEdition): Readonly<FeatureFlags>
   return edition === 'pro' ? PRO_FLAGS : FREE_FLAGS;
 }
 
-// --- License key format -----------------------------------------------------
-//
-//   SOLARIS-<version>-<expiresAt>-<edition>-<payload>.<signature>
-//
-// `payload` is an opaque base64url blob (customer/order reference). The
-// signature covers everything before the final '.', computed with HMAC-SHA256
-// over the raw ASCII bytes of that prefix.
+// --- Storage (cache only — never the authority) ------------------------------
 
-
-export const LICENSE_KEY_PREFIX = 'SOLARIS';
-export const LICENSE_EDITION_FREE = 'free' as const;
-export const LICENSE_EDITION_PRO = 'pro' as const;
-
-export const EDITION_STORAGE_KEY = 'solaris.editionOverride';
 export const LICENSE_CACHE_KEY = 'solaris.proLicense';
 
-export interface ParsedLicenseKey {
-  version: number;
-  /** Unix ms expiry; 0 = never expires. */
-  expiresAt: number;
-  edition: SolarisEdition;
-  payload: string;
-  signature: string;
+export interface StoredEntitlement {
+  /** The signed token exactly as issued. */
+  token: string;
+  /** Server activation id, when the token has been activated. */
+  activationId: string | null;
+  /** Last successful server revalidation (unix ms); 0 = never revalidated. */
+  verifiedAt: number;
+  /**
+   * Monotonic high-water mark of observed server-clock time (unix ms). Used to
+   * detect a client clock rolled back below the last trusted time (Riven R-05).
+   * Optional for backward compatibility with older cache entries.
+   */
+  timeFloor?: number;
 }
 
-export type LicenseParseResult =
-  | { ok: true; license: ParsedLicenseKey }
-  | { ok: false; reason: 'malformed' | 'bad-signature' };
+/** Tolerated skew before a clock is treated as rolled back / not-yet-valid. */
+export const CLOCK_SKEW_ALLOWANCE_MS = 5 * 60 * 1000;
+/** Extra slack when comparing against the monotonic time floor. */
+export const CLOCK_FLOOR_TOLERANCE_MS = 5 * 60 * 1000;
 
-const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
-
-function toBase64Url(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function fromBase64Url(value: string): Uint8Array {
-  const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '=='.slice((value.length + 3) % 4);
-  const binary = atob(padded);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-// Reserved for future payload decoding (customer ref display in the Pro modal).
-void fromBase64Url;
-
-/** Encodes a string as UTF-8 bytes (works under jsdom and Node). */
-function encodeUtf8(text: string): Uint8Array {
-  if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(text);
-  // Fallback (never hit in browsers/Node >= 12) — keep pure & dependency-free.
-  const bytes = new Uint8Array(text.length);
-  for (let i = 0; i < text.length; i += 1) bytes[i] = text.charCodeAt(i) & 0xff;
-  return bytes;
-}
-
-async function hmacSign(secret: string, message: string): Promise<string> {
-  const cryptoObj: typeof globalThis.crypto | undefined =
-    typeof crypto !== 'undefined' ? crypto : undefined;
-  if (!cryptoObj?.subtle) throw new Error('WebCrypto unavailable');
-  const key = await cryptoObj.subtle.importKey(
-    'raw',
-    encodeUtf8(secret) as unknown as ArrayBuffer,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const signature = await cryptoObj.subtle.sign(
-    'HMAC',
-    key,
-    encodeUtf8(message) as unknown as ArrayBuffer,
-  );
-  return toBase64Url(new Uint8Array(signature));
-}
-
-export async function verifyLicenseSignature(
-  secret: string,
-  message: string,
-  signature: string,
-): Promise<boolean> {
-  try {
-    const expected = await hmacSign(secret, message);
-    return expected === signature;
-  } catch {
-    return false;
-  }
-}
-
-/** Structural validation only — no signature check, no clock. */
-export function parseLicenseKey(raw: string | null | undefined): LicenseParseResult {
-  if (typeof raw !== 'string') return { ok: false, reason: 'malformed' };
-  const parts = raw.split('.');
-  if (parts.length !== 2) return { ok: false, reason: 'malformed' };
-  const [body, signature] = parts;
-  const segments = body.split('-');
-  if (segments.length !== 5) return { ok: false, reason: 'malformed' };
-  const [prefix, versionRaw, expiresRaw, edition, payload] = segments;
-  if (prefix !== LICENSE_KEY_PREFIX) return { ok: false, reason: 'malformed' };
-  if (!BASE64URL_RE.test(payload) || !BASE64URL_RE.test(signature)) {
-    return { ok: false, reason: 'malformed' };
-  }
-  const version = Number.parseInt(versionRaw, 10);
-  if (!Number.isFinite(version)) return { ok: false, reason: 'malformed' };
-  const expiresAt = Number.parseInt(expiresRaw, 10);
-  if (!Number.isFinite(expiresAt) || expiresAt < 0) return { ok: false, reason: 'malformed' };
-  if (edition !== LICENSE_EDITION_FREE && edition !== LICENSE_EDITION_PRO) {
-    return { ok: false, reason: 'malformed' };
-  }
-  return {
-    ok: true,
-    license: { version, expiresAt, edition, payload, signature },
-  };
-}
-
-export async function validateLicenseKey(
-  raw: string | null | undefined,
-  secret: string,
-  now: number = Date.now(),
-): Promise<{ valid: boolean; reason?: 'expired'; license?: ParsedLicenseKey }> {
-  const parsed = parseLicenseKey(raw);
-  if (!parsed.ok) return { valid: false };
-  const body = raw!.slice(0, raw!.lastIndexOf('.'));
-  const signatureOk = await verifyLicenseSignature(secret, body, parsed.license.signature);
-  if (!signatureOk) return { valid: false };
-  if (parsed.license.expiresAt > 0 && parsed.license.expiresAt <= now) {
-    return { valid: false, reason: 'expired', license: parsed.license };
-  }
-  return { valid: true, license: parsed.license };
-}
-
-// --- Storage ----------------------------------------------------------------
-
-export interface StoredLicense {
-  key: string;
-  activatedAt: number;
-}
-
-export function loadStoredLicense(storage: Pick<Storage, 'getItem'> | undefined): StoredLicense | null {
+export function loadStoredEntitlement(
+  storage: Pick<Storage, 'getItem'> | undefined,
+): StoredEntitlement | null {
   if (!storage) return null;
   try {
     const raw = storage.getItem(LICENSE_CACHE_KEY);
@@ -180,10 +79,14 @@ export function loadStoredLicense(storage: Pick<Storage, 'getItem'> | undefined)
     if (
       typeof parsed === 'object' &&
       parsed !== null &&
-      typeof (parsed as StoredLicense).key === 'string' &&
-      typeof (parsed as StoredLicense).activatedAt === 'number'
+      typeof (parsed as StoredEntitlement).token === 'string' &&
+      (typeof (parsed as StoredEntitlement).activationId === 'string' ||
+        (parsed as StoredEntitlement).activationId === null) &&
+      typeof (parsed as StoredEntitlement).verifiedAt === 'number' &&
+      (typeof (parsed as StoredEntitlement).timeFloor === 'number' ||
+        (parsed as StoredEntitlement).timeFloor === undefined)
     ) {
-      return parsed as StoredLicense;
+      return parsed as StoredEntitlement;
     }
     return null;
   } catch {
@@ -191,9 +94,9 @@ export function loadStoredLicense(storage: Pick<Storage, 'getItem'> | undefined)
   }
 }
 
-export function persistStoredLicense(
+export function persistStoredEntitlement(
   storage: Pick<Storage, 'setItem' | 'removeItem'> | undefined,
-  entry: StoredLicense | null,
+  entry: StoredEntitlement | null,
 ): void {
   if (!storage) return;
   try {
@@ -204,21 +107,81 @@ export function persistStoredLicense(
   }
 }
 
+// --- Verification & resolution ----------------------------------------------
+
+export interface LocalEntitlement {
+  /** Token verifies against the public ring and is inside its offline window. */
+  verified: boolean;
+  claims?: LicenseClaims;
+  reason?: string;
+}
+
+/** Verify a token locally (signature + clock). No network, no secret. */
+export async function verifyLocalEntitlement(
+  token: string | null | undefined,
+  now: number = Date.now(),
+  publicKeys: PublicKeyRing = LICENSE_PUBLIC_KEYS,
+  options: { clockSkewMs?: number } = {},
+): Promise<LocalEntitlement> {
+  if (!token) return { verified: false, reason: 'no-token' };
+  const result = await verifyLicenseToken(token, publicKeys, now, options);
+  if (result.valid) return { verified: true, claims: result.claims };
+  return { verified: false, reason: result.reason, claims: result.claims };
+}
+
 export type EditionOverride =
   | { kind: 'stored-license' }
   | { kind: 'env-override' }
   | { kind: 'none' };
 
-/** Pure resolution: stored license wins over env override wins over free. */
+/**
+ * Pure resolution: a locally verified Pro entitlement wins over the build-time
+ * env override wins over free. The env override is an operator/self-host switch,
+ * not a customer entitlement and not a security boundary.
+ */
 export function resolveEditionFromSources(
-  hasStoredValidProLicense: boolean,
+  hasVerifiedProEntitlement: boolean,
   envEdition: string | undefined,
 ): { edition: SolarisEdition; source: EditionOverride } {
-  if (hasStoredValidProLicense) return { edition: 'pro', source: { kind: 'stored-license' } };
+  if (hasVerifiedProEntitlement) return { edition: 'pro', source: { kind: 'stored-license' } };
   if (envEdition === 'pro' || envEdition === 'free') {
     return { edition: envEdition, source: { kind: 'env-override' } };
   }
   return { edition: 'free', source: { kind: 'none' } };
+}
+
+/** True when a server revalidation is due (default: once per 24h). */
+export const REVALIDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * True when the client should talk to the server again.
+ *
+ * Riven R-06: never trust a cache-supplied `verifiedAt` blindly. A future
+ * timestamp (impossible from our own writes) is treated as a tampered or
+ * rolled-back cache and forces revalidation. An entry that has never been
+ * verified (e.g. installed during an outage) also revalidates, so it can obtain
+ * an activation id and become revocable later (Naomi finding B).
+ */
+export function shouldRevalidate(entry: StoredEntitlement | null, now: number = Date.now()): boolean {
+  if (!entry?.token) return false;
+  if (!(entry.verifiedAt > 0)) return true;
+  if (entry.verifiedAt > now + CLOCK_SKEW_ALLOWANCE_MS) return true;
+  return now - entry.verifiedAt >= REVALIDATE_INTERVAL_MS;
+}
+
+/**
+ * True when the local clock is consistent with the highest server time we have
+ * observed. A client clock rolled back below `timeFloor` by more than the
+ * tolerance is not trusted for offline entitlement evaluation (Riven R-05).
+ */
+export function isClockConsistent(
+  entry: StoredEntitlement | null,
+  now: number = Date.now(),
+  tolerance: number = CLOCK_FLOOR_TOLERANCE_MS,
+): boolean {
+  const floor = entry?.timeFloor ?? 0;
+  if (!(floor > 0)) return true;
+  return now + tolerance >= floor;
 }
 
 // --- Gate helpers -----------------------------------------------------------

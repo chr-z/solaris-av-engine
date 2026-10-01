@@ -3,58 +3,18 @@ import {
   FREE_FLAGS,
   PRO_FLAGS,
   flagsForEdition,
-  parseLicenseKey,
-  validateLicenseKey,
-  verifyLicenseSignature,
-  loadStoredLicense,
-  persistStoredLicense,
+  verifyLocalEntitlement,
+  loadStoredEntitlement,
+  persistStoredEntitlement,
   resolveEditionFromSources,
+  shouldRevalidate,
+  isClockConsistent,
   isFeatureUnlocked,
   describeFeature,
-  LICENSE_KEY_PREFIX,
+  LICENSE_CACHE_KEY,
+  REVALIDATE_INTERVAL_MS,
 } from '../licensing/core';
-
-// --- HMAC helper (Node webcrypto mirrors the browser WebCrypto path) -------
-const { webcrypto } = await import('node:crypto');
-
-async function signWithNode(secret: string, message: string): Promise<string> {
-  const key = await webcrypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const sig = await webcrypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
-  const bytes = new Uint8Array(sig);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-const SECRET = 'test-secret-solaris-worker';
-
-function makeKey(
-  edition: 'pro' | 'free',
-  expiresAt: number,
-  payload = 'dGVzdA',
-  version = 1,
-): string {
-  const body = `${LICENSE_KEY_PREFIX}-${version}-${expiresAt}-${edition}-${payload}`;
-  return `${body}.PENDING`;
-}
-
-/** Builds a fully signed key through Node's crypto (independent of impl under test). */
-async function makeSignedKey(
-  edition: 'pro' | 'free',
-  expiresAt: number,
-  payload = 'dGVzdA',
-): Promise<string> {
-  const pending = makeKey(edition, expiresAt, payload);
-  const body = pending.slice(0, pending.lastIndexOf('.'));
-  const signature = await signWithNode(SECRET, body);
-  return `${body}.${signature}`;
-}
+import { newTestKeyPair, issueTestToken } from '../licensing/__tests__/keypair';
 
 // Memory storage double
 function memoryStorage(): {
@@ -69,6 +29,8 @@ function memoryStorage(): {
     removeItem: k => void map.delete(k),
   };
 }
+
+const NOW = 1_700_000_000_000;
 
 describe('feature flag matrix', () => {
   it('free tier keeps QC report export and locks A/B compare', () => {
@@ -95,101 +57,57 @@ describe('feature flag matrix', () => {
   });
 });
 
-describe('license key parsing', () => {
-  it('parses a structurally valid pro key', () => {
-    const result = parseLicenseKey('SOLARIS-1-0-pro-dGVzdA.c2ln');
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.license.edition).toBe('pro');
-      expect(result.license.expiresAt).toBe(0);
-      expect(result.license.version).toBe(1);
-      expect(result.license.payload).toBe('dGVzdA');
-      expect(result.license.signature).toBe('c2ln');
-    }
+describe('local entitlement verification (Ed25519)', () => {
+  it('accepts a real Pro token and rejects a token from another key', async () => {
+    const issuer = await newTestKeyPair('kid-1');
+    const attacker = await newTestKeyPair('attacker');
+    const { token } = await issueTestToken(issuer, { issuedAt: NOW, subject: 'order:P1' });
+
+    expect(await verifyLocalEntitlement(token, NOW, issuer.publicKeys)).toMatchObject({ verified: true });
+    expect(await verifyLocalEntitlement(token, NOW, attacker.publicKeys)).toMatchObject({ verified: false });
   });
 
-  it('rejects malformed keys for every structural reason', () => {
-    expect(parseLicenseKey(null).ok).toBe(false);
-    expect(parseLicenseKey(undefined).ok).toBe(false);
-    expect(parseLicenseKey('').ok).toBe(false);
-    expect(parseLicenseKey('no-dot-here').ok).toBe(false);
-    expect(parseLicenseKey('SOLARIS-1-0-pro.dGVzdA.sig').ok).toBe(false); // wrong segment count
-    expect(parseLicenseKey('SOLARI-1-0-pro-dGVzdA.sig').ok).toBe(false); // wrong prefix
-    expect(parseLicenseKey('SOLARIS-x-0-pro-dGVzdA.sig').ok).toBe(false); // non-numeric version
-    expect(parseLicenseKey('SOLARIS-1--5-pro-dGVzdA.sig').ok).toBe(false); // negative expiry
-    expect(parseLicenseKey('SOLARIS-1-0-enterprise-dGVzdA.sig').ok).toBe(false); // unknown edition
-    // base64url violations
-    expect(parseLicenseKey('SOLARIS-1-0-pro-dG+zdA.sig').ok).toBe(false);
-    expect(parseLicenseKey('SOLARIS-1-0-pro-dGVzdA.s/ig').ok) .toBe(false);
-  });
-
-  it('accepts expiry far in the future and zero (never)', () => {
-    expect(parseLicenseKey('SOLARIS-1-4102444800000-pro-dGVzdA.sig').ok).toBe(true);
-    expect(parseLicenseKey('SOLARIS-1-0-free-dGVzdA.sig').ok).toBe(true);
-  });
-});
-
-describe('license validation with signature + clock', () => {
-  it('accepts a correctly signed, unexpired pro key', async () => {
-    const key = await makeSignedKey('pro', 0);
-    const result = await validateLicenseKey(key, SECRET, 1_700_000_000_000);
-    expect(result.valid).toBe(true);
-    expect(result.license?.edition).toBe('pro');
-  });
-
-  it('rejects a key signed with a different secret', async () => {
-    const key = await makeSignedKey('pro', 0);
-    const result = await validateLicenseKey(key, 'wrong-secret', Date.now());
-    expect(result.valid).toBe(false);
-  });
-
-  it('rejects an expired key with reason=expired', async () => {
-    const pastExpiry = 1_600_000_000_000;
-    const key = await makeSignedKey('pro', pastExpiry);
-    const result = await validateLicenseKey(key, SECRET, 1_700_000_000_000);
-    expect(result.valid).toBe(false);
+  it('returns expired with claims when past the absolute cutoff', async () => {
+    const issuer = await newTestKeyPair('kid-1');
+    const { token } = await issueTestToken(issuer, {
+      issuedAt: NOW - 1000,
+      termEndsAt: NOW - 500,
+      graceEndsAt: NOW - 100,
+    });
+    const result = await verifyLocalEntitlement(token, NOW, issuer.publicKeys);
+    expect(result.verified).toBe(false);
     expect(result.reason).toBe('expired');
+    expect(result.claims?.edition).toBe('pro');
   });
 
-  it('rejects tampered bodies (signature covers the full prefix)', async () => {
-    const key = await makeSignedKey('pro', 0, 'dGVzdA');
-    const tampered = key.replace('-pro-', '-free-');
-    const result = await validateLicenseKey(tampered, SECRET, Date.now());
-    expect(result.valid).toBe(false);
-  });
-
-  it('verifyLicenseSignature agrees with node-signed values and rejects junk', async () => {
-    const body = `${LICENSE_KEY_PREFIX}-1-0-pro-dGVzdA`;
-    const signature = await signWithNode(SECRET, body);
-    await expect(verifyLicenseSignature(SECRET, body, signature)).resolves.toBe(true);
-    await expect(verifyLicenseSignature(SECRET, body, 'not-a-real-signature')).resolves.toBe(false);
-  });
-
-  it('validateLicenseKey returns invalid for malformed input without throwing', async () => {
-    await expect(validateLicenseKey('garbage', SECRET)).resolves.toMatchObject({ valid: false });
-    await expect(validateLicenseKey(null, SECRET)).resolves.toMatchObject({ valid: false });
+  it('returns not-verified for missing/malformed tokens without throwing', async () => {
+    const issuer = await newTestKeyPair('kid-1');
+    await expect(verifyLocalEntitlement(null, NOW, issuer.publicKeys)).resolves.toMatchObject({ verified: false });
+    await expect(verifyLocalEntitlement('garbage', NOW, issuer.publicKeys)).resolves.toMatchObject({
+      verified: false,
+      reason: 'malformed',
+    });
   });
 });
 
-describe('stored license persistence', () => {
-  afterEach(() => persistStoredLicense(memoryStorage(), null));
+describe('stored entitlement persistence', () => {
+  afterEach(() => persistStoredEntitlement(memoryStorage(), null));
 
-  it('persists and loads a license entry round-trip', () => {
+  it('persists and loads an entitlement entry round-trip', () => {
     const storage = memoryStorage();
-    persistStoredLicense(storage, { key: 'KEY-123', activatedAt: 1234 });
-    const loaded = loadStoredLicense(storage);
-    expect(loaded).toEqual({ key: 'KEY-123', activatedAt: 1234 });
+    persistStoredEntitlement(storage, { token: 'T', activationId: 'a1', verifiedAt: 1234 });
+    expect(loadStoredEntitlement(storage)).toEqual({ token: 'T', activationId: 'a1', verifiedAt: 1234 });
   });
 
-  it('removing a stored license clears storage', () => {
+  it('removing a stored entitlement clears storage', () => {
     const storage = memoryStorage();
-    persistStoredLicense(storage, { key: 'K', activatedAt: 1 });
-    persistStoredLicense(storage, null);
-    expect(loadStoredLicense(storage)).toBeNull();
+    persistStoredEntitlement(storage, { token: 'T', activationId: null, verifiedAt: 0 });
+    persistStoredEntitlement(storage, null);
+    expect(loadStoredEntitlement(storage)).toBeNull();
   });
 
   it('tolerates missing/corrupt storage without throwing', () => {
-    expect(loadStoredLicense(undefined)).toBeNull();
+    expect(loadStoredEntitlement(undefined)).toBeNull();
     const broken = {
       getItem: () => {
         throw new Error('boom');
@@ -197,23 +115,54 @@ describe('stored license persistence', () => {
       setItem: () => {},
       removeItem: () => {},
     };
-    expect(loadStoredLicense(broken)).toBeNull();
+    expect(loadStoredEntitlement(broken)).toBeNull();
     const badJson = memoryStorage();
-    badJson.setItem('solaris.proLicense', '{not-json');
-    expect(loadStoredLicense(badJson)).toBeNull();
+    badJson.setItem(LICENSE_CACHE_KEY, '{not-json');
+    expect(loadStoredEntitlement(badJson)).toBeNull();
     const wrongShape = memoryStorage();
-    wrongShape.setItem('solaris.proLicense', JSON.stringify({ key: 42 }));
-    expect(loadStoredLicense(wrongShape)).toBeNull();
+    wrongShape.setItem(LICENSE_CACHE_KEY, JSON.stringify({ token: 42 }));
+    expect(loadStoredEntitlement(wrongShape)).toBeNull();
+  });
+});
+
+describe('revalidation scheduling', () => {
+  it('is due when never revalidated, when the cache is future-dated, or past the interval', () => {
+    expect(shouldRevalidate(null, NOW)).toBe(false);
+    // Never server-verified (e.g. installed during an outage) → retry.
+    expect(shouldRevalidate({ token: 't', activationId: null, verifiedAt: 0 }, NOW)).toBe(true);
+    expect(shouldRevalidate({ token: 't', activationId: 'a', verifiedAt: 0 }, NOW)).toBe(true);
+    expect(shouldRevalidate({ token: 't', activationId: 'a', verifiedAt: NOW - REVALIDATE_INTERVAL_MS - 1 }, NOW)).toBe(true);
+    expect(shouldRevalidate({ token: 't', activationId: 'a', verifiedAt: NOW }, NOW)).toBe(false);
+    // A future verifiedAt is impossible from our own writes → tampered/rolled back.
+    expect(shouldRevalidate({ token: 't', activationId: 'a', verifiedAt: NOW + 10 * 365 * 24 * 60 * 60 * 1000 }, NOW)).toBe(true);
+  });
+});
+
+describe('client clock floor', () => {
+  it('is consistent when no floor is recorded', () => {
+    expect(isClockConsistent(null, NOW)).toBe(true);
+    expect(isClockConsistent({ token: 't', activationId: 'a', verifiedAt: NOW }, NOW)).toBe(true);
+  });
+
+  it('rejects a clock rolled back below the recorded server-time high-water mark', () => {
+    const entry = { token: 't', activationId: 'a', verifiedAt: NOW, timeFloor: NOW };
+    expect(isClockConsistent(entry, NOW)).toBe(true);
+    // 1 hour back is beyond the 5-minute tolerance.
+    expect(isClockConsistent(entry, NOW - 60 * 60 * 1000)).toBe(false);
+    // Within tolerance is accepted.
+    expect(isClockConsistent(entry, NOW - 1000)).toBe(true);
   });
 });
 
 describe('edition resolution order', () => {
-  it('stored Pro license wins over env override', () => {
-    const resolved = resolveEditionFromSources(true, 'free');
-    expect(resolved).toEqual({ edition: 'pro', source: { kind: 'stored-license' } });
+  it('verified Pro entitlement wins over env override', () => {
+    expect(resolveEditionFromSources(true, 'free')).toEqual({
+      edition: 'pro',
+      source: { kind: 'stored-license' },
+    });
   });
 
-  it('env override applies when no license is stored', () => {
+  it('env override applies when no entitlement is verified', () => {
     expect(resolveEditionFromSources(false, 'pro')).toEqual({
       edition: 'pro',
       source: { kind: 'env-override' },
@@ -221,14 +170,8 @@ describe('edition resolution order', () => {
   });
 
   it('unknown env values fall back to free', () => {
-    expect(resolveEditionFromSources(false, undefined)).toEqual({
-      edition: 'free',
-      source: { kind: 'none' },
-    });
-    expect(resolveEditionFromSources(false, 'enterprise')).toEqual({
-      edition: 'free',
-      source: { kind: 'none' },
-    });
+    expect(resolveEditionFromSources(false, undefined)).toEqual({ edition: 'free', source: { kind: 'none' } });
+    expect(resolveEditionFromSources(false, 'enterprise')).toEqual({ edition: 'free', source: { kind: 'none' } });
   });
 });
 

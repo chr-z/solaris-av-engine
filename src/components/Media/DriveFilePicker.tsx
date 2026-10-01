@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { DriveFile } from '../Analysis/AnalysisSheet';
 import { useWaveformCache } from '../../contexts/WaveformCacheContext';
 import { WaveformIcon } from '../Core/icons';
+import { getFirebaseCompat } from '../../config/firebase';
 
 // GAPI injetado via <script> externo (apis.google.com) — sem tipos próprios.
-declare const gapi: { client: { getToken: () => unknown } | undefined };
+declare const gapi: {
+    client: { getToken: () => { access_token?: string } | null } | undefined;
+};
 
 interface DriveFilePickerProps {
     folderId: string;
@@ -24,14 +27,24 @@ const DriveFilePicker: React.FC<DriveFilePickerProps> = ({ folderId, onFileSelec
             setError(null);
             try {
                 // Get token from GAPI client
-                const token = gapi.client.getToken()?.access_token;
+                const token = gapi.client?.getToken()?.access_token;
                 if (!token) {
                     throw new Error("User not authenticated. Please sign in again.");
+                }
+                // SOLA-35: authenticate with the Firebase ID token, delegate the
+                // Drive call with the Google OAuth token.
+                const { fbAuth } = await getFirebaseCompat();
+                const idToken = await fbAuth.currentUser?.getIdToken();
+                if (!idToken) {
+                    throw new Error("Session expired. Please sign in again.");
                 }
                 
                 // Call backend proxy
                 const response = await fetch(`/api/drive-folder-contents?folderId=${folderId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: {
+                        'Authorization': `Bearer ${idToken}`,
+                        'X-Google-Access-Token': token,
+                    }
                 });
 
                 if (!response.ok) {

@@ -119,15 +119,21 @@ describe('sheetSync: updateSheetRow resilience', () => {
     expect(sink.items).toHaveLength(0);
   });
 
-  it('writes via OAuth bearer POST and reports the updated range', async () => {
+  it('writes via Firebase-auth + delegated OAuth POST and reports the updated range', async () => {
     const fetchFn = vi.fn().mockResolvedValue(okJson({ success: true, updatedRange: 'ANÁLISE!A4:BP4' }));
-    const res = await updateSheetRow(4, rowData, { accessToken: 'tok123', fetchFn, auditSink: null });
+    const res = await updateSheetRow(4, rowData, {
+      accessToken: 'tok123',
+      idToken: 'id123',
+      fetchFn,
+      auditSink: null,
+    });
     expect(res.success).toBe(true);
     expect(res.attempts).toBe(1);
     const [url, init] = fetchFn.mock.calls[0];
     expect(url).toBe('/api/sheet-row');
     expect(init.method).toBe('POST');
-    expect(init.headers.Authorization).toBe('Bearer tok123');
+    expect(init.headers.Authorization).toBe('Bearer id123');
+    expect(init.headers['X-Google-Access-Token']).toBe('tok123');
     expect(init.headers['X-Idempotency-Key']).toMatch(/^os-r4-[0-9a-f]{8}$/);
     expect(JSON.parse(init.body)).toEqual({ rowIndex: 4, rowData });
   });
@@ -140,6 +146,7 @@ describe('sheetSync: updateSheetRow resilience', () => {
       .mockResolvedValue(okJson({ success: true, updatedRange: 'ANÁLISE!A4:BP4' }));
     const res = await updateSheetRow(4, rowData, {
       accessToken: 'tok',
+      idToken: 'id',
       fetchFn: fetchFn as unknown as typeof fetch,
       maxAttempts: 3,
       backoffMs: 1,
@@ -153,7 +160,7 @@ describe('sheetSync: updateSheetRow resilience', () => {
   it('aborts fast on auth failures without burning retries', async () => {
     const fetchFn = vi.fn().mockResolvedValue(errJson(401, { error: 'Sessão expirada.' }));
     await expect(
-      updateSheetRow(4, rowData, { accessToken: 'expired', fetchFn, maxAttempts: 3, backoffMs: 1, auditSink: null }),
+      updateSheetRow(4, rowData, { accessToken: 'expired', idToken: 'id', fetchFn, maxAttempts: 3, backoffMs: 1, auditSink: null }),
     ).rejects.toBeInstanceOf(SheetAuthError);
     expect(fetchFn).toHaveBeenCalledTimes(1);
   });
@@ -161,7 +168,7 @@ describe('sheetSync: updateSheetRow resilience', () => {
   it('aborts fast on 400 bad requests too', async () => {
     const fetchFn = vi.fn().mockResolvedValue(errJson(400, { error: 'Payload inválido.' }));
     await expect(
-      updateSheetRow(4, rowData, { accessToken: 'tok', fetchFn, maxAttempts: 3, backoffMs: 1, auditSink: null }),
+      updateSheetRow(4, rowData, { accessToken: 'tok', idToken: 'id', fetchFn, maxAttempts: 3, backoffMs: 1, auditSink: null }),
     ).rejects.toBeInstanceOf(SheetApiError);
     expect(fetchFn).toHaveBeenCalledTimes(1);
   });
@@ -172,6 +179,7 @@ describe('sheetSync: updateSheetRow resilience', () => {
     await expect(
       updateSheetRow(4, rowData, {
         accessToken: 'tok',
+        idToken: 'id',
         fetchFn: fetchFn as unknown as typeof fetch,
         maxAttempts: 3,
         backoffMs: 1,
@@ -188,8 +196,8 @@ describe('sheetSync: updateSheetRow resilience', () => {
 
   it('keeps the idempotency key stable for identical payloads', async () => {
     const fetchFn = vi.fn().mockResolvedValue(okJson({ success: true }));
-    await updateSheetRow(10, rowData, { accessToken: 'a', fetchFn, auditSink: null });
-    await updateSheetRow(10, [...rowData], { accessToken: 'a', fetchFn, auditSink: null });
+    await updateSheetRow(10, rowData, { accessToken: 'a', idToken: 'id', fetchFn, auditSink: null });
+    await updateSheetRow(10, [...rowData], { accessToken: 'a', idToken: 'id', fetchFn, auditSink: null });
     const k1 = fetchFn.mock.calls[0][1].headers['X-Idempotency-Key'];
     const k2 = fetchFn.mock.calls[1][1].headers['X-Idempotency-Key'];
     expect(k1).toBe(k2);

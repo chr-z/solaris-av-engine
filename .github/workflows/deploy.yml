@@ -33,6 +33,15 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Bundle signing-material guard (SOLA-34)
+        run: node scripts/check_bundle_secrets.mjs dist
+
+      - name: Bundle guard self-test (SOLA-34 R-01)
+        run: node scripts/check_bundle_secrets.mjs --self-test
+
+      - name: Security headers guard (SOLA-35)
+        run: node scripts/check-dist-security.mjs dist
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
@@ -40,9 +49,42 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=solaris --branch=main --commit-dirty=true
 
-      - name: Verify production URL
+      - name: Verify production URL and security surface (SOLA-35)
         run: |
           sleep 20
-          code=$(curl -s -o /dev/null -w '%{http_code}' https://solaris.chr-z.dev/)
-          echo "GET https://solaris.chr-z.dev/ -> $code"
+          base=https://solaris.chr-z.dev
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$base/")
+          echo "GET / -> $code"
           test "$code" = "200"
+
+          headers=$(curl -sS -D - -o /dev/null "$base/")
+          for h in content-security-policy strict-transport-security x-frame-options; do
+            echo "$headers" | grep -qi "^$h:" || { echo "FAIL: missing $h on /"; exit 1; }
+          done
+          echo "$headers" | grep -qi "frame-ancestors 'none'" || { echo "FAIL: CSP lacks frame-ancestors"; exit 1; }
+          echo "$headers" | grep -qi "unsafe-eval" && { echo "FAIL: CSP grants unsafe-eval"; exit 1; } || true
+
+          # /api/* must never answer with the SPA shell + 200.
+          api_headers=$(curl -sS -D - -o /tmp/api_body "$base/api/get-sheets-data")
+          echo "$api_headers" | grep -qi "content-type: application/json" || { echo "FAIL: /api/get-sheets-data is not JSON"; exit 1; }
+          if grep -qi "<!DOCTYPE html>" /tmp/api_body; then echo "FAIL: /api returned the SPA shell"; exit 1; fi
+          echo "/api/get-sheets-data -> $(echo "$api_headers" | head -1)"
+
+          # SOLA-34: the licensing backend must be reachable and durable-ready.
+          # A missing endpoint used to answer 405 (identical to a bogus path).
+          lic=$(curl -sS -o /tmp/lic_body -w '%{http_code} %{content_type}' \
+            -X POST -H 'content-type: application/json' -d '{"token":"x"}' \
+            "$base/api/license/activate")
+          echo "/api/license/activate -> $lic"
+          case "$lic" in
+            *application/json*) : ;;
+            *) echo "FAIL: /api/license/activate is not JSON (backend not deployed?)"; exit 1 ;;
+          esac
+          if grep -qi "<!DOCTYPE html>" /tmp/lic_body; then echo "FAIL: activate returned the SPA shell"; exit 1; fi
+          if grep -q "license_store_unconfigured" /tmp/lic_body; then
+            echo "FAIL: SOLARIS_LICENSE_KV binding is not configured on the Pages project"; exit 1
+          fi
+          if grep -q "signer_not_configured" /tmp/lic_body; then
+            echo "WARN: licence signer not configured yet — happy path cannot be issued"; :
+          fi
