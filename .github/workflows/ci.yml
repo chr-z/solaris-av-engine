@@ -68,3 +68,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Bundle signing-material guard (SOLA-34)
+        run: node scripts/check_bundle_secrets.mjs dist

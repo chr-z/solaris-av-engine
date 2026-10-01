@@ -2,24 +2,36 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import {
   FeatureFlags,
   SolarisEdition,
+  StoredEntitlement,
   flagsForEdition,
+  loadStoredEntitlement,
+  persistStoredEntitlement,
   resolveEditionFromSources,
-  validateLicenseKey,
-  loadStoredLicense,
-  persistStoredLicense,
-  StoredLicense,
+  shouldRevalidate,
+  verifyLocalEntitlement,
+  LocalEntitlement,
 } from './core';
+import { resolvePublicKeyRing } from './keys';
 
-/** Edition override injected at build time (optional). VITE_ vars are public by design. */
+/** Edition override injected at build time (optional, operator/self-host only). */
 const ENV_EDITION = (import.meta.env?.VITE_SOLARIS_EDITION as string | undefined)?.trim();
 
 /**
- * HMAC signing secret, injected at build time via VITE_SOLARIS_LICENSE_SECRET.
- * NOTE: client-side secrets are public by definition — this is a deliberate
- * local-first trade-off (tamper resistance, not DRM). For hardened licensing,
- * move validation to the serverless `api/` functions.
+ * Optional PUBLIC key ring override (JSON kid -> base64url key). Public by
+ * definition; the client holds no signing material. Resolved lazily so tests
+ * can substitute a ring.
  */
-const ENV_LICENSE_SECRET = import.meta.env?.VITE_SOLARIS_LICENSE_SECRET as string | undefined;
+function publicKeyRing() {
+  return resolvePublicKeyRing(import.meta.env?.VITE_SOLARIS_LICENSE_PUBLIC_KEYS as string | undefined);
+}
+
+function storage(): Storage | undefined {
+  return typeof window !== 'undefined' ? window.localStorage : undefined;
+}
+
+/** Baseline activation endpoint; overridable for tests/self-host. */
+const ACTIVATE_URL = (import.meta.env?.VITE_SOLARIS_LICENSE_API as string | undefined) ?? '/api/license/activate';
+const REVALIDATE_URL = ACTIVATE_URL.replace(/\/activate$/, '/revalidate');
 
 export interface LicenseContextValue {
   edition: SolarisEdition;
@@ -28,8 +40,10 @@ export interface LicenseContextValue {
   /** Where the current entitlement came from (upsell/debug UI). */
   source: 'stored-license' | 'env-override' | 'none';
   /**
-   * Activates a license key. Resolves to true when the key was accepted and
-   * Pro unlocked; false otherwise (invalid signature, malformed, expired).
+   * Activates a license key. Verifies the Ed25519 token locally first, then
+   * confirms with the server (activation counting / revocation). When the
+   * backend is unreachable the signed, time-bounded token is honoured so an
+   * outage never bricks a paying customer.
    */
   activate: (key: string) => Promise<boolean>;
   /** Removes any stored license; falls back to env/free resolution order. */
@@ -40,64 +54,136 @@ export interface LicenseContextValue {
 
 const LicenseContext = createContext<LicenseContextValue | null>(null);
 
+async function postJson(url: string, body: unknown): Promise<unknown | null> {
+  if (typeof fetch !== 'function') return null;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return { __httpError: res.status };
+    return await res.json();
+  } catch {
+    return null; // network failure → caller treats as outage
+  }
+}
+
 export function LicenseProvider({ children }: { children: React.ReactNode }) {
-  // Boot synchronously from localStorage so there's no free-tier flash.
-  const [stored, setStored] = useState<StoredLicense | null>(() =>
-    loadStoredLicense(typeof window !== 'undefined' ? window.localStorage : undefined),
-  );
+  // Boot synchronously from localStorage; entitlement is only granted after the
+  // token itself verifies, so a tampered cache cannot unlock Pro.
+  const [stored, setStored] = useState<StoredEntitlement | null>(() => loadStoredEntitlement(storage()));
   const [licenseError, setLicenseError] = useState<string | null>(null);
-  // null = not verified yet; keep last-known-good while re-checking.
-  const [signatureVerified, setSignatureVerified] = useState<boolean | null>(null);
+  // null = not verified yet; resolves to the local verification of the token.
+  const [local, setLocal] = useState<LocalEntitlement | null>(null);
 
-  const storedKey = stored?.key ?? null;
+  const storedToken = stored?.token ?? null;
 
-  // Re-verify the stored key's signature whenever it changes (async WebCrypto).
+  // Local cryptographic verification whenever the cached token changes.
   useEffect(() => {
     let cancelled = false;
-    if (!storedKey || !ENV_LICENSE_SECRET) {
-      // Defer out of the effect body (react-hooks/set-state-in-effect).
+    if (!storedToken) {
       queueMicrotask(() => {
-        if (!cancelled) setSignatureVerified(null);
+        if (!cancelled) setLocal({ verified: false, reason: 'no-token' });
       });
       return;
     }
-    validateLicenseKey(storedKey, ENV_LICENSE_SECRET, Date.now()).then(result => {
-      if (cancelled) return;
-      setSignatureVerified(result.valid);
+    verifyLocalEntitlement(storedToken, Date.now(), publicKeyRing()).then(result => {
+      if (!cancelled) setLocal(result);
     });
     return () => {
       cancelled = true;
     };
-  }, [storedKey]);
+  }, [storedToken]);
+
+  // Server revalidation (revocation check). Skipped while offline; the signed
+  // grace window keeps the customer entitled until `grace_exp`.
+  useEffect(() => {
+    if (!stored?.token || !stored.activationId || !shouldRevalidate(stored)) return;
+    let cancelled = false;
+    postJson(REVALIDATE_URL, { token: stored.token, activationId: stored.activationId }).then(data => {
+      if (cancelled || !data || typeof data !== 'object') return; // outage → keep entitlement
+      const payload = data as { entitled?: unknown; activationId?: unknown };
+      if (payload.entitled === true) {
+        const refreshed: StoredEntitlement = {
+          ...stored,
+          activationId: typeof payload.activationId === 'string' ? payload.activationId : stored.activationId,
+          verifiedAt: Date.now(),
+        };
+        persistStoredEntitlement(storage(), refreshed);
+        setStored(refreshed);
+      } else if (payload.entitled === false) {
+        // Authoritative server denial (revoked/invalid/expired): drop entitlement.
+        persistStoredEntitlement(storage(), null);
+        setStored(null);
+        setLocal({ verified: false, reason: 'revalidation-denied' });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [stored]);
+
+  const hasVerifiedPro = local?.verified === true && local.claims?.edition === 'pro';
 
   const resolution = useMemo(
-    () => resolveEditionFromSources(signatureVerified === true, ENV_EDITION),
-    [signatureVerified],
+    () => resolveEditionFromSources(hasVerifiedPro, ENV_EDITION),
+    [hasVerifiedPro],
   );
 
   const activate = useCallback(async (key: string): Promise<boolean> => {
     const trimmed = key.trim();
-    if (!trimmed || !ENV_LICENSE_SECRET) return false;
-    const result = await validateLicenseKey(trimmed, ENV_LICENSE_SECRET, Date.now());
-    if (!result.valid) {
-      setLicenseError(result.reason === 'expired' ? 'solaris.pro.keyExpired' : 'solaris.pro.invalidKey');
+    if (!trimmed) {
+      setLicenseError('solaris.pro.invalidKey');
       return false;
     }
-    if (result.license && result.license.edition !== 'pro') {
+
+    // 1. Offline cryptographic verification (no secret, no network).
+    const localResult = await verifyLocalEntitlement(trimmed, Date.now(), publicKeyRing());
+    if (localResult.reason === 'expired') {
+      setLicenseError('solaris.pro.keyExpired');
+      return false;
+    }
+    if (!localResult.verified) {
+      setLicenseError('solaris.pro.invalidKey');
+      return false;
+    }
+    if (localResult.claims?.edition !== 'pro') {
       setLicenseError('solaris.pro.notProKey');
       return false;
     }
-    const entry: StoredLicense = { key: trimmed, activatedAt: Date.now() };
-    persistStoredLicense(window.localStorage, entry);
+
+    // 2. Server round-trip: counting + revocation. Offline → honour the signed token.
+    let activationId: string | null = null;
+    const data = await postJson(ACTIVATE_URL, { token: trimmed });
+    if (data && typeof data === 'object' && 'entitled' in data) {
+      const payload = data as { entitled?: unknown; activationId?: unknown };
+      if (payload.entitled === false) {
+        setLicenseError('solaris.pro.invalidKey');
+        return false;
+      }
+      if (payload.entitled === true) {
+        activationId = typeof payload.activationId === 'string' ? payload.activationId : null;
+      }
+    }
+    // A non-2xx / network error is an outage: grant offline from the signed token.
+
+    const entry: StoredEntitlement = {
+      token: trimmed,
+      activationId,
+      verifiedAt: activationId ? Date.now() : 0,
+    };
+    persistStoredEntitlement(storage(), entry);
     setStored(entry);
+    setLocal({ verified: true, claims: localResult.claims });
     setLicenseError(null);
     return true;
   }, []);
 
   const deactivate = useCallback((): void => {
-    persistStoredLicense(window.localStorage, null);
+    persistStoredEntitlement(storage(), null);
     setStored(null);
-    setSignatureVerified(null);
+    setLocal({ verified: false, reason: 'deactivated' });
     setLicenseError(null);
   }, []);
 

@@ -10,9 +10,10 @@ interface ProUpgradeModalProps {
 }
 
 /**
- * S6.1: local-first Pro activation. The analyst pastes a signed license key
- * (delivered after purchase); validation is HMAC-SHA256 via WebCrypto, fully
- * offline. No account, no network call.
+ * Local-first Pro activation. The analyst pastes a signed licence token
+ * (delivered after purchase); the Ed25519 signature is verified in the browser
+ * with a public key, then confirmed by the server (counting + revocation).
+ * Works offline until the token's absolute `grace_exp`. See docs/entitlements.md.
  */
 const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) => {
   const { t } = useI18n();

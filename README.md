@@ -70,9 +70,7 @@ Rendering uses Canvas 2D with `willReadFrequently` pixel pipelines instead of We
 | **A/B Compare mode** | — | ✓ |
 | Priority support | — | ✓ |
 
-Pro activates fully **offline**: paste your license key into *Upgrade to Pro* — entitlement is verified locally via HMAC-SHA256 (WebCrypto), no license server round-trip, works behind firewalls.
-
-> Licensing is owner-side: keys are generated with `scripts/gen_license_key.mjs` using a secret that lives only in the operator's environment — never in the repo, never in a `VITE_` variable.
+Pro activates **offline-first**: paste your license key into *Upgrade to Pro* — the key is an Ed25519-signed token verified locally with a public key (WebCrypto). The client holds no signing material, so reading the bundle cannot mint a licence. Activation is confirmed server-side (counting and revocation) when reachable, and a paying customer keeps working offline until the signed, absolute `grace_exp` even if the backend is down. Keys are issued with `scripts/gen_license_key.mjs` using a private key that lives only in the operator's KMS/HSM — never in the repo, never in a `VITE_` variable. See [docs/entitlements.md](docs/entitlements.md).
 
 ## Quick Start
 

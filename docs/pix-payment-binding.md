@@ -149,3 +149,15 @@ npx eslint src/payments --max-warnings 0             → clean
   caller-supplied; treat all external fields (documents, keys, descriptions) as
   untrusted and normalized, never interpolated into queries or markup.
 - **No real-money test was performed** and none may be without owner approval.
+
+## 9. SOLA-34 update (2026-10-01)
+
+- The client-side HMAC secret (finding 2 above) is **removed**. Licence tokens
+  are now Ed25519, verify-only on the client (`src/licensing/token.ts`).
+- The missing webhook transport verification (finding in §1, "no webhook
+  signature verification exists anywhere") is **closed** by
+  `src/licensing/server/webhook.ts`: raw-body HMAC-SHA256, timestamp window and
+  replay protection run before `confirmSettlement`.
+- Issuance is server-side with an injected KMS/HSM signer
+  (`src/licensing/server/issue.ts`), called only after the transport gate.
+- See `docs/entitlements.md` for the full delivery report and behaviour matrix.
