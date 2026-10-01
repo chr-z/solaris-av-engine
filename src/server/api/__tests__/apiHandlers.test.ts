@@ -99,6 +99,29 @@ describe('/api/* — routing safety', () => {
     expect(await res.text()).not.toContain('<!DOCTYPE');
   });
 
+  // Regression: SOLA-48. deploy.yml used to assert JSON on
+  // /api/get-sheets-data, but that route authenticates FIRST and correctly
+  // answers an anonymous probe with a JSON 401 — so a healthy deploy failed the
+  // guard. The deploy probe must use an unauthenticated path that proves
+  // routing (unknown /api/* -> JSON 404, never the SPA shell) without
+  // depending on auth outcome. These two tests pin the contract the guard
+  // relies on, and would fail if the anonymous 404 ever became HTML or 200.
+  it('deploy-guard probe path (unknown /api/*) is JSON 404 for an ANONYMOUS caller', async () => {
+    const res = await call('/api/__deploy_guard_probe__');
+    expect(res.status).toBe(404);
+    expect(res.headers.get('content-type')).toContain('application/json');
+    const text = await res.text();
+    expect(text).not.toContain('<!DOCTYPE');
+    expect(JSON.parse(text)).toHaveProperty('error');
+  });
+
+  it('an authenticated route answers an anonymous probe with JSON 401 (why the old guard failed)', async () => {
+    const res = await call('/api/get-sheets-data');
+    expect(res.status).toBe(401);
+    expect(res.headers.get('content-type')).toContain('application/json');
+    expect(await res.text()).not.toContain('<!DOCTYPE');
+  });
+
   it('rejects a malformed or wrongly-signed token with 401', async () => {
     const res = await handleApi({
       request: new Request('https://app.test/api/dashboard-events', {
