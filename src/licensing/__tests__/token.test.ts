@@ -129,4 +129,20 @@ describe('Ed25519 licence token — verification', () => {
     expect(licenseOfflineCutoff({ edition: 'pro', sub: 'x', iat: 0, exp: 100, grace_exp: 200 })).toBe(200);
     expect(licenseOfflineCutoff({ edition: 'pro', sub: 'x', iat: 0, exp: 100, grace_exp: 0 })).toBe(100);
   });
+
+  it('R-12: rejects a signature-valid but eternal token (exp 0, grace_exp 0)', async () => {
+    const pair = await newTestKeyPair('kid-1');
+    const header = toBase64Url(new TextEncoder().encode(JSON.stringify({ alg: 'Ed25519', typ: 'SOLARIS-LICENSE', kid: 'kid-1', v: 1 })));
+    const payload = toBase64Url(
+      new TextEncoder().encode(JSON.stringify({ edition: 'pro', sub: 'rogue', iat: NOW - 1000, exp: 0, grace_exp: 0 })),
+    );
+    const signingInput = `${header}.${payload}`;
+    const signature = toBase64Url(await pair.sign(new TextEncoder().encode(signingInput)));
+    const token = `${signingInput}.${signature}`;
+    // `issue.ts` refuses to mint this, so it must have been signed elsewhere.
+    expect(await verifyLicenseToken(token, pair.publicKeys, NOW + 100 * 365 * 86_400_000)).toMatchObject({
+      valid: false,
+      reason: 'no-term',
+    });
+  });
 });

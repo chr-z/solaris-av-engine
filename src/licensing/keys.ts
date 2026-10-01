@@ -33,6 +33,7 @@ export function resolvePublicKeyRing(envRaw?: string): PublicKeyRing {
     if (!isRecord(parsed)) return LICENSE_PUBLIC_KEYS;
     const merged: Record<string, string> = { ...LICENSE_PUBLIC_KEYS };
     for (const [kid, value] of Object.entries(parsed)) {
+      if (typeof kid !== 'string' || kid.length === 0) continue;
       if (typeof value === 'string' && value.length > 0 && /^[A-Za-z0-9_-]+$/.test(value)) {
         merged[kid] = value;
       }

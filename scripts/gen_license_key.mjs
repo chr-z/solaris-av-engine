@@ -23,7 +23,6 @@ import { readFileSync } from 'node:fs';
 const ALG = 'Ed25519';
 const TYP = 'SOLARIS-LICENSE';
 const VERSION = 1;
-const DEFAULT_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
 
 function parseArgs(argv) {
   const args = { kid: '', subject: '', days: '365', graceDays: '30', edition: 'pro', key: '' };
@@ -82,7 +81,8 @@ async function main() {
 
   const issuedAt = Date.now();
   const termEndsAt = days === 0 ? 0 : issuedAt + days * 86_400_000;
-  const graceEndsAt = (termEndsAt > 0 ? termEndsAt : issuedAt) + (graceDays * 86_400_000 || DEFAULT_GRACE_MS);
+  // `--grace-days 0` means zero grace, not the 30-day default (Riven R-14).
+  const graceEndsAt = (termEndsAt > 0 ? termEndsAt : issuedAt) + graceDays * 86_400_000;
 
   const header = { alg: ALG, typ: TYP, kid: args.kid, v: VERSION };
   const claims = { edition: args.edition, sub: args.subject, iat: issuedAt, exp: termEndsAt, grace_exp: graceEndsAt };

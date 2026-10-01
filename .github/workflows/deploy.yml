@@ -36,6 +36,9 @@ jobs:
       - name: Bundle signing-material guard (SOLA-34)
         run: node scripts/check_bundle_secrets.mjs dist
 
+      - name: Bundle guard self-test (SOLA-34 R-01)
+        run: node scripts/check_bundle_secrets.mjs --self-test
+
       - name: Security headers guard (SOLA-35)
         run: node scripts/check-dist-security.mjs dist
 
@@ -67,3 +70,21 @@ jobs:
           echo "$api_headers" | grep -qi "content-type: application/json" || { echo "FAIL: /api/get-sheets-data is not JSON"; exit 1; }
           if grep -qi "<!DOCTYPE html>" /tmp/api_body; then echo "FAIL: /api returned the SPA shell"; exit 1; fi
           echo "/api/get-sheets-data -> $(echo "$api_headers" | head -1)"
+
+          # SOLA-34: the licensing backend must be reachable and durable-ready.
+          # A missing endpoint used to answer 405 (identical to a bogus path).
+          lic=$(curl -sS -o /tmp/lic_body -w '%{http_code} %{content_type}' \
+            -X POST -H 'content-type: application/json' -d '{"token":"x"}' \
+            "$base/api/license/activate")
+          echo "/api/license/activate -> $lic"
+          case "$lic" in
+            *application/json*) : ;;
+            *) echo "FAIL: /api/license/activate is not JSON (backend not deployed?)"; exit 1 ;;
+          esac
+          if grep -qi "<!DOCTYPE html>" /tmp/lic_body; then echo "FAIL: activate returned the SPA shell"; exit 1; fi
+          if grep -q "license_store_unconfigured" /tmp/lic_body; then
+            echo "FAIL: SOLARIS_LICENSE_KV binding is not configured on the Pages project"; exit 1
+          fi
+          if grep -q "signer_not_configured" /tmp/lic_body; then
+            echo "WARN: licence signer not configured yet — happy path cannot be issued"; :
+          fi

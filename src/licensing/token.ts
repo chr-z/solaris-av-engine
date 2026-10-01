@@ -72,6 +72,7 @@ export type TokenVerifyFailureReason =
   | 'bad-signature'
   | 'expired'
   | 'not-yet-valid'
+  | 'no-term'
   | 'crypto-unavailable';
 
 export type TokenVerifyResult =
@@ -232,6 +233,13 @@ export async function verifyLicenseToken(
   const signatureOk = await verifyEd25519(publicKeyRaw, parsed.signature, encodeUtf8(parsed.signingInput));
   if (!signatureOk) {
     return { valid: false, reason: 'bad-signature', header: parsed.header, claims: parsed.claims };
+  }
+
+  // Defence in depth (Riven R-12): `issue.ts` refuses to mint a token with no
+  // term and no grace, but the verifier must not honour one from any other
+  // issuer. A signature-valid but eternal token is rejected here.
+  if (parsed.claims.exp === 0 && parsed.claims.grace_exp === 0) {
+    return { valid: false, reason: 'no-term', header: parsed.header, claims: parsed.claims };
   }
 
   const skew = options.clockSkewMs ?? 0;

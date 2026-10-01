@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { deriveGraceEnd, issueLicenseToken } from '../issue';
-import { createWebhookSignature, timingSafeEqualHex, verifyWebhookSignature } from '../webhook';
+import { createWebhookSignature, MemoryReplayStore, timingSafeEqualHex, verifyWebhookSignature } from '../webhook';
 import { handleActivate, handlePaymentWebhook, handleRevalidate, type WebhookApiDeps } from '../http';
 import { MemoryActivationStore } from '../activation';
 import { verifyLicenseToken } from '../../token';
@@ -62,13 +62,20 @@ describe('webhook transport verification', () => {
     });
   });
 
-  it('detects replay via the event id set', async () => {
+  it('detects replay via the durable replay store', async () => {
     const header = await createWebhookSignature(secret, Math.floor(NOW / 1000), body);
-    const seen = new Set<string>();
-    const first = await verifyWebhookSignature({ rawBody: body, signatureHeader: header, secret, now: NOW, eventId: 'evt-1', seenEventIds: seen });
-    const second = await verifyWebhookSignature({ rawBody: body, signatureHeader: header, secret, now: NOW, eventId: 'evt-1', seenEventIds: seen });
+    const store = new MemoryReplayStore();
+    const first = await verifyWebhookSignature({ rawBody: body, signatureHeader: header, secret, now: NOW, eventId: 'evt-1', replayStore: store });
+    const second = await verifyWebhookSignature({ rawBody: body, signatureHeader: header, secret, now: NOW, eventId: 'evt-1', replayStore: store });
     expect(first.ok).toBe(true);
     expect(second).toMatchObject({ ok: false, reason: 'replay' });
+  });
+
+  it('fails closed when an event id is present but no replay store is supplied', async () => {
+    const header = await createWebhookSignature(secret, Math.floor(NOW / 1000), body);
+    expect(
+      await verifyWebhookSignature({ rawBody: body, signatureHeader: header, secret, now: NOW, eventId: 'evt-1' }),
+    ).toMatchObject({ ok: false, reason: 'replay_store_unavailable' });
   });
 
   it('a tampered body fails even with a valid-looking header', async () => {
@@ -114,6 +121,31 @@ describe('HTTP handlers', () => {
     const res = await handleRevalidate({ token, activationId }, { publicKeys: pair.publicKeys, store, now: NOW });
     expect(res.body).toMatchObject({ entitled: false, status: 'revoked' });
   });
+
+  it('R-09: rejects a malformed/oversized activationId before it reaches the store', async () => {
+    const pair = await newTestKeyPair('kid-1');
+    const { token } = await issueTestToken(pair, { issuedAt: NOW - 1000 });
+    const res = await handleRevalidate(
+      { token, activationId: 'x'.repeat(65536) },
+      { publicKeys: pair.publicKeys, store: new MemoryActivationStore(), now: NOW },
+    );
+    expect(res.status).toBe(400);
+    expect(res.body.reason).toBe('missing_activation_id');
+  });
+
+  it('R-10: a denial never reflects the attacker-controlled subject or reason', async () => {
+    const attacker = await newTestKeyPair('attacker');
+    const server = await newTestKeyPair('sol-2026a');
+    const { token } = await issueTestToken(attacker, {
+      issuedAt: NOW - 1000,
+      subject: 'INJECTED<script>alert(1)</script>',
+    });
+    const res = await handleActivate({ token }, { publicKeys: server.publicKeys, store: new MemoryActivationStore(), now: NOW });
+    expect(res.body).toMatchObject({ entitled: false, status: 'invalid', edition: 'free' });
+    expect(res.body.subject).toBeUndefined();
+    expect(res.body.reason).toBeUndefined();
+    expect(JSON.stringify(res.body)).not.toContain('INJECTED');
+  });
 });
 
 describe('webhook → issuance pipeline', () => {
@@ -126,6 +158,7 @@ describe('webhook → issuance pipeline', () => {
       sign: pair.sign,
       kid: pair.kid,
       now: NOW,
+      replayStore: new MemoryReplayStore(),
       resolveGrant: () => ({ subject: 'order:P1' }),
     };
     const res = await handlePaymentWebhook('{"subject":"order:P1"}', 't=1,v1=deadbeef', 'evt-1', deps);
@@ -144,6 +177,7 @@ describe('webhook → issuance pipeline', () => {
       sign: pair.sign,
       kid: pair.kid,
       now: NOW,
+      replayStore: new MemoryReplayStore(),
       resolveGrant: raw => {
         const parsed = JSON.parse(raw) as { subject: string };
         return { subject: parsed.subject };
@@ -154,5 +188,28 @@ describe('webhook → issuance pipeline', () => {
     expect(res.body.issued).toBe(true);
     const token = res.body.token as string;
     expect((await verifyLicenseToken(token, pair.publicKeys, NOW)).valid).toBe(true);
+  });
+
+  it('rejects a replayed delivery at the adapter level (same event id)', async () => {
+    const pair = await newTestKeyPair('kid-1');
+    const body = JSON.stringify({ subject: 'order:P1', termDays: 365 });
+    const header = await createWebhookSignature('whsec_test', Math.floor(NOW / 1000), body);
+    const deps: WebhookApiDeps = {
+      publicKeys: pair.publicKeys,
+      store: new MemoryActivationStore(),
+      webhookSecret: 'whsec_test',
+      sign: pair.sign,
+      kid: pair.kid,
+      now: NOW,
+      replayStore: new MemoryReplayStore(),
+      resolveGrant: raw => ({ subject: (JSON.parse(raw) as { subject: string }).subject }),
+    };
+    const first = await handlePaymentWebhook(body, header, 'evt-dup', deps);
+    const second = await handlePaymentWebhook(body, header, 'evt-dup', deps);
+    expect(first.status).toBe(200);
+    expect(first.body.issued).toBe(true);
+    expect(second.status).toBe(401);
+    expect(second.body.reason).toBe('replay');
+    expect(second.body.token).toBeUndefined();
   });
 });

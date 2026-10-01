@@ -1,13 +1,14 @@
 /**
  * Cloudflare Pages Function — POST /api/license/activate (SOLA-34).
  *
- * Thin transport wrapper over the tested pure handler. Durable activation
- * counting/revocation require the `SOLARIS_LICENSE_KV` KV binding; without it
- * the per-isolate in-memory store is used (documented degradation).
+ * Durable activation counting and revocation require the `SOLARIS_LICENSE_KV`
+ * KV binding. Without it we FAIL LOUDLY (503) instead of silently degrading to a
+ * per-isolate in-memory counter that loses all revocation state on cold start
+ * (Riven R-11 / Naomi deployment finding). Wire the binding in the Pages project
+ * before serving this route.
  */
 
 import { handleActivate } from '../../../src/licensing/server/http';
-import { MemoryActivationStore } from '../../../src/licensing/server/activation';
 import { KvActivationStore, type MinimalKv } from '../../../src/licensing/server/kvStore';
 import { LICENSE_PUBLIC_KEYS } from '../../../src/licensing/keys';
 
@@ -16,19 +17,33 @@ interface Env {
   SOLARIS_MAX_ACTIVATIONS?: string;
 }
 
-const memory = new MemoryActivationStore();
-
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
+  const kv = context.env.SOLARIS_LICENSE_KV;
+  if (!kv) return json(503, { entitled: false, status: 'invalid', reason: 'license_store_unconfigured' });
+
+  let maxActivations: number | undefined;
+  const rawMax = context.env.SOLARIS_MAX_ACTIVATIONS;
+  if (rawMax !== undefined && rawMax !== '') {
+    const parsed = Number(rawMax);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      // Fail closed: never let a bad value silently remove the ceiling (Riven R-07).
+      return json(500, { entitled: false, status: 'invalid', reason: 'invalid_max_activations_config' });
+    }
+    maxActivations = parsed;
+  }
+
   const body = await context.request.json().catch(() => null);
-  const store = context.env.SOLARIS_LICENSE_KV ? new KvActivationStore(context.env.SOLARIS_LICENSE_KV) : memory;
-  const parsedMax = Number.parseInt(context.env.SOLARIS_MAX_ACTIVATIONS ?? '', 10);
   const result = await handleActivate(body, {
     publicKeys: LICENSE_PUBLIC_KEYS,
-    store,
-    maxActivations: Number.isFinite(parsedMax) ? parsedMax : undefined,
+    store: new KvActivationStore(kv),
+    maxActivations,
   });
-  return new Response(JSON.stringify(result.body), {
-    status: result.status,
+  return json(result.status, result.body);
+}
+
+function json(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
 }

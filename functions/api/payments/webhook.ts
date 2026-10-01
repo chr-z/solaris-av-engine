@@ -2,19 +2,22 @@
  * Cloudflare Pages Function — POST /api/payments/webhook (SOLA-34).
  *
  * Server-verified payment webhook → licence issuance. The transport gate
- * (HMAC + timestamp window + replay) runs before any issuance. Requires:
- *   SOLARIS_PAYMENT_WEBHOOK_SECRET  shared provider secret (server-side only)
+ * (HMAC + timestamp window + durable replay) runs before any issuance. Requires:
+ *   SOLARIS_LICENSE_KV                 durable KV binding (replay + counting)
+ *   SOLARIS_PAYMENT_WEBHOOK_SECRET     shared provider secret (server-side only)
  *   SOLARIS_LICENSE_SIGNING_KEY_PKCS8  base64url Ed25519 PKCS#8 (self-host);
  *       production should use a KMS/HSM signer instead of an env key.
- *   SOLARIS_LICENSE_KID             key id matching the client's public ring
+ *   SOLARIS_LICENSE_KID                key id matching the client's public ring
  *
  * A PSP-specific body -> subject mapping belongs in `resolveGrant`; until the
  * provider contract is fixed it accepts `{"subject":"<ref>","termDays":N}`.
+ *
+ * Replay protection is durable: the event id is recorded in KV before issuance
+ * (Riven R-02 / Naomi finding A). Without the KV binding we fail loudly.
  */
 
 import { handlePaymentWebhook } from '../../../src/licensing/server/http';
-import { MemoryActivationStore } from '../../../src/licensing/server/activation';
-import { KvActivationStore, type MinimalKv } from '../../../src/licensing/server/kvStore';
+import { KvActivationStore, KvReplayStore, type MinimalKv } from '../../../src/licensing/server/kvStore';
 import { importEd25519SignerFromPkcs8, type Ed25519Signer } from '../../../src/licensing/server/issue';
 import { LICENSE_PUBLIC_KEYS } from '../../../src/licensing/keys';
 
@@ -33,10 +36,10 @@ function decodeBase64Url(value: string): Uint8Array {
   return bytes;
 }
 
-const memory = new MemoryActivationStore();
-
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
   const env = context.env;
+  const kv = env.SOLARIS_LICENSE_KV;
+  if (!kv) return json(503, { ok: false, reason: 'license_store_unconfigured' });
   if (!env.SOLARIS_PAYMENT_WEBHOOK_SECRET) {
     return json(500, { ok: false, reason: 'webhook_secret_not_configured' });
   }
@@ -46,6 +49,10 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   const rawBody = await context.request.text();
   const signatureHeader = context.request.headers.get('x-solaris-signature') ?? undefined;
   const eventId = context.request.headers.get('x-solaris-event-id') ?? undefined;
+  if (!eventId) {
+    // No event id → no way to de-duplicate a replay; reject rather than re-issue.
+    return json(400, { ok: false, reason: 'missing_event_id' });
+  }
 
   let sign: Ed25519Signer;
   try {
@@ -54,13 +61,13 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     return json(500, { ok: false, reason: 'signer_import_failed' });
   }
 
-  const store = env.SOLARIS_LICENSE_KV ? new KvActivationStore(env.SOLARIS_LICENSE_KV) : memory;
   const result = await handlePaymentWebhook(rawBody, signatureHeader, eventId, {
     publicKeys: LICENSE_PUBLIC_KEYS,
-    store,
+    store: new KvActivationStore(kv),
     webhookSecret: env.SOLARIS_PAYMENT_WEBHOOK_SECRET,
     sign,
     kid: env.SOLARIS_LICENSE_KID,
+    replayStore: new KvReplayStore(kv),
     resolveGrant: body => {
       try {
         const parsed = JSON.parse(body) as { subject?: unknown; termDays?: unknown; graceDays?: unknown };

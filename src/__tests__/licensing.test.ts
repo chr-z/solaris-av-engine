@@ -8,6 +8,7 @@ import {
   persistStoredEntitlement,
   resolveEditionFromSources,
   shouldRevalidate,
+  isClockConsistent,
   isFeatureUnlocked,
   describeFeature,
   LICENSE_CACHE_KEY,
@@ -125,12 +126,31 @@ describe('stored entitlement persistence', () => {
 });
 
 describe('revalidation scheduling', () => {
-  it('is due when never revalidated or past the interval', () => {
+  it('is due when never revalidated, when the cache is future-dated, or past the interval', () => {
     expect(shouldRevalidate(null, NOW)).toBe(false);
-    expect(shouldRevalidate({ token: 't', activationId: null, verifiedAt: 0 }, NOW)).toBe(false);
+    // Never server-verified (e.g. installed during an outage) → retry.
+    expect(shouldRevalidate({ token: 't', activationId: null, verifiedAt: 0 }, NOW)).toBe(true);
     expect(shouldRevalidate({ token: 't', activationId: 'a', verifiedAt: 0 }, NOW)).toBe(true);
     expect(shouldRevalidate({ token: 't', activationId: 'a', verifiedAt: NOW - REVALIDATE_INTERVAL_MS - 1 }, NOW)).toBe(true);
     expect(shouldRevalidate({ token: 't', activationId: 'a', verifiedAt: NOW }, NOW)).toBe(false);
+    // A future verifiedAt is impossible from our own writes → tampered/rolled back.
+    expect(shouldRevalidate({ token: 't', activationId: 'a', verifiedAt: NOW + 10 * 365 * 24 * 60 * 60 * 1000 }, NOW)).toBe(true);
+  });
+});
+
+describe('client clock floor', () => {
+  it('is consistent when no floor is recorded', () => {
+    expect(isClockConsistent(null, NOW)).toBe(true);
+    expect(isClockConsistent({ token: 't', activationId: 'a', verifiedAt: NOW }, NOW)).toBe(true);
+  });
+
+  it('rejects a clock rolled back below the recorded server-time high-water mark', () => {
+    const entry = { token: 't', activationId: 'a', verifiedAt: NOW, timeFloor: NOW };
+    expect(isClockConsistent(entry, NOW)).toBe(true);
+    // 1 hour back is beyond the 5-minute tolerance.
+    expect(isClockConsistent(entry, NOW - 60 * 60 * 1000)).toBe(false);
+    // Within tolerance is accepted.
+    expect(isClockConsistent(entry, NOW - 1000)).toBe(true);
   });
 });
 

@@ -5,6 +5,11 @@ server core**. Independent security/licensing review (Riven) and release
 behaviour verification (Naomi) are **required** before this is considered done;
 Akira does not self-certify this path.
 
+> **Remediation revision.** The first independent review (Riven, SOLA-38) and
+> release verification (Naomi, SOLA-39) both returned adverse verdicts against
+> the original commit. §11 maps every finding to its fix in the remediation
+> commit and lists what remains (deployment/provisioning). Re-review is pending.
+
 This document is the delivery report: root cause, files, before/after behaviour,
 tests, limitations, rollback and security implications.
 
@@ -112,41 +117,64 @@ Changed:
 
 ## 6. Exact test results
 
+Post-remediation (see §11), on the remediation branch:
+
 ```
 npx vitest run src/licensing src/__tests__/licensing.test.ts \
   src/__tests__/licenseContext.test.tsx src/payments/__tests__/sola6-security.poc.test.ts
-  → 100 passed (9 files)
+  → 10 files, 119 passed (100 before remediation, +19 regression tests)
 
-npm test (full suite)
-  → 1078 passed, 1 failed
-  the only failure is src/audio-acoustics/__tests__/perf-benchmark.test.ts
-  (3.27s vs a 3.00s wall-clock bound); it passes in isolation and is unrelated
-  to licensing. Pre-existing timing flake under full-suite load.
-
-npx tsc --noEmit -p tsconfig.json   → clean
-npx eslint <changed files> --max-warnings 0 → clean
+node scripts/check_bundle_secrets.mjs --self-test
+  → self-test OK — all 5 encodings detected, clean file passed
 
 npm run build && node scripts/check_bundle_secrets.mjs dist
-  → OK — 22 artifacts scanned; verification key present; no signing material.
-  (dist/assets/index-*.js contains the public key, no HMAC/private material.)
+  → OK — 37 artifacts scanned; verification key present; no signing material
+    (the walker now scans every artifact type, not just JS/CSS/HTML)
+
+npx tsc --noEmit -p tsconfig.json            → clean
+npx eslint <changed files> --max-warnings 0  → clean
 ```
+
+The first review's numbers are preserved for comparison in the SOLA-38/39
+verdicts; the original commit reported 100 passed (9 files).
 
 ## 7. Limitations
 
 - Durable counting and revocation require the `SOLARIS_LICENSE_KV` binding. The
-  in-memory fallback is per-isolate and does **not** guarantee counting/revocation
-  across cold starts.
-- The Cloudflare Pages Function adapters are thin and were not executed in the
-  Workers runtime here (no local workerd); Naomi verifies release behaviour.
+  adapters now **fail closed (503)** when it is absent rather than silently
+  degrading to a per-isolate, restart-amnesiac in-memory counter. Provisioning
+  the binding is a deployment prerequisite (see §11).
+- Cloudflare KV has no compare-and-set. `insertIfUnderLimit` serialises the
+  ceiling per subject *within an isolate*, so the count cannot be exceeded by
+  concurrent requests in one process, but a strict cross-isolate ceiling needs
+  D1 (`UNIQUE`) or a Durable Object. Treat the KV ceiling as strong cost control,
+  not a hard guarantee, until that store is chosen.
+- KV replay de-duplication likewise closes the practical replay window but is
+  not atomic across isolates.
 - `grace_exp` bounds offline revocation lag. This is intentional: the client runs
   on hardware the customer controls, so this is cost control, not DRM. No result
   here is described as unbreakable.
+- **Clock rollback (residual, R-05).** An attacker who keeps the machine clock
+  inside `[iat, grace_exp]` can keep an offline entitlement alive. We now record
+  a monotonic high-water mark of observed server time and refuse to evaluate
+  against an earlier `now` (beyond a 5-minute tolerance), but this is a
+  mitigation, not an elimination.
+- **Revocation is suppressible offline (residual, R-06).** Editing
+  `localStorage.verifiedAt` no longer suppresses revalidation (a future
+  timestamp is treated as tampered and forces a server check, and revalidation
+  also runs on visibility change), but while the backend is unreachable no
+  revocation can be delivered. The practical revocation bound is `grace_exp`.
 - The committed public key `sol-2026a` has no usable private key until the
-  operator approves the secret proposal. Until then, self-host can issue with
-  `--key` and a locally generated keypair.
+  operator approves the secret proposal (proposal
+  `c0c62da4-8f83-42a3-91b1-c10da6ccd3c8`). Until then the happy path cannot be
+  minted against the shipped ring; self-host can issue with `--key` and a local
+  keypair. The webhook returns `501 signer_not_configured` until a signer is set.
 - The webhook adapter expects a normalized `{subject, termDays?, graceDays?}`
   body; the PSP-specific body→subject mapping is a follow-up once the provider
   contract is fixed.
+- The deploy smoke check now asserts `/api/license/activate` returns JSON and
+  that `SOLARIS_LICENSE_KV` is bound, so a deploy fails loudly until the binding
+  is provisioned.
 
 ## 8. Rollback
 
@@ -173,3 +201,43 @@ old-format keys already failed in production. No irreversible state.
   webhook trust boundary.
 - **Naomi** — release-behaviour verification: build, bundle guard, activation,
   outage and revocation on the deployed target.
+
+## 11. Remediation of SOLA-38 / SOLA-39 findings
+
+Every finding from Riven's security review and Naomi's release verification is
+mapped below to its fix (all in this remediation commit).
+
+| ID | Finding | Fix |
+| --- | --- | --- |
+| R-01 | Bundle guard missed ~96% of real base64url PKCS#8 keys; only scanned JS/CSS/HTML | Constant DER prefix; scanner walks **all** artifact types; `--self-test` + `src/licensing/__tests__/bundleGuard.test.ts` assert detection of real keys in `.js`/`.json`/`.pem`/`.txt`/`.map` |
+| R-02 (Naomi A) | Replay protection dead on the deployed webhook path | `ReplayStore` is required; `KvReplayStore` persists event ids in KV; adapter-level replay test |
+| R-03 | A revoked subject could activate a different valid token | Durable `subjrev:<len>:<subject>` marker checked before every activation and revalidation |
+| R-04 | Activation ceiling was a non-atomic count-then-insert | Ceiling enforced in the store (`insertIfUnderLimit`); serialised per subject; concurrency test asserts ≤ max for memory **and** KV stores |
+| R-05 | Clock rollback restored an expired entitlement | Monotonic `timeFloor` high-water mark; local evaluation refused when the clock is rolled back beyond tolerance (documented residual) |
+| R-06 | `verifiedAt` in localStorage suppressed revocation | Future `verifiedAt` forces revalidation; revalidation runs on mount and on visibility change, not on a cache interval |
+| R-07 | `SOLARIS_MAX_ACTIVATIONS` silently no-op on bad config | Adapter rejects any non-integer `< 1` with HTTP 500; the core fails closed on invalid ceiling |
+| R-08 | `countForSubject` truncated at 1000 keys; subject prefix ambiguous | Cursor pagination to exhaustion; length-prefixed subject keys; tests for 1200 keys and `order:A` vs `order:A:B` |
+| R-09 | Unbounded `activationId`; non-constant-time compare | `/^[0-9a-f]{32}$/` at the handler boundary; `timingSafeEqualHex` for the token-hash compare |
+| R-10 | Denials reflected attacker-controlled `sub` | Denials return only `{entitled:false,status,edition}`; no subject/bounds/reason |
+| R-11 (Naomi deploy) | In-memory fallback made counting/revocation meaningless | Adapters **fail closed (503)** without `SOLARIS_LICENSE_KV`; memory store is test-only |
+| R-12 | `exp:0, grace_exp:0` verified forever | Verifier rejects with `reason: 'no-term'` |
+| R-13 | Keypair generator wrote to a non-ignored path | `.gitignore` covers key files; generator warns when writing inside a git worktree |
+| R-14 | `--grace-days 0` silently became 30 days | Explicit `graceDays * 86_400_000` (0 = zero grace) |
+| Naomi B | First-activation outage permanently disabled revocation | Client re-attempts activation (not only revalidation) when there is no activation id; test covers backend returning |
+| Naomi C | Any non-2xx silently granted Pro | Explicit decision: an authoritative answer is a JSON body with a boolean `entitled`; anything else is an outage (a WAF/proxy must not brick a payer). Documented. |
+| Naomi D | No clock-skew tolerance | `clockSkewMs` (5 min) passed to local verification |
+| Naomi E | `REVALIDATE_URL` derivation; empty env; empty `kid` | Robust `siblingUrl`; empty strings treated as unset; empty `kid` rejected in the ring |
+
+### Remaining (not code — owned, not hidden)
+
+- **Deployment / provisioning.** The remediation branch must be merged to `main`
+  and the `SOLARIS_LICENSE_KV` KV namespace must be bound to the Pages project;
+  the deploy workflow now fails loudly until it is. A usable signing key for
+  `sol-2026a` requires approving the pending secret proposal (or a new keypair).
+  Until then the live happy path is not proven and the webhook returns
+  `501 signer_not_configured`.
+- **Strict cross-isolate ceiling.** KV cannot do atomic conditional writes; a
+  D1 `UNIQUE` constraint or a Durable Object is the strict fix. Currently strong
+  cost control within an isolate, documented as such.
+- **Independent re-review.** Riven (security/licensing) and Naomi (release
+  verification) must re-verify this remediation. Akira does not self-certify.

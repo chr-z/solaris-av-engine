@@ -13,6 +13,11 @@
  * The HMAC secret is a shared PSP/provider secret and stays server-side. It is
  * intentionally NOT an Ed25519 key: webhook authenticity proves the transport,
  * while licence authenticity is proven separately by the Ed25519 signature.
+ *
+ * SOLA-34 remediation (Riven R-02 / Naomi finding A): replay protection used to
+ * be opt-in via a caller-owned `Set`. It is now enforced through a required
+ * `ReplayStore`; a signed event id with no durable store is rejected
+ * (`replay_store_unavailable`) rather than silently accepted.
  */
 
 export const WEBHOOK_TOLERANCE_MS_DEFAULT = 5 * 60 * 1000;
@@ -22,11 +27,34 @@ export type WebhookFailureReason =
   | 'timestamp_out_of_window'
   | 'bad_signature'
   | 'replay'
+  | 'replay_store_unavailable'
   | 'crypto-unavailable';
 
 export type WebhookVerifyResult =
   | { ok: true; timestamp: number; eventId?: string }
   | { ok: false; reason: WebhookFailureReason };
+
+/**
+ * Durable de-duplication for provider event ids. A process-local `Set` is NOT
+ * sufficient: it dies with the isolate and protects nothing across requests.
+ */
+export interface ReplayStore {
+  has(eventId: string): Promise<boolean> | boolean;
+  remember(eventId: string, now: number): Promise<void> | void;
+}
+
+/** In-memory replay store — tests and single-process use only. */
+export class MemoryReplayStore implements ReplayStore {
+  private readonly seen = new Map<string, number>();
+
+  has(eventId: string): boolean {
+    return this.seen.has(eventId);
+  }
+
+  remember(eventId: string, now: number): void {
+    this.seen.set(eventId, now);
+  }
+}
 
 export interface WebhookVerifyInput {
   /** Exact request body bytes as received (never a re-serialised object). */
@@ -38,8 +66,11 @@ export interface WebhookVerifyInput {
   toleranceMs?: number;
   /** Stable provider event id, used for replay de-duplication. */
   eventId?: string;
-  /** Persisted set of already-consumed event ids (caller owns persistence). */
-  seenEventIds?: Set<string>;
+  /**
+   * Durable replay store. Required whenever `eventId` is present; without it a
+   * signed event id cannot be de-duplicated and verification fails closed.
+   */
+  replayStore?: ReplayStore;
 }
 
 /** Length-independent, constant-time-ish comparison of equal-length hex strings. */
@@ -95,8 +126,9 @@ export async function createWebhookSignature(secret: string, timestampSeconds: n
 
 /**
  * Verifies a webhook's authenticity and freshness. Returns `ok` only when the
- * HMAC matches, the timestamp is inside the window, and the event is not a
- * replay. On success with an `eventId`, the id is added to `seenEventIds`.
+ * HMAC matches, the timestamp is inside the window, and (when an event id is
+ * present) the event has not been consumed before. On success with an `eventId`,
+ * the id is durably remembered via `replayStore`.
  */
 export async function verifyWebhookSignature(input: WebhookVerifyInput): Promise<WebhookVerifyResult> {
   const now = input.now ?? Date.now();
@@ -123,10 +155,12 @@ export async function verifyWebhookSignature(input: WebhookVerifyInput): Promise
   const matched = parsed.signatures.some(sig => timingSafeEqualHex(sig.toLowerCase(), expected));
   if (!matched) return { ok: false, reason: 'bad_signature' };
 
-  if (input.eventId !== undefined && input.seenEventIds?.has(input.eventId)) {
-    return { ok: false, reason: 'replay' };
+  if (input.eventId !== undefined) {
+    const store = input.replayStore;
+    if (!store) return { ok: false, reason: 'replay_store_unavailable' };
+    if (await store.has(input.eventId)) return { ok: false, reason: 'replay' };
+    await store.remember(input.eventId, now);
   }
-  if (input.eventId !== undefined && input.seenEventIds) input.seenEventIds.add(input.eventId);
 
   return { ok: true, timestamp: timestampMs, ...(input.eventId !== undefined ? { eventId: input.eventId } : {}) };
 }

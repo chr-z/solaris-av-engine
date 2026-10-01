@@ -15,7 +15,8 @@
  */
 
 import { webcrypto as crypto } from 'node:crypto';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, existsSync, statSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
 function parseArgs(argv) {
   const args = { kid: 'sol-2026a', out: 'solaris-license-signing-key.json' };
@@ -48,7 +49,34 @@ async function main() {
     warning: 'PRIVATE KEY — store in KMS/HSM or a server secret; never commit.',
   };
   writeFileSync(out, JSON.stringify(payload, null, 2), { mode: 0o600 });
+  if (insideGitWorktree(out)) {
+    console.error(
+      'WARNING: the private key was written inside a git worktree. The default path is ' +
+        '.gitignore-d, but a broad `git add -A` in a repo without that rule would commit the ' +
+        'live signing key. Prefer an out-of-tree path, and store the key in a KMS/HSM or a ' +
+        'server secret, then delete the local file.',
+    );
+  }
   process.stdout.write(`PUBLIC_KEY_B64U=${payload.publicKeyB64u}\nKID=${kid}\nPRIVATE_KEY_FILE=${out}\n`);
+}
+
+/** True when `filePath` sits under a directory containing `.git`. */
+function insideGitWorktree(filePath) {
+  let dir = resolve(dirname(filePath));
+  for (let i = 0; i < 40; i += 1) {
+    const marker = resolve(dir, '.git');
+    if (existsSync(marker)) {
+      try {
+        return statSync(marker).isDirectory() || statSync(marker).isFile();
+      } catch {
+        return true;
+      }
+    }
+    const parent = dirname(dir);
+    if (parent === dir) return false;
+    dir = parent;
+  }
+  return false;
 }
 
 main().catch(error => {

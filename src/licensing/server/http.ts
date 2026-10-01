@@ -19,7 +19,10 @@ import {
   type ActivationStore,
 } from './activation';
 import { deriveGraceEnd, issueLicenseToken, type Ed25519Signer } from './issue';
-import { verifyWebhookSignature } from './webhook';
+import { verifyWebhookSignature, type ReplayStore } from './webhook';
+
+/** Activation ids are generated as exactly 32 lowercase hex chars. */
+const ACTIVATION_ID_RE = /^[0-9a-f]{32}$/;
 
 export interface LicenseApiDeps {
   publicKeys: PublicKeyRing;
@@ -34,9 +37,17 @@ export interface HttpResult {
   body: Record<string, unknown>;
 }
 
+/**
+ * Public body. On a denial we return only the stable `status` enum — never the
+ * attacker-controlled `subject`, the signed bounds, or the detailed reason
+ * (Riven R-10). The detailed reason stays server-side for logs/tests.
+ */
 function publicResult(result: ActivateResult): Record<string, unknown> {
+  if (!result.entitled) {
+    return { entitled: false, status: result.status, edition: result.edition };
+  }
   return {
-    entitled: result.entitled,
+    entitled: true,
     status: result.status,
     edition: result.edition,
     ...(result.activationId ? { activationId: result.activationId } : {}),
@@ -44,7 +55,6 @@ function publicResult(result: ActivateResult): Record<string, unknown> {
     ...(result.subject ? { subject: result.subject } : {}),
     ...(result.exp !== undefined ? { exp: result.exp } : {}),
     ...(result.graceExp !== undefined ? { graceExp: result.graceExp } : {}),
-    ...(result.reason ? { reason: result.reason } : {}),
   };
 }
 
@@ -66,7 +76,7 @@ export async function handleRevalidate(body: unknown, deps: LicenseApiDeps): Pro
   if (!token) return { status: 400, body: { entitled: false, status: 'invalid', reason: 'missing_token' } };
   const activationId =
     typeof body === 'object' && body !== null ? (body as { activationId?: unknown }).activationId : undefined;
-  if (typeof activationId !== 'string' || activationId.length === 0) {
+  if (typeof activationId !== 'string' || !ACTIVATION_ID_RE.test(activationId)) {
     return { status: 400, body: { entitled: false, status: 'invalid', reason: 'missing_activation_id' } };
   }
   const result = await revalidateActivation({ token, activationId, publicKeys: deps.publicKeys, store: deps.store, now: deps.now });
@@ -81,7 +91,8 @@ export interface WebhookApiDeps extends LicenseApiDeps {
   kid: string;
   now?: number;
   toleranceMs?: number;
-  seenEventIds?: Set<string>;
+  /** Durable replay de-duplication; required so replayed events cannot re-issue. */
+  replayStore: ReplayStore;
   /** Maps a verified raw webhook body to a licence subject, or null to ignore. */
   resolveGrant: (rawBody: string) => { subject: string; termMs?: number; graceMs?: number } | null;
 }
@@ -104,7 +115,7 @@ export async function handlePaymentWebhook(
     now,
     toleranceMs: deps.toleranceMs,
     eventId,
-    seenEventIds: deps.seenEventIds,
+    replayStore: deps.replayStore,
   });
   if (!verified.ok) return { status: 401, body: { ok: false, reason: verified.reason } };
 

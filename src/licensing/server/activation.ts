@@ -5,7 +5,7 @@
  * server, driven by an Ed25519-verified token:
  *
  *  - activation is counted per subject, so one key cannot fan out without bound;
- *  - revocation is first-class (per activation and per subject);
+ *  - revocation is first-class (per activation AND per subject);
  *  - the absolute offline cutoff (`grace_exp`) is carried inside the signed
  *    token, so a tampered client store cannot extend it;
  *  - the returned status encodes the outage/expiry/revocation matrix.
@@ -13,10 +13,17 @@
  * The store is an interface: production binds it to a durable KV/DB. The
  * bundled `MemoryActivationStore` is for tests and single-process use only; it
  * does not survive a restart and must not be the production counter.
+ *
+ * SOLA-34 remediation (Riven R-03/R-04/R-07): the per-subject ceiling is
+ * enforced *inside* the store via `insertIfUnderLimit`, so a count-then-insert
+ * race in the caller can no longer exceed it; a revoked subject is denied even
+ * when presenting a *different* valid token; and an invalid `maxActivations`
+ * configuration fails closed instead of silently disabling the ceiling.
  */
 
 import type { LicenseClaims, PublicKeyRing, SolarisEdition } from '../token';
 import { verifyLicenseToken } from '../token';
+import { timingSafeEqualHex } from './webhook';
 
 export interface ActivationRecord {
   activationId: string;
@@ -32,17 +39,43 @@ export interface ActivationRecord {
   expiresAt: number;
 }
 
+/** Durable, subject-level deny marker (refund/chargeback). */
+export interface SubjectRevocation {
+  revokedAt: number;
+  reason: string;
+}
+
+/** Result of an atomic ceiling-checked insert. */
+export interface InsertIfUnderLimitResult {
+  inserted: boolean;
+  /** Live (non-revoked) activation count observed by the store. */
+  count: number;
+}
+
 export interface ActivationStore {
   countForSubject(subject: string): Promise<number> | number;
   findByTokenHash(tokenHash: string): Promise<ActivationRecord | null> | ActivationRecord | null;
   findByActivationId(activationId: string): Promise<ActivationRecord | null> | ActivationRecord | null;
   listForSubject(subject: string): Promise<readonly ActivationRecord[]> | readonly ActivationRecord[];
   insert(record: ActivationRecord): Promise<void> | void;
+  /**
+   * Atomically insert `record` only while the subject has fewer than `max` live
+   * activations. Implementations with a compare-and-set / unique constraint
+   * enforce the ceiling strictly; stores without atomic primitives (e.g. KV)
+   * must at minimum serialise within the process and document the residual
+   * cross-isolate race.
+   */
+  insertIfUnderLimit(
+    record: ActivationRecord,
+    max: number,
+  ): Promise<InsertIfUnderLimitResult> | InsertIfUnderLimitResult;
   touch(activationId: string, now: number): Promise<void> | void;
   /** Revoke one activation. */
   revoke(activationId: string, now: number, reason: string): Promise<boolean> | boolean;
-  /** Revoke every activation for a subject (e.g. refund/chargeback). */
+  /** Revoke every activation for a subject and set a durable subject deny. */
   revokeSubject(subject: string, now: number, reason: string): Promise<number> | number;
+  /** Subject-level deny marker, or null when the subject is not revoked. */
+  isSubjectRevoked(subject: string): Promise<SubjectRevocation | null> | SubjectRevocation | null;
 }
 
 /** Default per-subject activation ceiling. Cost control, not authentication. */
@@ -73,15 +106,15 @@ export interface ActivateResult {
   reason?: string;
 }
 
+/**
+ * Builds a denial. Attacker-controlled fields (`subject`, `exp`, `grace_exp`)
+ * are deliberately NOT echoed here: Riven R-10. `reason` is kept for server-side
+ * logging/tests; the HTTP layer (`http.ts`) strips it from the public body.
+ */
 function deny(status: ActivateStatus, reason: string, claims?: LicenseClaims, kid?: string): ActivateResult {
-  return {
-    entitled: false,
-    status,
-    edition: 'free',
-    reason,
-    ...(claims ? { subject: claims.sub, exp: claims.exp, graceExp: claims.grace_exp } : {}),
-    ...(kid ? { kid } : {}),
-  };
+  void claims;
+  void kid;
+  return { entitled: false, status, edition: 'free', reason };
 }
 
 async function sha256Hex(text: string): Promise<string> {
@@ -101,13 +134,20 @@ export function newActivationId(): string {
     .join('');
 }
 
+/** Resolves the effective ceiling, failing closed on invalid configuration. */
+function resolveMaxActivations(value: number | undefined): number | null {
+  const max = value ?? DEFAULT_MAX_ACTIVATIONS;
+  if (!Number.isInteger(max) || max < 1) return null;
+  return max;
+}
+
 /**
  * Activate (or re-activate) a licence token. Idempotent for the same token:
  * an already-registered token is refreshed, not counted twice.
  */
 export async function activateLicense(input: ActivateInput): Promise<ActivateResult> {
   const now = input.now ?? Date.now();
-  const maxActivations = input.maxActivations ?? DEFAULT_MAX_ACTIVATIONS;
+  const maxActivations = resolveMaxActivations(input.maxActivations);
 
   const verified = await verifyLicenseToken(input.token, input.publicKeys, now);
   if (!verified.valid) {
@@ -118,6 +158,13 @@ export async function activateLicense(input: ActivateInput): Promise<ActivateRes
 
   const { claims, keyId } = verified;
   if (claims.edition !== 'pro') return deny('invalid', 'not_a_pro_token', claims, keyId);
+
+  // A revoked subject is denied even when presenting a fresh valid token.
+  const subjectRevocation = await input.store.isSubjectRevoked(claims.sub);
+  if (subjectRevocation) return deny('revoked', 'subject_revoked', claims, keyId);
+
+  // Invalid ceiling configuration fails closed rather than becoming unlimited.
+  if (maxActivations === null) return deny('invalid', 'invalid_max_activations_config', claims, keyId);
 
   const tokenHash = await sha256Hex(input.token);
   const existing = await input.store.findByTokenHash(tokenHash);
@@ -139,12 +186,7 @@ export async function activateLicense(input: ActivateInput): Promise<ActivateRes
     };
   }
 
-  // New activation: enforce the server-side activation count.
-  const count = await input.store.countForSubject(claims.sub);
-  if (Number.isFinite(maxActivations) && maxActivations >= 0 && count >= maxActivations) {
-    return deny('activation_limit', 'activation_limit_reached', claims, keyId);
-  }
-
+  // New activation: the store enforces the ceiling atomically.
   const record: ActivationRecord = {
     activationId: newActivationId(),
     kid: keyId,
@@ -156,7 +198,8 @@ export async function activateLicense(input: ActivateInput): Promise<ActivateRes
     revokeReason: null,
     expiresAt: claims.grace_exp > 0 ? claims.grace_exp : claims.exp,
   };
-  await input.store.insert(record);
+  const inserted = await input.store.insertIfUnderLimit(record, maxActivations);
+  if (!inserted.inserted) return deny('activation_limit', 'activation_limit_reached', claims, keyId);
 
   const inGrace = claims.exp > 0 && now > claims.exp;
   return {
@@ -191,11 +234,18 @@ export async function revalidateActivation(input: RevalidateInput): Promise<Acti
     if (verified.reason === 'expired') return deny('expired', 'token_expired', verified.claims, verified.header?.kid);
     return deny('invalid', `token_${verified.reason}`, verified.claims, verified.header?.kid);
   }
+  const subjectRevocation = await input.store.isSubjectRevoked(verified.claims.sub);
+  if (subjectRevocation) return deny('revoked', 'subject_revoked', verified.claims, verified.keyId);
+
   const record = await input.store.findByActivationId(input.activationId);
   if (!record) return deny('invalid', 'unknown_activation', verified.claims, verified.keyId);
   if (record.revokedAt !== null) return deny('revoked', 'activation_revoked', verified.claims, verified.keyId);
   const tokenHash = await sha256Hex(input.token);
-  if (record.tokenHash !== tokenHash) return deny('invalid', 'activation_token_mismatch', verified.claims, verified.keyId);
+  // Constant-time compare: the token hash is a secret-independent 64-hex value
+  // but the codebase already has a timing-safe helper (Riven R-09).
+  if (!timingSafeEqualHex(record.tokenHash, tokenHash)) {
+    return deny('invalid', 'activation_token_mismatch', verified.claims, verified.keyId);
+  }
 
   const cutoff = verified.claims.grace_exp > 0 ? verified.claims.grace_exp : verified.claims.exp;
   if (cutoff > 0 && now > cutoff) return deny('expired', 'token_expired', verified.claims, verified.keyId);
@@ -219,6 +269,7 @@ export async function revalidateActivation(input: RevalidateInput): Promise<Acti
 export class MemoryActivationStore implements ActivationStore {
   private readonly byTokenHash = new Map<string, ActivationRecord>();
   private readonly byActivationId = new Map<string, ActivationRecord>();
+  private readonly subjectRevocations = new Map<string, SubjectRevocation>();
 
   countForSubject(subject: string): number {
     let n = 0;
@@ -247,6 +298,17 @@ export class MemoryActivationStore implements ActivationStore {
     this.byActivationId.set(record.activationId, record);
   }
 
+  /**
+   * Synchronous, therefore atomic within the single JS event loop: the count,
+   * the check and the insert happen in one uninterruptible step.
+   */
+  insertIfUnderLimit(record: ActivationRecord, max: number): InsertIfUnderLimitResult {
+    const count = this.countForSubject(record.subject);
+    if (count >= max) return { inserted: false, count };
+    this.insert(record);
+    return { inserted: true, count: count + 1 };
+  }
+
   touch(activationId: string, now: number): void {
     const record = this.byActivationId.get(activationId);
     if (record) record.lastSeenAt = now;
@@ -261,6 +323,7 @@ export class MemoryActivationStore implements ActivationStore {
   }
 
   revokeSubject(subject: string, now: number, reason: string): number {
+    this.subjectRevocations.set(subject, { revokedAt: now, reason });
     let n = 0;
     for (const record of this.byActivationId.values()) {
       if (record.subject === subject && record.revokedAt === null) {
@@ -270,5 +333,10 @@ export class MemoryActivationStore implements ActivationStore {
       }
     }
     return n;
+  }
+
+  isSubjectRevoked(subject: string): SubjectRevocation | null {
+    const marker = this.subjectRevocations.get(subject);
+    return marker ? { ...marker } : null;
   }
 }

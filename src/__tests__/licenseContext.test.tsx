@@ -138,6 +138,42 @@ describe('LicenseProvider · activation', () => {
     expect(screen.getByTestId('pro').textContent).toBe('false');
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('tolerates small server clock skew (Naomi finding D)', async () => {
+    const now = Date.now();
+    const future = await issueTestToken(pair, {
+      subject: 'order:skew',
+      issuedAt: now + 60_000, // issued by a server 60s ahead of this machine
+      termEndsAt: now + 90 * 86_400_000,
+      graceEndsAt: now + 120 * 86_400_000,
+    });
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')));
+    mount(future.token);
+    await activate();
+    await waitFor(() => expect(screen.getByTestId('pro').textContent).toBe('true'));
+  });
+});
+
+describe('LicenseProvider · activation retry after outage (Naomi finding B)', () => {
+  it('obtains an activation id when the backend returns', async () => {
+    // A customer who installed during an outage: signed token, no activation id.
+    window.localStorage.setItem(
+      LICENSE_CACHE_KEY,
+      JSON.stringify({ token: validToken, activationId: null, verifiedAt: 0 }),
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ entitled: true, status: 'active', edition: 'pro', activationId: 'a2' }),
+      }),
+    );
+    mount(validToken);
+    await waitFor(() => {
+      const cached = JSON.parse(window.localStorage.getItem(LICENSE_CACHE_KEY)!);
+      expect(cached.activationId).toBe('a2');
+    });
+  });
 });
 
 describe('LicenseProvider · revalidation', () => {

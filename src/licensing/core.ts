@@ -55,7 +55,18 @@ export interface StoredEntitlement {
   activationId: string | null;
   /** Last successful server revalidation (unix ms); 0 = never revalidated. */
   verifiedAt: number;
+  /**
+   * Monotonic high-water mark of observed server-clock time (unix ms). Used to
+   * detect a client clock rolled back below the last trusted time (Riven R-05).
+   * Optional for backward compatibility with older cache entries.
+   */
+  timeFloor?: number;
 }
+
+/** Tolerated skew before a clock is treated as rolled back / not-yet-valid. */
+export const CLOCK_SKEW_ALLOWANCE_MS = 5 * 60 * 1000;
+/** Extra slack when comparing against the monotonic time floor. */
+export const CLOCK_FLOOR_TOLERANCE_MS = 5 * 60 * 1000;
 
 export function loadStoredEntitlement(
   storage: Pick<Storage, 'getItem'> | undefined,
@@ -71,7 +82,9 @@ export function loadStoredEntitlement(
       typeof (parsed as StoredEntitlement).token === 'string' &&
       (typeof (parsed as StoredEntitlement).activationId === 'string' ||
         (parsed as StoredEntitlement).activationId === null) &&
-      typeof (parsed as StoredEntitlement).verifiedAt === 'number'
+      typeof (parsed as StoredEntitlement).verifiedAt === 'number' &&
+      (typeof (parsed as StoredEntitlement).timeFloor === 'number' ||
+        (parsed as StoredEntitlement).timeFloor === undefined)
     ) {
       return parsed as StoredEntitlement;
     }
@@ -108,9 +121,10 @@ export async function verifyLocalEntitlement(
   token: string | null | undefined,
   now: number = Date.now(),
   publicKeys: PublicKeyRing = LICENSE_PUBLIC_KEYS,
+  options: { clockSkewMs?: number } = {},
 ): Promise<LocalEntitlement> {
   if (!token) return { verified: false, reason: 'no-token' };
-  const result = await verifyLicenseToken(token, publicKeys, now);
+  const result = await verifyLicenseToken(token, publicKeys, now, options);
   if (result.valid) return { verified: true, claims: result.claims };
   return { verified: false, reason: result.reason, claims: result.claims };
 }
@@ -139,9 +153,35 @@ export function resolveEditionFromSources(
 /** True when a server revalidation is due (default: once per 24h). */
 export const REVALIDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * True when the client should talk to the server again.
+ *
+ * Riven R-06: never trust a cache-supplied `verifiedAt` blindly. A future
+ * timestamp (impossible from our own writes) is treated as a tampered or
+ * rolled-back cache and forces revalidation. An entry that has never been
+ * verified (e.g. installed during an outage) also revalidates, so it can obtain
+ * an activation id and become revocable later (Naomi finding B).
+ */
 export function shouldRevalidate(entry: StoredEntitlement | null, now: number = Date.now()): boolean {
-  if (!entry?.token || !entry.activationId) return false;
-  return entry.verifiedAt <= 0 || now - entry.verifiedAt >= REVALIDATE_INTERVAL_MS;
+  if (!entry?.token) return false;
+  if (!(entry.verifiedAt > 0)) return true;
+  if (entry.verifiedAt > now + CLOCK_SKEW_ALLOWANCE_MS) return true;
+  return now - entry.verifiedAt >= REVALIDATE_INTERVAL_MS;
+}
+
+/**
+ * True when the local clock is consistent with the highest server time we have
+ * observed. A client clock rolled back below `timeFloor` by more than the
+ * tolerance is not trusted for offline entitlement evaluation (Riven R-05).
+ */
+export function isClockConsistent(
+  entry: StoredEntitlement | null,
+  now: number = Date.now(),
+  tolerance: number = CLOCK_FLOOR_TOLERANCE_MS,
+): boolean {
+  const floor = entry?.timeFloor ?? 0;
+  if (!(floor > 0)) return true;
+  return now + tolerance >= floor;
 }
 
 // --- Gate helpers -----------------------------------------------------------

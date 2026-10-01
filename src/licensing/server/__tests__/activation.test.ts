@@ -138,3 +138,46 @@ describe('server-side activation', () => {
     })).toMatchObject({ status: 'invalid', reason: 'activation_token_mismatch' });
   });
 });
+
+describe('SOLA-34 remediation · adversarial controls', () => {
+  it('R-03: a revoked subject cannot activate with a different valid token', async () => {
+    const pair = await newTestKeyPair('kid-1');
+    const store = new MemoryActivationStore();
+    const a = await issueTestToken(pair, { issuedAt: NOW - 1000, subject: 'order:P1' });
+    const b = await issueTestToken(pair, { issuedAt: NOW - 2000, subject: 'order:P1' });
+    expect((await activateLicense(baseInput(pair, a.token, store))).entitled).toBe(true);
+
+    store.revokeSubject('order:P1', NOW + 1, 'chargeback');
+    // Previously the second token activated cleanly (Riven R-03).
+    expect(await activateLicense({ ...baseInput(pair, b.token, store), now: NOW + 2 })).toMatchObject({
+      entitled: false,
+      status: 'revoked',
+    });
+  });
+
+  it('R-04: a concurrent activation burst cannot exceed the ceiling', async () => {
+    const pair = await newTestKeyPair('kid-1');
+    const store = new MemoryActivationStore();
+    const tokens = await Promise.all(
+      Array.from({ length: 12 }, (_, i) =>
+        issueTestToken(pair, { issuedAt: NOW - 1000 - i * 1000, subject: 'order:BURST' }),
+      ),
+    );
+    const results = await Promise.all(
+      tokens.map(t => activateLicense({ token: t.token, publicKeys: pair.publicKeys, store, now: NOW, maxActivations: 5 })),
+    );
+    const granted = results.filter(r => r.entitled).length;
+    expect(granted).toBe(5);
+    expect(store.countForSubject('order:BURST')).toBe(5);
+  });
+
+  it('R-07: an invalid maxActivations configuration fails closed', async () => {
+    const pair = await newTestKeyPair('kid-1');
+    const { token } = await issueTestToken(pair, { issuedAt: NOW - 1000, subject: 'order:P1' });
+    for (const bad of [-1, 0, Number.NaN]) {
+      expect(
+        await activateLicense({ token, publicKeys: pair.publicKeys, store: new MemoryActivationStore(), now: NOW, maxActivations: bad }),
+      ).toMatchObject({ entitled: false, reason: 'invalid_max_activations_config' });
+    }
+  });
+});

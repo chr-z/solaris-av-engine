@@ -71,3 +71,6 @@ jobs:
 
       - name: Bundle signing-material guard (SOLA-34)
         run: node scripts/check_bundle_secrets.mjs dist
+
+      - name: Bundle guard self-test (SOLA-34 R-01)
+        run: node scripts/check_bundle_secrets.mjs --self-test
