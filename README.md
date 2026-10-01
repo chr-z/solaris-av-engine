@@ -109,6 +109,12 @@ src/
 - **Code splitting** — Firebase, React vendor and the analysis workspace ship as separate chunks; modals load on demand.
 - **Data layer** — Google Sheets API v4 as a dynamic CMS for work orders; Firebase RTDB presence + optimistic locking; role-based rules validate permissions at the database level.
 
+### Deployment & security (Cloudflare Pages)
+
+- **Security headers** live in `public/_headers` (copied verbatim to `dist/_headers` by Vite). Cloudflare Pages reads `_headers`; it never read the old `vercel.json`, which has been removed. `scripts/check-dist-security.mjs` asserts CSP, `frame-ancestors 'none'` and HSTS against the built artifact in CI.
+- **API** lives in `functions/api/**` as Cloudflare Pages Functions, backed by the runtime-agnostic handlers in `src/server/api/`. The `[[path]]` catch-all guarantees every `/api/*` path returns JSON (401/404/…) — never the SPA shell with HTTP 200.
+- **Auth contract** — every data handler authenticates with a Firebase ID token (`Authorization: Bearer`, or the `fb_id_token` cookie for `<video>`/`<img>` requests that cannot set headers). Google OAuth access tokens are carried separately (`X-Google-Access-Token` / `g_token`) for delegated Sheets/Drive calls. The YouTube proxy validates its `url` against a strict YouTube host allowlist and re-checks every redirect hop.
+
 ## Roadmap
 
 - [x] Core engine: RGB/Waveform/Vectorscope/Spectrogram monitors

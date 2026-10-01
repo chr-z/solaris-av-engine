@@ -870,11 +870,20 @@ const AnalysisWorkspace: React.FC<AnalysisWorkspaceProps> = memo(({
       setSyncStatus('error');
       return;
     }
+    // SOLA-35: authenticate the write with a Firebase ID token; the Google
+    // OAuth token is still sent for the delegated Sheets update.
+    const { fbAuth } = await getFirebaseCompat();
+    const idToken = await fbAuth.currentUser?.getIdToken();
+    if (!idToken) {
+      setSyncError('Sessão expirada. Conecte-se novamente para sincronizar.');
+      setSyncStatus('error');
+      return;
+    }
     setIsSyncing(true);
     setSyncError(null);
     setSyncStatus('idle');
     try {
-      await syncUpdateSheetRow(selectedOsIndex, localRowData, { accessToken: token });
+      await syncUpdateSheetRow(selectedOsIndex, localRowData, { accessToken: token, idToken });
       onSaveSuccess(localRowData);
       setSyncStatus('success');
       setTimeout(() => setSyncStatus('idle'), 2500);

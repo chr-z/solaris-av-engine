@@ -36,6 +36,9 @@ jobs:
       - name: Bundle signing-material guard (SOLA-34)
         run: node scripts/check_bundle_secrets.mjs dist
 
+      - name: Security headers guard (SOLA-35)
+        run: node scripts/check-dist-security.mjs dist
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
@@ -43,9 +46,24 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=solaris --branch=main --commit-dirty=true
 
-      - name: Verify production URL
+      - name: Verify production URL and security surface (SOLA-35)
         run: |
           sleep 20
-          code=$(curl -s -o /dev/null -w '%{http_code}' https://solaris.chr-z.dev/)
-          echo "GET https://solaris.chr-z.dev/ -> $code"
+          base=https://solaris.chr-z.dev
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$base/")
+          echo "GET / -> $code"
           test "$code" = "200"
+
+          headers=$(curl -sS -D - -o /dev/null "$base/")
+          for h in content-security-policy strict-transport-security x-frame-options; do
+            echo "$headers" | grep -qi "^$h:" || { echo "FAIL: missing $h on /"; exit 1; }
+          done
+          echo "$headers" | grep -qi "frame-ancestors 'none'" || { echo "FAIL: CSP lacks frame-ancestors"; exit 1; }
+          echo "$headers" | grep -qi "unsafe-eval" && { echo "FAIL: CSP grants unsafe-eval"; exit 1; } || true
+
+          # /api/* must never answer with the SPA shell + 200.
+          api_headers=$(curl -sS -D - -o /tmp/api_body "$base/api/get-sheets-data")
+          echo "$api_headers" | grep -qi "content-type: application/json" || { echo "FAIL: /api/get-sheets-data is not JSON"; exit 1; }
+          if grep -qi "<!DOCTYPE html>" /tmp/api_body; then echo "FAIL: /api returned the SPA shell"; exit 1; fi
+          echo "/api/get-sheets-data -> $(echo "$api_headers" | head -1)"

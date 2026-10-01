@@ -71,11 +71,19 @@ export const updateSheetRow = async (rowIndex: number, rowData: RowData): Promis
     if (!token) {
       throw new Error("User not authenticated. Please sign in again.");
     }
+    // SOLA-35: the handler authenticates with a Firebase ID token and receives
+    // the Google OAuth token separately for the delegated Sheets write.
+    const { fbAuth } = await getFirebaseCompat();
+    const idToken = await fbAuth.currentUser?.getIdToken();
+    if (!idToken) {
+      throw new Error('Session expired. Please sign in again.');
+    }
     const response = await fetch('/api/sheet-row', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${idToken}`,
+            'X-Google-Access-Token': token,
         },
         body: JSON.stringify({ rowIndex, rowData }),
     });
