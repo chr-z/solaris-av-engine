@@ -32,7 +32,7 @@ import {
   sheetsValuesUpdate,
   type DriveFile,
 } from './google';
-import { parseYouTubeVideoId, resolveYouTubeStream, safeStreamFetch } from './youtube';
+import { getInnertubeApiKey, parseYouTubeVideoId, resolveYouTubeStream, safeStreamFetch } from './youtube';
 
 export interface ApiDeps extends AuthDeps, GoogleDeps {
   fetch?: typeof fetch;
@@ -324,8 +324,14 @@ const youtubeProxy: Handler = async (ctx) => {
   const videoId = rawUrl ? parseYouTubeVideoId(rawUrl) : null;
   if (!videoId) return jsonError(400, 'Invalid URL.');
 
+  // SOLA-142: the Innertube key is server-only (YOUTUBE_INNERTUBE_API_KEY).
+  // A missing binding is an operator misconfiguration (503), never silently
+  // treated as "stream unavailable" and never sourced from a VITE_ variable.
+  const innertubeKey = getInnertubeApiKey(ctx.env, ctx.deps);
+  if (!innertubeKey) return jsonError(503, 'YouTube unavailable: server key unconfigured.');
+
   try {
-    const format = await resolveYouTubeStream(videoId, ctx.deps);
+    const format = await resolveYouTubeStream(videoId, ctx.deps, innertubeKey);
     if (!format) return jsonError(502, 'Stream unavailable.');
     const range = ctx.request.headers.get('range');
     const upstream = await safeStreamFetch(

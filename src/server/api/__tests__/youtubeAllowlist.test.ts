@@ -120,7 +120,7 @@ describe('resolveYouTubeStream', () => {
     const doFetch = vi.fn(
       async () => new Response(JSON.stringify({ streamingData: { formats: [] } }), { status: 200 }),
     );
-    expect(await resolveYouTubeStream('dQw4w9WgXcQ', { fetch: doFetch })).toBeNull();
+    expect(await resolveYouTubeStream('dQw4w9WgXcQ', { fetch: doFetch }, 'test-innertube-key')).toBeNull();
   });
 
   it('rejects a malformed video id without fetching', async () => {

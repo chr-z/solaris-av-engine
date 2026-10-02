@@ -11,6 +11,16 @@ export interface ServerEnv {
   SPREADSHEET_ID?: string;
   /** Google OAuth scopes override, space-separated (advanced). */
   SOLARIS_GOOGLE_SCOPES?: string;
+  /**
+   * Innertube player API key for the YouTube proxy (SOLA-142).
+   *
+   * Server-only. Never use a `VITE_` prefixed variable here: a bare
+   * `import.meta.env` reference serialises the whole env object into the
+   * client bundle (SOLA-120) and would leak this key to every visitor.
+   * The committed key is revoked; operators must set this binding and
+   * rotate the value in Cloud Console (SOLA-104 operator action).
+   */
+  YOUTUBE_INNERTUBE_API_KEY?: string;
 }
 
 export function serviceAccountJson(env: ServerEnv): string | undefined {
