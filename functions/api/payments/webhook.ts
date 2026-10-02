@@ -19,13 +19,19 @@
 import { handlePaymentWebhook } from '../../../src/licensing/server/http';
 import { KvActivationStore, KvReplayStore, type MinimalKv } from '../../../src/licensing/server/kvStore';
 import { importEd25519SignerFromPkcs8, type Ed25519Signer } from '../../../src/licensing/server/issue';
-import { LICENSE_PUBLIC_KEYS } from '../../../src/licensing/keys';
+import { resolvePublicKeyRing } from '../../../src/licensing/keys';
 
 interface Env {
   SOLARIS_LICENSE_KV?: MinimalKv;
   SOLARIS_PAYMENT_WEBHOOK_SECRET?: string;
   SOLARIS_LICENSE_SIGNING_KEY_PKCS8?: string;
   SOLARIS_LICENSE_KID?: string;
+  /**
+   * Operator entitlement ring as JSON `{ kid -> base64url public key }` (SOLA-104).
+   * NOT a `VITE_` variable: Pages Functions read `env` at request time, and the
+   * webhook must honour the same rotated keys the client ring carries.
+   */
+  SOLARIS_LICENSE_PUBLIC_KEYS?: string;
 }
 
 function decodeBase64Url(value: string): Uint8Array {
@@ -62,7 +68,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   }
 
   const result = await handlePaymentWebhook(rawBody, signatureHeader, eventId, {
-    publicKeys: LICENSE_PUBLIC_KEYS,
+    publicKeys: resolvePublicKeyRing(env.SOLARIS_LICENSE_PUBLIC_KEYS),
     store: new KvActivationStore(kv),
     webhookSecret: env.SOLARIS_PAYMENT_WEBHOOK_SECRET,
     sign,
