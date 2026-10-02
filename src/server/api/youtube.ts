@@ -16,6 +16,11 @@
 
 export interface FetchDeps {
   fetch?: typeof fetch;
+  /**
+   * Innertube API key override (tests and callers that already resolved the
+   * server env). Production callers pass `ctx.env`; see `getInnertubeApiKey`.
+   */
+  apiKey?: string;
 }
 
 /** Hosts accepted as *input*. Keep this list closed. */
@@ -126,22 +131,77 @@ export interface InnertubeFormat {
   audioChannels?: number;
 }
 
-const INNERTUBE_PLAYER_URL =
-  'https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8';
+/**
+ * Innertube player endpoint without credentials (SOLA-142).
+ *
+ * The Google API key that was previously hard-coded here is revoked. It is
+ * now sourced at runtime from the server-only `YOUTUBE_INNERTUBE_API_KEY`
+ * binding (Cloudflare Pages env / `process.env` on Node). This module must
+ * never reference `import.meta.env` or any `VITE_` variable: a bare
+ * `import.meta.env` reference serialises the whole env object into the
+ * client bundle (SOLA-120).
+ */
+export const INNERTUBE_PLAYER_BASE = 'https://www.youtube.com/youtubei/v1/player';
+
+/** Sources a server-side Innertube key can come from. Never a `VITE_` var. */
+export type InnertubeKeySource =
+  | string
+  | { YOUTUBE_INNERTUBE_API_KEY?: string }
+  | undefined;
+
+function readServerProcessKey(): string | undefined {
+  if (typeof process !== 'undefined' && process.env) {
+    const value = process.env.YOUTUBE_INNERTUBE_API_KEY;
+    if (typeof value === 'string' && value.length > 0) return value;
+  }
+  return undefined;
+}
+
+/**
+ * Resolves the Innertube API key from (in order): an explicit string, a
+ * `ServerEnv`-like object, `deps.apiKey`, then server `process.env`.
+ * Returns undefined when unconfigured so callers can answer 503.
+ */
+export function getInnertubeApiKey(
+  source?: InnertubeKeySource,
+  deps?: FetchDeps,
+): string | undefined {
+  if (typeof source === 'string' && source.length > 0) return source;
+  if (source && typeof source === 'object') {
+    const fromEnv = source.YOUTUBE_INNERTUBE_API_KEY;
+    if (typeof fromEnv === 'string' && fromEnv.length > 0) return fromEnv;
+  }
+  const fromDeps = deps?.apiKey;
+  if (typeof fromDeps === 'string' && fromDeps.length > 0) return fromDeps;
+  return readServerProcessKey();
+}
+
+/** Builds the player URL for a configured key. Throws when unconfigured. */
+export function innertubePlayerUrl(apiKey: string): string {
+  if (!apiKey) throw new Error('youtube_api_key_missing');
+  return `${INNERTUBE_PLAYER_BASE}?key=${encodeURIComponent(apiKey)}`;
+}
 
 /**
  * Resolves a playable stream URL via YouTube's public Innertube player API.
  * Formats carrying only a `signatureCipher` (no direct `url`) are skipped; if
  * nothing usable remains the caller gets null and must return a deliberate
  * JSON error rather than fetching anything.
+ *
+ * Throws `youtube_api_key_missing` when no server-side key is configured
+ * instead of silently returning null: a missing binding is an operator
+ * misconfiguration (503), not an upstream "stream unavailable" (502).
  */
 export async function resolveYouTubeStream(
   videoId: string,
   deps: FetchDeps = {},
+  keySource?: InnertubeKeySource,
 ): Promise<StreamFormat | null> {
   if (!VIDEO_ID_RE.test(videoId)) return null;
+  const apiKey = getInnertubeApiKey(keySource, deps);
+  if (!apiKey) throw new Error('youtube_api_key_missing');
   const doFetch = deps.fetch ?? fetch;
-  const res = await doFetch(INNERTUBE_PLAYER_URL, {
+  const res = await doFetch(innertubePlayerUrl(apiKey), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
