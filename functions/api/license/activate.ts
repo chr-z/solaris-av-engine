@@ -10,11 +10,20 @@
 
 import { handleActivate } from '../../../src/licensing/server/http';
 import { KvActivationStore, type MinimalKv } from '../../../src/licensing/server/kvStore';
-import { LICENSE_PUBLIC_KEYS } from '../../../src/licensing/keys';
+import { resolvePublicKeyRing } from '../../../src/licensing/keys';
 
 interface Env {
   SOLARIS_LICENSE_KV?: MinimalKv;
   SOLARIS_MAX_ACTIVATIONS?: string;
+  /**
+   * Operator entitlement ring as JSON `{ kid -> base64url public key }` (SOLA-104).
+   *
+   * NOT a `VITE_` variable: Pages Functions read `context.env` at request time,
+   * and `VITE_` only ever reaches the client bundle. The client ring
+   * (`LicenseContext`) and this server ring must therefore be fed separately —
+   * a token signed by a rotated key the client trusts must also verify here.
+   */
+  SOLARIS_LICENSE_PUBLIC_KEYS?: string;
 }
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
@@ -33,8 +42,15 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   }
 
   const body = await context.request.json().catch(() => null);
+  const publicKeys = resolvePublicKeyRing(context.env.SOLARIS_LICENSE_PUBLIC_KEYS);
+  // Fail loud rather than silently verifying against the built-in ring: a
+  // configured-but-unparseable ring is a deployment error that would otherwise
+  // reject every paying customer with no signal anywhere.
+  if (context.env.SOLARIS_LICENSE_PUBLIC_KEYS && Object.keys(publicKeys).length === 0) {
+    return json(500, { entitled: false, status: 'invalid', reason: 'license_ring_not_configured' });
+  }
   const result = await handleActivate(body, {
-    publicKeys: LICENSE_PUBLIC_KEYS,
+    publicKeys,
     store: new KvActivationStore(kv),
     maxActivations,
   });
