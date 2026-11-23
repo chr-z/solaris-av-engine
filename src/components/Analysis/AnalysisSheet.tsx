@@ -138,46 +138,28 @@ const ListItem: React.FC<ListItemProps> = memo(({ row, rowIndex, headerIdx, isSe
     };
     
     return (
-        <li 
-            onClick={!isLockedByOther ? () => onClick(rowIndex, row) : undefined} 
-            className={`p-4 border-b border-hairline transition-all duration-150 ${
-                isSelected 
-                    ? 'bg-solar-accent/20 border-l-4 border-solar-accent' 
-                    : isLockedByOther
-                    ? 'border-l-4 border-blue-500 bg-blue-500/5'
-                    : 'border-l-4 border-transparent hover:bg-surface/50 even:bg-surface/30 even:hover:bg-surface/70 cursor-pointer transition-all duration-150'
-            }`}
+        <li
+            onClick={!isLockedByOther ? () => onClick(rowIndex, row) : undefined}
+            className={`qrow ${isSelected ? 'is-selected' : ''} ${isLockedByOther ? 'is-locked' : ''} ${!isLockedByOther ? 'is-clickable' : ''}`}
             title={isLockedByOther ? `${lockInfo?.user.givenName} is editing.` : ''}
         >
-            <div className={`flex justify-between items-start ${isLockedByOther ? 'opacity-60' : ''}`}>
-                <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-base truncate flex items-center gap-2">
-                        {osCell?.value || 'N/A'}
-                        {osCell?.link && <LinkIcon className="w-3 h-3 text-solar-accent flex-shrink-0" />}
-                        {hasCachedWaveform && <WaveformIcon title="Cached Waveform" className="w-4 h-4 text-solar-accent/70 flex-shrink-0" />}
-                    </h3>
-                    <p className="text-sm text-gray-400 truncate mt-1">{professorCell?.value || 'No Instructor'}</p>
-                </div>
-                <div className="text-right flex-shrink-0 ml-2 flex flex-col items-end">
-                    {infoParts.length > 0 && (
-                        <p className={`text-xs truncate ${isSelected ? 'text-ink' : 'text-ink-secondary'}`}>                            {infoParts.join(' • ')}
-                        </p>
-                    )}
-                    {finalCell?.value && (
-                        <div className="mt-1.5 flex items-baseline gap-1">
-                            <span className="text-xs text-gray-400">Score:</span>
-                            {/* Tick 12: pill com número tabular, cor pelo tier semântico
-                                (verde=ok, amarelo=atenção, vermelho=inconformidade).
-                                Mesma informação do MVP (o valor cru), acabamento v3. */}
-                            <span className={`badge-pill badge-score ${scoreBandClass(finalCell.value)}`}>
-                                <span className="tnum">{formatScore(finalCell.value) ?? finalCell.value}</span>
-                            </span>
-                        </div>
-                    )}
-                </div>
-            </div>
+            <span className="qrow__bar" aria-hidden="true" />
+            <span className="qrow__id tnum">
+                <span className="qrow__wo">{osCell?.value || 'N/A'}</span>
+                {osCell?.link && <LinkIcon className="w-3 h-3" />}
+                {hasCachedWaveform && <WaveformIcon title="Cached Waveform" className="w-3.5 h-3.5" />}
+            </span>
+            <span className="qrow__who">{professorCell?.value || 'No Instructor'}</span>
+            <span className="qrow__meta">{infoParts.join(' · ')}</span>
+            {finalCell?.value ? (
+                <span className={`badge-pill badge-score ${scoreBandClass(finalCell.value)}`}>
+                    <span className="tnum">{formatScore(finalCell.value) ?? finalCell.value}</span>
+                </span>
+            ) : (
+                <span className="qrow__noscore">—</span>
+            )}
             {isLockedByOther && lockInfo && (
-                <div className="mt-3 pt-3 border-t border-hairline flex items-center justify-between gap-3">
+                <div className="qrow__lock flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                         <UserAvatar user={lockInfo.user} className="w-8 h-8 flex-shrink-0" />
                         <div className="min-w-0">

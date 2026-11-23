@@ -18,6 +18,7 @@ import DensityMenu from './DensityMenu';
 import PomodoroBadge from './PomodoroBadge';
 import { describeFeature } from '../../licensing/core';
 import { useAdminRole } from '../../hooks/useAdminRole';
+import './header.css';
 
 // Code splitting (S3.1): admin/report modals ship in separate chunks and are
 // fetched only on first open. `isOpen && ...` keeps them out of the tree while
@@ -36,12 +37,12 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ 
-  onSourceSelected,
-  isWorkspaceOpen,
-  onCloseWorkspace,
-  title,
-  userProfile,
-  onLogout
+  onSourceSelected, 
+  isWorkspaceOpen, 
+  onCloseWorkspace, 
+  title, 
+  userProfile, 
+  onLogout 
 }) => {
   const { t } = useI18n();
   const { isPro } = useLicense();
@@ -58,73 +59,64 @@ const Header: React.FC<HeaderProps> = ({
     return () => window.removeEventListener('solaris:open-pro-upgrade', open as EventListener);
   }, []);
 
+  const isWorkOrder = title.startsWith('W.O');
+
   return (
     <>
-      <header className="flex-shrink-0 flex items-center justify-between p-3 h-16 border-b border-hairline bg-surface/80 dark:bg-surface/80 backdrop-blur-sm z-20">
-        <div className="flex items-center gap-2">
-          <div className={`transition-all duration-150 ease-in-out ${isWorkspaceOpen ? 'w-0 opacity-0 -translate-x-2' : 'w-6 opacity-100'}`}>
-            <SolarisLogo size={24} />
-          </div>
-          
-          <button 
+      <header className="topbar">
+        <div className="topbar__left">
+          <button
+            type="button"
             onClick={onCloseWorkspace}
-            className={`transition-all duration-150 ease-in-out flex items-center gap-2 ${isWorkspaceOpen ? 'w-auto opacity-100' : 'w-0 opacity-0 -translate-x-2'}`}
+            className={`topbar__back ${isWorkspaceOpen ? 'is-on' : ''}`}
             disabled={!isWorkspaceOpen}
             aria-label={t('header.backToList')}
           >
-            <ArrowLeftIcon className="w-5 h-5" />
+            <ArrowLeftIcon className="w-4 h-4" />
           </button>
 
-          <h1 className="text-lg font-bold text-gray-900 dark:text-white truncate">{title}</h1>
+          <a className="topbar__mark" href="#/" onClick={(e) => { if (isWorkspaceOpen) { e.preventDefault(); onCloseWorkspace(); } }}>
+            <SolarisLogo size={18} />
+            <span className="topbar__wordmark">Solaris</span>
+          </a>
+
+          <span className="topbar__rule" aria-hidden="true" />
+
+          <span className={`topbar__title ${isWorkOrder ? 'tnum' : ''}`} title={title}>
+            {title}
+          </span>
         </div>
-        <div className="flex items-center gap-4">
+
+        <div className="topbar__right">
           {!isWorkspaceOpen && (
-              <Popover 
-                contentClassName="w-96"
-                trigger={
-                  <button className="flex items-center gap-2 px-3 py-2 rounded-md bg-gradient-to-br from-accent-from to-accent-to text-[#0b0e14] font-semibold hover:shadow-glow transition-shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-accent">
-                    <VideoIcon className="w-5 h-5" />
-                    <span>{t('header.loadMedia')}</span>
-                  </button>
-                }
-              >
-                {(close) => <SourceSelector onSourceSelected={onSourceSelected} onClosePopover={close} />}
-              </Popover>
-          )}
-          
-          <div className="h-6 w-px bg-hairline"></div>
-          
-          <OfflineIndicator />
-
-          {/* F2 QoL A2: tema + densidade + timer de pausa. */}
-          <ThemeMenu />
-          <DensityMenu />
-          <PomodoroBadge />
-
-          {/* S6.1: edition badge + upgrade entry point (free tier only). */}
-          {isPro ? (
-            <span
-              title={t('solaris.pro.activeTitle')}
-              className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider bg-solar-accent/20 text-solar-accent border border-solar-accent/40 select-none"
+            <Popover
+              contentClassName="w-96"
+              trigger={
+                <button className="topbar__cta" type="button">
+                  <VideoIcon className="w-4 h-4" />
+                  <span>{t('header.loadMedia')}</span>
+                </button>
+              }
             >
+              {(close) => <SourceSelector onSourceSelected={onSourceSelected} onClosePopover={close} />}
+            </Popover>
+          )}
+
+          {/* S4.1: printable QC report download (dataset summary). */}
+          <QCExportButton className="topbar__ghost" />
+
+          {isPro ? (
+            <span className="topbar__badge" title={t('solaris.pro.activeTitle')}>
               {t('pro.badge')}
             </span>
           ) : (
             <button
+              type="button"
               onClick={() => setIsProUpgradeOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-sm font-semibold hover:from-yellow-400 hover:to-orange-400 transition-colors focus-visible:ring-2 focus-visible:ring-solar-accent"
+              className="topbar__ghost"
               title={describeFeature('abCompareMode')}
             >
-              <svg
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="4" y="11" width="16" height="10" rx="2" />
                 <path d="M8 11V7a4 4 0 0 1 8 0v4" />
               </svg>
@@ -132,81 +124,89 @@ const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* S4.1: printable QC report download (dataset summary). */}
-          <QCExportButton className="!px-2" />
+          <span className="topbar__rule" aria-hidden="true" />
 
-          <OnlineUsers />
+          <div className="topbar__icons">
+            <OfflineIndicator />
+            <ThemeMenu />
+            <DensityMenu />
+            <PomodoroBadge />
+            <OnlineUsers />
+          </div>
+
+          <span className="topbar__rule" aria-hidden="true" />
 
           <LanguageSwitcher />
 
           {userProfile && (
-              <Popover 
-                contentClassName="w-56"
-                trigger={
-                  <button className="icon-btn flex items-center gap-2 p-1 rounded-full">
-                      <UserAvatar user={userProfile} className="w-8 h-8"/>
-                  </button>
-                }
-              >
-                {(close) => (
-                  <div className="p-1">
-                    <div className="px-3 py-2 border-b border-hairline">
-                        <p className="font-bold truncate" title={userProfile.name}>{userProfile.name}</p>
-                        <p className="text-xs text-gray-400 truncate" title={userProfile.email}>{userProfile.email}</p>
-                    </div>
-                    <div className="py-1">
-                        <button
-                          onClick={() => { setIsBugReportModalOpen(true); close(); }}
-                          className="menu-item"
-                        >
-                          {t('header.reportIssue')}
-                        </button>
-                        {/* F4: Liga dos Analistas (#/liga) — todos os autenticados. */}
-                        <a
-                          href="#/liga"
-                          data-testid="header-league-link"
-                          className="w-full text-left px-3 py-2 text-sm rounded-md text-gray-200 hover:bg-gray-500/20 transition-colors"
-                        >
-                          {t('header.league')}
-                        </a>
-                        {/* v3: Scoring Rules console (#/admin) — same RBAC decision as the gate. */}
-                        {isAdminUser && (
-                          <a
-                            href="#/admin"
-                            className="menu-item"
-                          >
-                            {t('header.adminPanel')}
-                          </a>
-                        )}
-                        {/* P5: Scoring dashboards (#/admin/dashboards) — same RBAC decision. */}
-                        {isAdminUser && (
-                          <a
-                            href="#/admin/dashboards"
-                            data-testid="header-dashboards-link"
-                            className="menu-item"
-                          >
-                            {t('header.dashboards')}
-                          </a>
-                        )}
-                        {/* Admin Panel Link */}
-                        {userProfile.email.endsWith('.admin') && (
-                          <button
-                            onClick={() => { setIsBugReportViewerOpen(true); close(); }}
-                            className="menu-item"
-                          >
-                            {t('header.systemReports')}
-                          </button>
-                        )}
-                    </div>
-                    <button
-                      onClick={() => { onLogout(); close(); }}
-                      className="menu-item menu-item-danger mt-1 border-t border-hairline"
-                    >
-                      {t('header.signOut')}
-                    </button>
+            <Popover
+              contentClassName="w-56"
+              trigger={
+                <button className="topbar__user" aria-label={userProfile.name}>
+                  <UserAvatar user={userProfile} className="w-7 h-7" />
+                </button>
+              }
+            >
+              {(close) => (
+                <div className="p-1">
+                  <div className="px-3 py-2 border-b border-hairline">
+                    <p className="text-sm font-semibold truncate" title={userProfile.name}>{userProfile.name}</p>
+                    <p className="text-xs text-ink-secondary truncate" title={userProfile.email}>{userProfile.email}</p>
                   </div>
-                )}
-              </Popover>
+                  <div className="py-1">
+                    <button
+                      onClick={() => { setIsBugReportModalOpen(true); close(); }}
+                      className="menu-item"
+                    >
+                      {t('header.reportIssue')}
+                    </button>
+                    {/* F4: Liga dos Analistas (#/liga) — todos os autenticados. */}
+                    <a href="#/liga" data-testid="header-league-link" className="menu-item">
+                      {t('header.league')}
+                    </a>
+                    <button
+                      type="button"
+                      className="menu-item"
+                      onClick={() => {
+                        try { window.localStorage.removeItem('solaris.onboarded'); } catch { /* ignore */ }
+                        close();
+                        window.location.hash = '';
+                        window.location.reload();
+                      }}
+                    >
+                      {t('header.replayTour')}
+                    </button>
+                    {/* v3: Scoring Rules console (#/admin) — same RBAC decision as the gate. */}
+                    {isAdminUser && (
+                      <a href="#/admin" className="menu-item">
+                        {t('header.adminPanel')}
+                      </a>
+                    )}
+                    {/* P5: Scoring dashboards (#/admin/dashboards) — same RBAC decision. */}
+                    {isAdminUser && (
+                      <a href="#/admin/dashboards" data-testid="header-dashboards-link" className="menu-item">
+                        {t('header.dashboards')}
+                      </a>
+                    )}
+                    {/* Admin Panel Link */}
+                    {userProfile.email.endsWith('.admin') && (
+                      <button
+                        onClick={() => { setIsBugReportViewerOpen(true); close(); }}
+                        className="menu-item"
+                      >
+                        {t('header.systemReports')}
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => { onLogout(); close(); }}
+                    className="menu-item menu-item-danger mt-1 border-t border-hairline"
+                  >
+                    {t('header.signOut')}
+                  </button>
+                </div>
+              )}
+            </Popover>
           )}
         </div>
       </header>

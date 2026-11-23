@@ -22,6 +22,7 @@ export const en = {
   'header.reportIssue': 'Report Issue',
   'header.systemReports': 'System Reports',
   'header.signOut': 'Sign Out',
+  'header.replayTour': 'Replay the tour',
 
   // Source selector
   'source.tab.local': 'Local File',
@@ -499,6 +500,7 @@ export const pt: Record<TranslationKey, string> = {
   'header.reportIssue': 'Reportar Problema',
   'header.systemReports': 'Relatórios do Sistema',
   'header.signOut': 'Sair',
+  'header.replayTour': 'Rever o tour',
 
   // Source selector
   'source.tab.local': 'Arquivo Local',

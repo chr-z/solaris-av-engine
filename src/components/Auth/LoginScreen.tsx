@@ -5,93 +5,139 @@ import { useI18n } from '../../i18n/I18nContext';
 import { isFirebaseConfigured } from '../../config/firebase';
 import LanguageSwitcher from '../../i18n/LanguageSwitcher';
 import { humanizeAuthError } from '../../utils/humanErrors';
+import './login.css';
 
 interface LoginScreenProps {
   onLogin: () => void;
   onGuestLogin?: () => void; // Added for Demo Mode
+  /** Optional: brings the Arrival tour back. */
+  onReplayTour?: () => void;
   isLoading: boolean;
   error: string | null;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestLogin, isLoading, error }) => {
+/** Decorative scope glyphs for the spec panel. */
+const ScopeGlyphs: React.FC = () => (
+  <svg viewBox="0 0 240 96" className="login__glyphs" aria-hidden="true" fill="none">
+    {[0, 1, 2].map((col) => (
+      <g key={col} transform={`translate(${col * 80 + 8} 8)`}>
+        <rect x="0.5" y="0.5" width="63" height="79" stroke="currentColor" strokeOpacity="0.18" />
+        {[0, 1, 2, 3].map((i) => (
+          <line key={i} x1="0" y1={16 * (i + 1)} x2="64" y2={16 * (i + 1)} stroke="currentColor" strokeOpacity="0.1" />
+        ))}
+        {col === 0 &&
+          Array.from({ length: 26 }).map((_, i) => (
+            <line
+              key={i}
+              x1={4 + i * 2.2}
+              y1={70 - Math.sin(i * 0.7) * 12 - (i % 5) * 2}
+              x2={4 + i * 2.2}
+              y2={70 - Math.sin(i * 0.7) * 12 + 6}
+              stroke="currentColor"
+              strokeOpacity="0.55"
+            />
+          ))}
+        {col === 1 &&
+          Array.from({ length: 18 }).map((_, i) => (
+            <line
+              key={i}
+              x1={4 + i * 3.2}
+              y1={72 - (i % 7) * 7}
+              x2={4 + i * 3.2}
+              y2={40 + (i % 4) * 6}
+              stroke="currentColor"
+              strokeOpacity="0.45"
+            />
+          ))}
+        {col === 2 && (
+          <>
+            <circle cx="32" cy="40" r="24" stroke="currentColor" strokeOpacity="0.35" />
+            <line x1="8" y1="40" x2="56" y2="40" stroke="currentColor" strokeOpacity="0.18" />
+            <line x1="32" y1="16" x2="32" y2="64" stroke="currentColor" strokeOpacity="0.18" />
+            <circle cx="22" cy="30" r="1.6" fill="currentColor" fillOpacity="0.8" />
+            <circle cx="30" cy="26" r="1.2" fill="currentColor" fillOpacity="0.6" />
+            <circle cx="38" cy="34" r="1.4" fill="currentColor" fillOpacity="0.7" />
+          </>
+        )}
+      </g>
+    ))}
+  </svg>
+);
+
+const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onGuestLogin, onReplayTour, isLoading, error }) => {
   const { t } = useI18n();
+
   return (
-    <main className="flex flex-col items-center justify-center h-screen w-screen bg-bg text-gray-200 font-sans relative overflow-hidden">      {/* Background Elements */}
-      <div className="absolute inset-0 bg-gradient-to-br from-surface via-bg to-bg opacity-50"></div>
-      <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-accent/10 rounded-full filter blur-3xl animate-pulse-slow"></div>
-      <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-yellow-400/10 rounded-full filter blur-3xl animate-pulse-slow animation-delay-4000"></div>
-
-      {/* Language selector — fixed top-right */}
-      <div className="absolute top-4 right-4 z-20 bg-bg/60 rounded-md backdrop-blur-sm">
-        <LanguageSwitcher />
-      </div>
-
-      <div className="relative z-10 flex flex-col items-center text-center p-8 max-w-md w-full bg-surface/50 backdrop-blur-md rounded-xl border border-hairline shadow-2xl">
-        <SolarisLogo size={64} alwaysAnimate className="mb-6" />
-        <h1 className="text-5xl font-bold text-white tracking-tight">Solaris</h1>
-        <p className="mt-2 text-lg text-ink-secondary">{t('login.tagline')}</p>
-
-        <div className="w-full h-px bg-hairline my-8"></div>
-
-        <button
-          onClick={onLogin}
-          disabled={isLoading}
-          className="w-full flex items-center justify-center gap-3 px-6 py-3 rounded-lg bg-white text-gray-800 font-semibold hover:bg-gray-200 transition-colors focus:outline-none focus:ring-4 focus:ring-solar-accent/50 disabled:opacity-50 disabled:cursor-wait"
-        >
-          {isLoading ? (
-            <div className="w-6 h-6 border-2 border-solar-accent border-t-transparent rounded-full animate-spin"></div>
-          ) : (
-            <GoogleIcon className="w-6 h-6" />
+    <main className="login">
+      <header className="login__top">
+        <a className="login__brand" href="https://chr-z.dev/">
+          <SolarisLogo size={20} />
+          <span>Solaris</span>
+          <em>by chr-z</em>
+        </a>
+        <div className="login__top-right">
+          <LanguageSwitcher />
+          {onReplayTour && (
+            <button type="button" className="login__tour" onClick={onReplayTour}>
+              Tour <span aria-hidden="true">↗</span>
+            </button>
           )}
-          <span>{isLoading ? t('login.connecting') : t('login.signInGoogle')}</span>
-        </button>
+        </div>
+      </header>
 
-        {/* Guest/Demo Button */}
-        {onGuestLogin && (
-            <button
-              onClick={onGuestLogin}
-              disabled={isLoading}
-              className="btn btn-ghost mt-4 w-full text-sm"
-            >
+      <div className="login__body">
+        <section className="login__card">
+          <p className="label login__label">{t('login.tagline')}</p>
+          <h1 className="login__title">Solaris</h1>
+
+          <button
+            onClick={onLogin}
+            disabled={isLoading}
+            className="btn btn-primary login__google"
+          >
+            {isLoading ? (
+              <span className="login__spinner" aria-hidden="true" />
+            ) : (
+              <GoogleIcon className="w-5 h-5" />
+            )}
+            <span>{isLoading ? t('login.connecting') : t('login.signInGoogle')}</span>
+          </button>
+
+          {onGuestLogin && (
+            <button onClick={onGuestLogin} disabled={isLoading} className="btn btn-ghost login__guest">
               {t('login.continueAsGuest')}
             </button>
-        )}
+          )}
 
-        {/* turbo-web: offline/demo builds carry no Firebase env vars */}
-        {!isFirebaseConfigured() && (
-            <p className="mt-4 text-xs text-gray-400" data-testid="demo-mode-notice">
+          {!isFirebaseConfigured() && (
+            <p className="login__notice" data-testid="demo-mode-notice">
               {t('login.demoNotice')}
             </p>
-        )}
+          )}
 
-        {error && (() => {
-          // R3: erro humano — nunca o raw error do provider.
-          const he = humanizeAuthError(error);
-          return (
-            <div className="mt-6 p-3 bg-fail/10 border border-fail/30 rounded-md w-full" role="alert">
-              <div className="flex items-start gap-2.5 text-left">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" className="flex-shrink-0 mt-0.5">
-                  <circle cx="10" cy="10" r="8" stroke="var(--color-fail)" strokeWidth="1.5" />
-                  <path d="M10 6v5" stroke="var(--color-fail)" strokeWidth="1.8" strokeLinecap="round" />
-                  <circle cx="10" cy="13.8" r="1" fill="var(--color-fail)" />
-                </svg>
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm text-fail leading-snug">{he.title}</p>
-                  <p className="text-xs text-ink-secondary mt-1 leading-relaxed">{he.hint}</p>
-                </div>
+          {error && (() => {
+            // R3: erro humano — nunca o raw error do provider.
+            const he = humanizeAuthError(error);
+            return (
+              <div className="cta__error" role="alert">
+                <strong>{he.title}</strong>
+                <span>{he.hint}</span>
               </div>
-            </div>
-          );
-        })()}
+            );
+          })()}
+        </section>
+
+        <aside className="login__spec" aria-hidden="true">
+          <ScopeGlyphs />
+          <ul className="login__list">
+            <li><span>RGB parade</span><em>per-channel exposure</em></li>
+            <li><span>Waveform</span><em>luma vs. safe range</em></li>
+            <li><span>Vectorscope</span><em>hue and saturation</em></li>
+            <li><span>Spectrogram</span><em>hum, hiss, dead air</em></li>
+            <li><span>QC report</span><em>timecode, signed, PDF</em></li>
+          </ul>
+        </aside>
       </div>
-      <style>{`
-        .animate-pulse-slow {
-          animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        .animation-delay-4000 {
-          animation-delay: -4s;
-        }
-      `}</style>
     </main>
   );
 };

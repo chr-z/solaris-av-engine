@@ -1,11 +1,9 @@
-/* Fontes locais v3 (Inter + JetBrains Mono) — font-display:optional, ver
-   fonts.css. Precisam vir antes de tudo. */
+/* Fontes locais (Inter + JetBrains Mono) — font-display:optional, ver fonts.css.
+   Precisam vir antes de tudo. */
 @import './fonts.css';
 
-/* Design tokens v3 — fonte canônica de toda cor/espaço/raio/sombra.
-   TEM que vir antes das diretivas @tailwind: @import só é válido
-   no topo do arquivo (antes de qualquer regra). Depois do @tailwind,
-   o postcss-import descarta o bloco inteiro e as vars somem do build. */
+/* Design tokens v4 ("Signal Room") — fonte canônica de cor/espaço/raio.
+   TEM que vir antes das diretivas @tailwind: @import só é válido no topo. */
 @import './tokens.css';
 
 @tailwind base;
@@ -13,15 +11,26 @@
 @tailwind utilities;
 
 /* ============================================================
-   Componentes base (R1) — consomem exclusivamente os tokens
+   v4 — linguagem base
+   Tudo é hairline, mono em caixa alta para rótulo, e nenhum
+   gradiente decorativo. A cor fica reservada ao sinal.
    ============================================================ */
 @layer components {
-  /* Card hairline: borda sutil + sombra interna suave (fim das bordas cinza duras) */
+  /* Rótulo de instrumento: mono, 11px, caixa alta, tracking largo. */
+  .label {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+  }
+
   .card {
     background-color: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-card);
+    box-shadow: none;
   }
   .card-raised {
     background-color: var(--color-surface-raised);
@@ -30,13 +39,34 @@
     box-shadow: var(--shadow-pop);
   }
 
-  /* Botões — tamanhos 32/40px (touch-friendly), 120-180ms só transform/opacity */
+  /* Painel de instrumento: superfície + hairline + título mono.
+     Usado pelos monitores e pelas seções do onboarding. */
+  .panel {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+  }
+
+  /* Botões — 32/40px, sem sombra, raio curto */
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: var(--space-2);
-    min-height: 32px;
+    min-height: 36px;
     padding: 0 var(--space-4);
     border-radius: var(--radius-md);
     font-family: var(--font-ui);
@@ -45,36 +75,35 @@
     line-height: 1;
     cursor: pointer;
     border: 1px solid transparent;
-    transition: transform 140ms ease-out, box-shadow 140ms ease-out,
-      background-color 140ms ease-out, opacity 140ms ease-out;
+    transition: transform 140ms ease-out, background-color 140ms ease-out,
+      border-color 140ms ease-out, opacity 140ms ease-out, color 140ms ease-out;
   }
   .btn:active:not(:disabled) {
     transform: translateY(1px);
   }
   .btn:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
   }
-  /* Primário: gradiente roxo→laranja refinado + glow leve no hover */
   .btn-primary {
     background-image: var(--gradient-accent);
-    color: #0b0e14;
-    font-weight: 700;
+    color: #0a0b0d;
+    font-weight: 650;
+    border-color: rgba(255, 255, 255, 0.12);
   }
   .btn-primary:hover:not(:disabled) {
-    box-shadow: var(--shadow-glow-hover);
+    filter: brightness(1.06);
   }
-  /* Secundário ghost: hover de superfície */
   .btn-ghost {
     background-color: transparent;
     color: var(--color-text);
     border-color: var(--color-border-strong);
   }
   .btn-ghost:hover:not(:disabled) {
-    background-color: var(--color-surface-raised);
+    background-color: var(--color-hover-wash);
+    border-color: var(--color-text-secondary);
   }
 
-  /* Inputs: fundo elevado, borda acende no foco (accent) */
   .input {
     background-color: var(--color-surface-raised);
     border: 1px solid var(--color-border-strong);
@@ -93,13 +122,11 @@
     box-shadow: 0 0 0 3px var(--color-accent-glow);
   }
 
-  /* Timecodes/métricas: mono + números tabulares */
   .tnum {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums lining-nums;
   }
 
-  /* Skeleton loader (desenhado — nada de spinner genérico) */
   .skeleton {
     background: linear-gradient(
       90deg,
@@ -111,6 +138,24 @@
     animation: skeleton-shimmer 1.4s ease-in-out infinite;
     border-radius: var(--radius-md);
   }
+
+  /* Kbd / keycap — atalho exibido como tecla física */
+  .keycap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border: 1px solid var(--color-border-strong);
+    border-bottom-width: 2px;
+    border-radius: var(--radius-sm);
+    background-color: var(--color-surface-raised);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    color: var(--color-text);
+  }
 }
 
 @keyframes skeleton-shimmer {
@@ -118,10 +163,6 @@
   to { background-position: -200% 0; }
 }
 
-/* ============================================================
-   Animações utilitárias existentes (usadas por modais/loading).
-   Restauradas intactas — comportamento não muda.
-   ============================================================ */
 @layer utilities {
   .transition-height {
     transition-property: height;
@@ -151,30 +192,30 @@
 }
 
 /* ============================================================
-   Scrollbar discreta (tokens)
+   Scrollbar discreta
    ============================================================ */
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
   background: var(--color-bg);
 }
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(139, 147, 167, 0.35);
+  background-color: rgba(148, 156, 171, 0.28);
   border-radius: var(--radius-full);
   border: 3px solid var(--color-bg);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(139, 147, 167, 0.6);
+  background-color: rgba(148, 156, 171, 0.5);
 }
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(139, 147, 167, 0.35) var(--color-bg);
+  scrollbar-color: rgba(148, 156, 171, 0.28) var(--color-bg);
 }
 
 /* ============================================================
-   Skip link (a11y, S1.2) — agora com accent da marca
+   Skip link (a11y)
    ============================================================ */
 .skip-link {
   position: absolute;
@@ -182,8 +223,8 @@
   left: 8px;
   z-index: 100;
   padding: var(--space-2) var(--space-4);
-  background-image: var(--gradient-accent);
-  color: #0b0e14;
+  background-color: var(--color-accent);
+  color: #0a0b0d;
   border-radius: 0 0 var(--radius-md) var(--radius-md);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -193,19 +234,16 @@
   top: 0;
 }
 
-/* Movimento reduzido é tratado globalmente em tokens.css (WCAG 2.3.3). */
 /* ============================================================
-   R2 — Componentes premium (badges, checkboxes, tooltips,
-   skeletons). Consomem exclusivamente tokens v3.
+   Badges, checkboxes, tooltips, skeletons
    ============================================================ */
 @layer components {
-  /* ---------- Badges pill (números tabulares) ---------- */
   .badge-pill {
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
     padding: 1px var(--space-2);
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-sm);
     background-color: var(--color-surface-raised);
     border: 1px solid var(--color-border);
     color: var(--color-text-secondary);
@@ -213,57 +251,19 @@
     font-weight: 600;
     line-height: 1.4;
   }
-}
-/* ── F4 Gamificação: confete discreto do level-up (spec C1) ────────────── */
-@keyframes solaris-confetti-fall {
-  0% {
-    transform: translateY(-12px) rotate(0deg);
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(160px) rotate(240deg);
-    opacity: 0;
-  }
-}
-.solaris-confetti {
-  animation: solaris-confetti-fall 1.6s ease-in forwards;
-}
 
-/* ── F2 QoL A2: densidade compacta (html.solaris-density-compact) ──────── */
-/* Espelha o dark: a classe vive no <html>, aplicada por efeito declarado do
-   useDensityPreference. Mira elementos comuns (tabelas, listas, botões de
-   menu) para reduzir respiro vertical sem tocar em tokens do redesign. */
-html.solaris-density-compact table td,
-html.solaris-density-compact table th {
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
-}
-html.solaris-density-compact [role='menuitem'],
-html.solaris-density-compact [role='option'] {
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
-}
-html.solaris-density-compact button,
-html.solaris-density-compact input[type='range'] {
-  line-height: 1.15;
-
-  /* Números/métricas dentro do badge: tabulares */
   .badge-pill .tnum,
   .badge-pill.tnum {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums lining-nums;
     font-size: var(--text-xs);
   }
-  /* Variantes semânticas — verde=ok, amarelo=atenção, vermelho=inconformidade */
-  .badge-pill.badge-ok   { color: var(--color-ok);   border-color: rgba(52, 211, 153, 0.25); background-color: rgba(52, 211, 153, 0.08); }
-  .badge-pill.badge-warn { color: var(--color-warn); border-color: rgba(251, 191, 36, 0.25); background-color: rgba(251, 191, 36, 0.08); }
-  .badge-pill.badge-fail { color: var(--color-fail); border-color: rgba(248, 113, 113, 0.25); background-color: rgba(248, 113, 113, 0.08); }
-  .badge-pill.badge-info { color: var(--color-info); border-color: rgba(96, 165, 250, 0.25); background-color: rgba(96, 165, 250, 0.08); }
 
-  /* Sparkline inline de tendência (SVG 40x12) */
+  .badge-pill.badge-ok   { color: var(--color-ok);   border-color: rgb(var(--color-ok-rgb) / 0.3);   background-color: rgb(var(--color-ok-rgb) / 0.08); }
+  .badge-pill.badge-warn { color: var(--color-warn); border-color: rgb(var(--color-warn-rgb) / 0.3); background-color: rgb(var(--color-warn-rgb) / 0.08); }
+  .badge-pill.badge-fail { color: var(--color-fail); border-color: rgb(var(--color-fail-rgb) / 0.3); background-color: rgb(var(--color-fail-rgb) / 0.08); }
+  .badge-pill.badge-info { color: var(--color-info); border-color: rgb(var(--color-info-rgb) / 0.3); background-color: rgb(var(--color-info-rgb) / 0.08); }
+
   .badge-sparkline {
     display: inline-flex;
     align-items: center;
@@ -274,9 +274,6 @@ html.solaris-density-compact input[type='range'] {
     overflow: visible;
   }
 
-  /* Badge de score na lista de análise (tick 12): pill um pouco maior que o
-     padrão pra carregar o número com presença, mantendo o mesmo vocabulário
-     semântico (ok/warn/fail). Número já é tabular via .tnum interno. */
   .badge-score {
     padding: 2px var(--space-2);
     font-size: var(--text-xs);
@@ -286,7 +283,6 @@ html.solaris-density-compact input[type='range'] {
     font-weight: 700;
   }
 
-  /* ---------- Checkbox customizado animado ---------- */
   .checkbox-custom {
     appearance: none;
     -webkit-appearance: none;
@@ -320,7 +316,7 @@ html.solaris-density-compact input[type='range'] {
     top: 1.5px;
     width: 5px;
     height: 9px;
-    border: solid #0b0e14;
+    border: solid #0a0b0d;
     border-width: 0 2px 2px 0;
     transform: rotate(45deg) scale(1);
     animation: checkbox-check 140ms ease-out;
@@ -334,7 +330,6 @@ html.solaris-density-compact input[type='range'] {
     to   { transform: rotate(45deg) scale(1); opacity: 1; }
   }
 
-  /* ---------- Tooltip rico ---------- */
   .tooltip-rich {
     font-size: var(--text-xs);
     line-height: 1.45;
@@ -344,7 +339,7 @@ html.solaris-density-compact input[type='range'] {
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-pop);
     padding: var(--space-2) var(--space-3);
-    max-width: 288px; /* w-72 do Tooltip core */
+    max-width: 288px;
   }
   .tooltip-rich .tooltip-title {
     font-size: var(--text-sm);
@@ -364,14 +359,11 @@ html.solaris-density-compact input[type='range'] {
     padding: 0 4px;
   }
 
-  /* ---------- Skeletons desenhados ---------- */
   .skeleton-line   { height: 0.8125rem; border-radius: var(--radius-sm); }
   .skeleton-title  { height: 1.5rem;    border-radius: var(--radius-md); }
   .skeleton-block  { height: 80px;      border-radius: var(--radius-lg); }
 
-  /* ---------- Logo Solaris (disco accent + halo) ----------
-     Momento wow nº 1: animação de entrada UMA vez por sessão
-     (classe .solaris-logo-intro é adicionada condicionalmente). */
+  /* Logo Solaris — disco âmbar, sem halo */
   .solaris-logo {
     display: inline-flex;
     align-items: center;
@@ -385,9 +377,7 @@ html.solaris-density-compact input[type='range'] {
     height: 100%;
     border-radius: var(--radius-full);
     background-image: var(--gradient-accent);
-    box-shadow:
-      inset -1px -2px 3px rgba(11, 14, 20, 0.35), /* sombra interna de volume */
-      0 0 calc(var(--space-2) / 2) var(--color-accent-glow); /* halo leve */
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
   }
   @keyframes logo-intro {
     from {
@@ -403,11 +393,6 @@ html.solaris-density-compact input[type='range'] {
     animation: logo-intro 600ms ease-out both;
   }
 
-  /* ---------- Estados de interação v3 (t16) ----------
-     Substituem os hovers crus gray-500/20 + text-white do MVP nos
-     botões-ícone, itens de menu e chips. Mesma anatomia de classe no
-     DOM (mesmos elementos, mesmos aria-labels), acabamento dos tokens. */
-  /* Botão-ícone: o gesto mais comum do app (fechar, editar, controles). */
   .icon-btn {
     color: var(--color-text-secondary);
     transition: background-color 140ms ease-out, color 140ms ease-out;
@@ -416,7 +401,6 @@ html.solaris-density-compact input[type='range'] {
     background-color: var(--color-hover-wash);
     color: var(--color-text);
   }
-  /* Variante destrutiva (remover marcador etc.) — semântica fail mantida. */
   .icon-btn-danger {
     color: var(--color-fail);
   }
@@ -424,7 +408,6 @@ html.solaris-density-compact input[type='range'] {
     background-color: rgb(var(--color-fail-rgb) / 0.12);
     color: var(--color-fail);
   }
-  /* Item de menu/dropdown (popover do usuário, listas de opções). */
   .menu-item {
     width: 100%;
     text-align: left;
@@ -437,18 +420,15 @@ html.solaris-density-compact input[type='range'] {
   .menu-item:hover:not(:disabled) {
     background-color: var(--color-hover-wash);
   }
-  /* Item de ação destrutiva (Sign out). */
   .menu-item-danger {
     color: var(--color-fail);
   }
   .menu-item-danger:hover:not(:disabled) {
     background-color: rgb(var(--color-fail-rgb) / 0.12);
   }
-  /* Chip de alternância (Sort by: Time|Comment) — hover só quando inativo;
-     ativo recebe o wash accent (equivalente ao bg-solar-accent/20 legado). */
   .chip-sort {
     padding: 2px var(--space-2);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     color: inherit;
     transition: background-color 140ms ease-out, color 140ms ease-out;
   }
@@ -456,17 +436,156 @@ html.solaris-density-compact input[type='range'] {
     background-color: var(--color-hover-wash);
   }
   .chip-sort.is-active {
-    background-color: rgb(var(--color-accent-rgb) / 0.2);
+    background-color: rgb(var(--color-accent-rgb) / 0.16);
     color: var(--color-accent);
     font-weight: 600;
   }
-  /* Hover neutro avulso p/ chips com borda (toolbar A/B) que mantêm suas
-     utilidades próprias — só troca o fundo no hover pelo token. */
   .wash-hover {
     transition: background-color 140ms ease-out;
   }
   .wash-hover:hover:not(:disabled) {
     background-color: var(--color-hover-wash);
   }
+}
 
+/* ── Gamificação: confete discreto do level-up ───────────────────────── */
+@keyframes solaris-confetti-fall {
+  0% {
+    transform: translateY(-12px) rotate(0deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(160px) rotate(240deg);
+    opacity: 0;
+  }
+}
+.solaris-confetti {
+  animation: solaris-confetti-fall 1.6s ease-in forwards;
+}
+
+/* ── Densidade compacta (html.solaris-density-compact) ───────────────── */
+html.solaris-density-compact table td,
+html.solaris-density-compact table th {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+html.solaris-density-compact [role='menuitem'],
+html.solaris-density-compact [role='option'] {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+html.solaris-density-compact button,
+html.solaris-density-compact input[type='range'] {
+  line-height: 1.15;
+}
+
+/* ============================================================
+   Queue rows (v4) — aligned columns instead of a floating split.
+   ============================================================ */
+@layer components {
+  .qrow {
+    position: relative;
+    display: grid;
+    grid-template-columns: 3px 140px minmax(0, 1fr) auto 66px;
+    align-items: center;
+    gap: 12px;
+    min-height: 54px;
+    padding-right: 12px;
+    border-bottom: 1px solid var(--color-border);
+    transition: background-color 130ms ease-out;
+  }
+
+  .qrow__bar {
+    grid-row: 1;
+    align-self: stretch;
+    width: 3px;
+    background: transparent;
+  }
+
+  .qrow.is-clickable {
+    cursor: pointer;
+  }
+
+  .qrow.is-clickable:hover {
+    background: var(--color-hover-wash);
+  }
+
+  .qrow.is-selected {
+    background: rgb(var(--color-accent-rgb) / 0.07);
+  }
+
+  .qrow.is-selected .qrow__bar {
+    background: var(--color-accent);
+  }
+
+  .qrow__id {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-accent);
+    min-width: 0;
+  }
+
+  .qrow__wo {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--color-text);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  .qrow__who {
+    font-size: 13px;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .qrow__meta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+  }
+
+  .qrow__noscore {
+    text-align: right;
+    color: var(--color-neutral-700);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .qrow__lock {
+    grid-column: 1 / -1;
+    padding: 10px 12px 10px 15px;
+    border-top: 1px solid var(--color-border);
+    background: rgb(var(--color-info-rgb) / 0.05);
+  }
+
+  .qrow .badge-pill {
+    justify-self: end;
+  }
+
+  @media (max-width: 640px) {
+    .qrow {
+      grid-template-columns: 3px minmax(0, 1fr) auto;
+      grid-template-areas:
+        'bar id score'
+        'bar who score';
+      row-gap: 2px;
+      padding: 10px 12px 10px 0;
+      min-height: 0;
+    }
+    .qrow__bar { grid-area: bar; }
+    .qrow__id { grid-area: id; }
+    .qrow__who { grid-area: who; font-size: 12px; color: var(--color-text-secondary); }
+    .qrow__meta { display: none; }
+    .qrow .badge-pill { grid-area: score; }
+  }
 }

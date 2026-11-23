@@ -3,6 +3,7 @@ import Header from './components/Layout/Header';
 import AnalysisSheetList from './components/Analysis/AnalysisSheet';
 import { RowWithSheetIndex, DriveFile, RowData } from './components/Analysis/AnalysisSheet';
 import LoginScreen from './components/Auth/LoginScreen';
+import Arrival from './components/Arrival/Arrival';
 import LoadingIndicator from './components/Core/LoadingIndicator';
 import { OverlaySettings, VideoChoice, UserProfile } from './types';
 import { DRIVE_FILE_REGEX, YOUTUBE_REGEX, DRIVE_FOLDER_REGEX } from './utils/regex';
@@ -215,6 +216,32 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  // v4 Arrival: the tour is the front door until it is skipped or finished.
+  // Persisted so a returning analyst lands straight on sign-in.
+  const [showTour, setShowTour] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('solaris.onboarded') !== '1';
+    } catch {
+      return true;
+    }
+  });
+  const dismissTour = useCallback(() => {
+    try {
+      window.localStorage.setItem('solaris.onboarded', '1');
+    } catch {
+      /* storage unavailable — the tour still closes for this session */
+    }
+    setShowTour(false);
+  }, []);
+  const replayTour = useCallback(() => {
+    try {
+      window.localStorage.removeItem('solaris.onboarded');
+    } catch {
+      /* ignore */
+    }
+    setShowTour(true);
+  }, []);
 
   // ── F4 Gamificação ──────────────────────────────────────────────
   const gamificationStorage = useMemo(() => ({
@@ -839,7 +866,19 @@ const App: React.FC = () => {
     const pollForApis = () => {
         if (!isFirebaseConfigured()) {
             // turbo-web: demo/local build without Firebase env vars — skip the
-            // Google SDK polling entirely and land straight in guest mode.
+            // Google SDK polling entirely. The tour still gets first refusal:
+            // a first-time visitor sees the Arrival screen and only lands in
+            // guest mode when they pick the demo queue.
+            let tourPending = true;
+            try {
+                tourPending = window.localStorage.getItem('solaris.onboarded') !== '1';
+            } catch {
+                tourPending = true;
+            }
+            if (tourPending) {
+                setAuthStatus('signedOut');
+                return;
+            }
             handleGuestLogin();
             return;
         }
@@ -1018,10 +1057,22 @@ const App: React.FC = () => {
         );
       case 'signedOut':
       case 'error':
+        if (showTour) {
+          return (
+            <Arrival
+              onLogin={() => { dismissTour(); handleLogin(); }}
+              onGuestLogin={() => { dismissTour(); handleGuestLogin(); }}
+              onSkip={dismissTour}
+              isLoading={isAuthLoading}
+              error={authError}
+            />
+          );
+        }
         return (
           <LoginScreen 
             onLogin={handleLogin}
             onGuestLogin={handleGuestLogin}
+            onReplayTour={replayTour}
             isLoading={isAuthLoading}
             error={authError}
           />

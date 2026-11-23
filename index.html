@@ -3,17 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Solaris | AV Analysis Engine</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop stop-color='%238F6FF7'/><stop offset='1' stop-color='%23F09A52'/></linearGradient></defs><circle cx='50' cy='50' r='50' fill='url(%23g)'/></svg>">
+    <title>Solaris — broadcast QC in a browser tab</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop stop-color='%23FFB45C'/><stop offset='1' stop-color='%23F2832C'/></linearGradient></defs><circle cx='50' cy='50' r='50' fill='url(%23g)'/></svg>">
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png" />
     <!-- PWA (S2.1) -->
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#0B0E14" />
-    <meta name="description" content="Audiovisual analysis platform: waveform, spectrogram, vectorscope and QC reporting for media professionals." />
+    <meta name="theme-color" content="#07080A" />
+    <meta name="description" content="Broadcast-grade QC in a browser tab: luma waveform, RGB parade, vectorscope, spectrogram and a signed QC report for long-form video." />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- Link previews -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Solaris" />
+    <meta property="og:title" content="Solaris — watch less footage" />
+    <meta property="og:description" content="Reads the signal of a two-hour file and hands back the seconds that need a human. Five live monitors, one signed QC report, nothing to install." />
+    <meta property="og:image" content="https://solaris.chr-z.dev/demo/tape-poster.jpg" />
+    <meta property="og:image:width" content="960" />
+    <meta property="og:image:height" content="540" />
+    <meta property="og:url" content="https://solaris.chr-z.dev/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Solaris — watch less footage" />
+    <meta name="twitter:description" content="Broadcast QC in a browser tab: waveform, RGB parade, vectorscope, spectrogram." />
+    <meta name="twitter:image" content="https://solaris.chr-z.dev/demo/tape-poster.jpg" />
+    <meta name="color-scheme" content="dark" />
   </head>
   <body class="bg-solar-light-bg dark:bg-solar-dark-bg">
     <div id="root"></div>

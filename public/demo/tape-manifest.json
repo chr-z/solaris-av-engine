@@ -1,0 +1,20 @@
+{
+  "id": "solaris-demo-tape-01",
+  "title": "Solaris QC Demo Tape 01",
+  "duration": 40,
+  "width": 960,
+  "height": 540,
+  "fps": 25,
+  "video": { "codec": "h264", "pixFmt": "yuv420p", "profile": "high" },
+  "audio": { "codec": "aac", "sampleRate": 48000, "channels": 2, "bitrate": "96k" },
+  "segments": [
+    { "id": "slate",    "start": 0.0,  "end": 4.0,  "label": "Slate — test pattern + title card" },
+    { "id": "bars",     "start": 4.0,  "end": 10.0, "label": "SMPTE 75% colour bars" },
+    { "id": "ramp",     "start": 10.0, "end": 16.0, "label": "Luma ramp + 11-step wedge" },
+    { "id": "deadair",  "start": 16.0, "end": 20.0, "label": "Dead air — picture static, audio silent" },
+    { "id": "black",    "start": 20.0, "end": 24.0, "label": "Black slug — audio present" },
+    { "id": "clip",     "start": 24.0, "end": 29.0, "label": "Audio clip — 100 Hz + 1 kHz overdriven, blue cast" },
+    { "id": "skintone", "start": 29.0, "end": 34.0, "label": "Skin-tone and saturated patch grid" },
+    { "id": "final",    "start": 34.0, "end": 40.0, "label": "Final — graded scene, 60 Hz hum" }
+  ]
+}
